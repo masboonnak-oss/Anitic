@@ -28,50 +28,70 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  position: relative;
+  gap: 8px;
   box-shadow: 0 0 24px color-mix(in srgb, var(--medal-color) 20%, transparent);
   transition: transform 0.15s;
 }
 .card:hover { transform: translateY(-3px); }
 
-.medal { font-size: 32px; }
+.medal { font-size: 30px; }
 
-.avatar {
-  width: 68px;
-  height: 68px;
+.avatarWrap {
   border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid var(--medal-color);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.avatarFallback {
+  width: 100%;
+  height: 100%;
   background: linear-gradient(135deg, #fe2c55, #25f4ee);
-  display: flex;
   align-items: center;
   justify-content: center;
   font-size: 28px;
   font-weight: 900;
   color: #fff;
-  border: 3px solid var(--medal-color);
 }
 
 .name {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
   text-align: center;
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  margin-top: 2px;
+}
+
+.usertag {
+  font-size: 12px;
+  color: #555;
+  margin-top: -4px;
 }
 
 .winCount {
-  font-size: 36px;
+  font-size: 38px;
   font-weight: 900;
   color: var(--medal-color);
   line-height: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
 }
 .winCount span {
   font-size: 14px;
   font-weight: 600;
   opacity: 0.7;
-  margin-left: 4px;
 }
 
 .controls {
@@ -94,8 +114,7 @@
   transition: transform 0.1s, opacity 0.15s;
   font-family: 'Kanit', sans-serif;
 }
-.btn:active { transform: scale(0.9); }
-
+.btn:active { transform: scale(0.88); }
 .plus  { background: #22c55e; color: #fff; }
 .minus { background: #ef4444; color: #fff; }
 .plus:hover  { opacity: 0.85; }

@@ -21,14 +21,14 @@ export default function App() {
     setTimeout(() => setToast(null), 2500);
   }
 
-  async function handleAdd(username) {
+  async function handleAdd({ username, displayName, profilePicUrl }) {
     const res = await fetch('/api/player', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username })
+      body: JSON.stringify({ username, displayName, profilePicUrl })
     });
     const data = await res.json();
-    if (res.ok) notify(`เพิ่ม ${username} แล้ว`);
+    if (res.ok) notify(`เพิ่ม ${displayName || username} แล้ว`);
     else notify(data.error || 'เพิ่มไม่ได้', 'error');
   }
 
@@ -67,7 +67,7 @@ export default function App() {
         {players.length === 0 ? (
           <div className={styles.empty}>
             <div className={styles.emptyIcon}>🎮</div>
-            <p>เพิ่มผู้เล่นเพื่อเริ่มต้น</p>
+            <p>พิมพ์ TikTok username เพื่อเพิ่มผู้เล่น</p>
           </div>
         ) : (
           <>

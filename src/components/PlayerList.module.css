@@ -21,7 +21,7 @@
   background: #13131f;
   border: 1px solid #222235;
   border-radius: 12px;
-  padding: 12px 16px;
+  padding: 10px 14px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -30,35 +30,59 @@
 .row:hover { background: #181828; }
 
 .rank {
-  width: 28px;
-  font-size: 16px;
+  width: 26px;
+  font-size: 15px;
   font-weight: 700;
-  color: #555;
+  color: #444;
   text-align: center;
   flex-shrink: 0;
 }
 
-.avatar {
-  width: 40px;
-  height: 40px;
+.avatarWrap {
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1.5px solid #222235;
+  position: relative;
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.avatarFallback {
+  width: 100%;
+  height: 100%;
   background: linear-gradient(135deg, #fe2c55, #25f4ee);
-  display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
   font-weight: 900;
   color: #fff;
-  flex-shrink: 0;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
 }
 
 .name {
-  flex: 1;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.usertag {
+  font-size: 12px;
+  color: #444;
+  margin-top: 1px;
 }
 
 .win {
@@ -75,8 +99,8 @@
 }
 
 .winLabel {
-  font-size: 12px;
-  color: #555;
+  font-size: 11px;
+  color: #444;
   font-weight: 600;
 }
 
@@ -108,13 +132,13 @@
 
 .deleteBtn {
   background: transparent;
-  border: 1px solid #333;
-  color: #555;
-  width: 30px;
-  height: 30px;
+  border: 1px solid #2a2a35;
+  color: #444;
+  width: 28px;
+  height: 28px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;

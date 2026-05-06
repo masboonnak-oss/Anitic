@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const axios = require('axios');
 
 const app = express();
 app.use(cors());
@@ -19,6 +20,36 @@ function broadcast() {
   io.emit('players', sorted);
 }
 
+// Fetch TikTok profile pic and try to get display name
+app.get('/api/tiktok-info/:username', async (req, res) => {
+  const username = req.params.username.replace('@', '').trim();
+  if (!username) return res.status(400).json({ error: 'username required' });
+
+  const profilePicUrl = `https://unavatar.io/tiktok/${username}`;
+
+  // Try to get display name from TikTok page
+  let displayName = username;
+  try {
+    const r = await axios.get(`https://www.tiktok.com/@${username}`, {
+      timeout: 6000,
+      maxRedirects: 5,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      }
+    });
+    const html = r.data;
+    // Try to extract nickname from page JSON
+    const nickMatch = html.match(/"nickname":"([^"]+)"/);
+    if (nickMatch) displayName = nickMatch[1];
+  } catch (e) {
+    // fallback to username
+  }
+
+  res.json({ username, displayName, profilePicUrl });
+});
+
 app.get('/api/players', (req, res) => {
   const sorted = Array.from(players.values())
     .sort((a, b) => b.win - a.win)
@@ -27,11 +58,18 @@ app.get('/api/players', (req, res) => {
 });
 
 app.post('/api/player', (req, res) => {
-  const { username } = req.body;
+  const { username, displayName, profilePicUrl } = req.body;
   if (!username) return res.status(400).json({ error: 'username required' });
-  const id = username.trim();
+  const id = username.trim().replace('@', '');
   if (players.has(id)) return res.status(409).json({ error: 'มีผู้เล่นนี้อยู่แล้ว' });
-  players.set(id, { id, username: id, win: 0, joinedAt: Date.now() });
+  players.set(id, {
+    id,
+    username: id,
+    displayName: displayName || id,
+    profilePicUrl: profilePicUrl || `https://unavatar.io/tiktok/${id}`,
+    win: 0,
+    joinedAt: Date.now()
+  });
   broadcast();
   res.json(players.get(id));
 });

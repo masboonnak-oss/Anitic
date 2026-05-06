@@ -4,29 +4,27 @@ import styles from './Overlay.module.css';
 
 const socket = io('/', { transports: ['websocket', 'polling'] });
 
+// col order: 2nd left, 1st center, 3rd right
 const CONFIGS = [
   {
     playerIdx: 1, rank: 2,
-    barH: 110, barGrad: 'linear-gradient(180deg,#c0c0d8 0%,#707088 100%)',
-    ringGrad: 'linear-gradient(135deg,#e8e8ff,#a0a0c0,#e8e8ff)',
-    glowColor: '#aaaadd',
-    avatarSize: 76,
+    barH: 110, barGrad: 'linear-gradient(180deg,#c8c8e0 0%,#6a6a8a 100%)',
+    avatarSize: 68,   // inner circle px
+    frameSize: 140,   // total frame container px
     label: 'silver',
   },
   {
     playerIdx: 0, rank: 1,
     barH: 155, barGrad: 'linear-gradient(180deg,#ffe066 0%,#f0a000 50%,#c07000 100%)',
-    ringGrad: 'linear-gradient(135deg,#fff7a0,#ffd700,#ff9900,#ffd700,#fff7a0)',
-    glowColor: '#ffd700',
-    avatarSize: 96,
+    avatarSize: 88,
+    frameSize: 178,
     label: 'gold',
   },
   {
     playerIdx: 2, rank: 3,
-    barH: 85, barGrad: 'linear-gradient(180deg,#e8a070 0%,#a05030 100%)',
-    ringGrad: 'linear-gradient(135deg,#f4c090,#cd7f32,#f4c090)',
-    glowColor: '#cd7f32',
-    avatarSize: 68,
+    barH: 85, barGrad: 'linear-gradient(180deg,#d49060 0%,#8a4020 100%)',
+    avatarSize: 60,
+    frameSize: 124,
     label: 'bronze',
   },
 ];
@@ -34,26 +32,25 @@ const CONFIGS = [
 function Sparkles() {
   return (
     <div className={styles.sparkles}>
-      {[...Array(6)].map((_, i) => (
+      {[...Array(7)].map((_, i) => (
         <div key={i} className={styles.sparkle} style={{ '--i': i }} />
       ))}
     </div>
   );
 }
 
-const FRAME_FILTER = {
-  gold:   'none',
-  silver: 'grayscale(0.55) brightness(1.25) contrast(1.05)',
-  bronze: 'sepia(0.7) brightness(0.95) saturate(1.4)',
-};
-
 function Avatar({ player, cfg }) {
   const [err, setErr] = useState(false);
-  const size = cfg.avatarSize;
   return (
-    <div className={styles.avatarWrap2} style={{ width: size + 40, height: size + 40 }}>
-      {/* Profile picture circle */}
-      <div className={styles.avatarCircle} style={{ width: size, height: size }}>
+    <div
+      className={styles.avatarWrap}
+      style={{ width: cfg.frameSize, height: cfg.frameSize }}
+    >
+      {/* Profile circle — sits behind, exactly fills the ring opening */}
+      <div
+        className={styles.avatarCircle}
+        style={{ width: cfg.avatarSize, height: cfg.avatarSize }}
+      >
         {!err && player.profilePicUrl ? (
           <img
             src={player.profilePicUrl}
@@ -67,11 +64,11 @@ function Avatar({ player, cfg }) {
           </div>
         )}
       </div>
-      {/* Decorative gold wing frame overlaid on top */}
+
+      {/* Frame on top — mix-blend-mode:screen makes black pixels transparent */}
       <img
-        src="/gold-frame.avif"
-        className={styles.frameImg}
-        style={{ filter: FRAME_FILTER[cfg.label] }}
+        src="/gold-frame2.png"
+        className={`${styles.frameImg} ${styles['frame_' + cfg.label]}`}
         alt=""
         draggable={false}
       />
@@ -95,7 +92,7 @@ export default function Overlay() {
   return (
     <div className={styles.overlay}>
       <div className={styles.stage}>
-        {CONFIGS.map((cfg, colIdx) => {
+        {CONFIGS.map((cfg) => {
           const p = top3[cfg.playerIdx];
           if (!p) return null;
           const isFirst = cfg.rank === 1;
@@ -103,24 +100,20 @@ export default function Overlay() {
           return (
             <div key={p.id} className={`${styles.column} ${isFirst ? styles.colFirst : ''}`}>
 
-              {/* Player card above bar */}
               <div className={`${styles.card} ${styles[cfg.label + 'Card']}`}>
                 {isFirst && <Sparkles />}
 
-                {/* Crown */}
+                {/* Crown / medal */}
                 <div className={`${styles.crownWrap} ${isFirst ? styles.crownFirst : styles.crownSmall}`}>
                   {isFirst ? '👑' : cfg.rank === 2 ? '🥈' : '🥉'}
                 </div>
 
-                {/* Avatar */}
                 <Avatar player={p} cfg={cfg} />
 
-                {/* Name */}
                 <div className={`${styles.playerName} ${isFirst ? styles.nameFirst : ''}`}>
                   {p.displayName || p.username}
                 </div>
 
-                {/* Wins */}
                 <div className={`${styles.winsWrap} ${styles[cfg.label + 'Wins']}`}>
                   <span className={styles.winsNum}>{p.win}</span>
                   <span className={styles.winsText}>WINS</span>

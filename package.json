@@ -1,0 +1,26 @@
+{
+  "name": "tiktok-leaderboard",
+  "version": "1.0.0",
+  "main": "server/index.js",
+  "scripts": {
+    "dev": "concurrently \"node server/index.js\" \"vite --port 5000 --host 0.0.0.0\"",
+    "server": "node server/index.js",
+    "client": "vite --port 5000 --host 0.0.0.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.2.1",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
+    "tiktok-live-connector": "^2.1.1-beta1",
+    "vite": "^8.0.10"
+  }
+}

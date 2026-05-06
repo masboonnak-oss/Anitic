@@ -1,140 +1,87 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
-import Leaderboard from './components/Leaderboard.jsx';
-import ConnectPanel from './components/ConnectPanel.jsx';
-import EditPlayerModal from './components/EditPlayerModal.jsx';
-import AddPlayerModal from './components/AddPlayerModal.jsx';
+import Podium from './components/Podium.jsx';
+import PlayerList from './components/PlayerList.jsx';
+import AddPlayer from './components/AddPlayer.jsx';
 import styles from './App.module.css';
 
 const socket = io('/', { transports: ['websocket', 'polling'] });
 
 export default function App() {
   const [players, setPlayers] = useState([]);
-  const [status, setStatus] = useState({ connected: false, username: null });
-  const [editPlayer, setEditPlayer] = useState(null);
-  const [showAdd, setShowAdd] = useState(false);
-  const [notification, setNotification] = useState(null);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
-    socket.on('leaderboard', setPlayers);
-    socket.on('status', (s) => {
-      setStatus(s);
-      if (s.error) {
-        notify(s.error, 'error');
-      } else if (s.connected) {
-        notify(`เชื่อมต่อ @${s.username} สำเร็จ!`, 'success');
-      }
-    });
-    return () => {
-      socket.off('leaderboard');
-      socket.off('status');
-    };
+    socket.on('players', setPlayers);
+    return () => socket.off('players');
   }, []);
 
   function notify(msg, type = 'success') {
-    setNotification({ msg, type });
-    setTimeout(() => setNotification(null), 3000);
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 2500);
   }
 
-  async function handleConnect(username) {
-    const res = await fetch('/api/connect', {
+  async function handleAdd(username) {
+    const res = await fetch('/api/player', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username })
     });
     const data = await res.json();
-    if (data.ok) notify(`กำลังเชื่อมต่อ @${username}...`, 'info');
-    else notify(data.error || 'เชื่อมต่อไม่ได้', 'error');
+    if (res.ok) notify(`เพิ่ม ${username} แล้ว`);
+    else notify(data.error || 'เพิ่มไม่ได้', 'error');
   }
 
-  async function handleDisconnect() {
-    await fetch('/api/disconnect', { method: 'POST' });
-    notify('ยกเลิกการเชื่อมต่อแล้ว', 'info');
+  async function handleWin(id, delta) {
+    await fetch(`/api/player/${encodeURIComponent(id)}/win`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ delta })
+    });
+  }
+
+  async function handleDelete(id) {
+    await fetch(`/api/player/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    notify('ลบผู้เล่นแล้ว', 'info');
   }
 
   async function handleReset() {
-    if (!confirm('ล้างข้อมูล Leaderboard ทั้งหมด?')) return;
+    if (!confirm('ล้างข้อมูลทั้งหมด?')) return;
     await fetch('/api/reset', { method: 'POST' });
     notify('ล้างข้อมูลแล้ว', 'info');
   }
 
-  async function handleSavePlayer(uniqueId, data) {
-    const res = await fetch(`/api/player/${encodeURIComponent(uniqueId)}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    if (res.ok) {
-      notify('บันทึกข้อมูลแล้ว');
-      setEditPlayer(null);
-    } else {
-      notify('บันทึกไม่ได้', 'error');
-    }
-  }
-
-  async function handleAddPlayer(data) {
-    const res = await fetch('/api/player', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    if (res.ok) {
-      notify('เพิ่มผู้เล่นแล้ว');
-      setShowAdd(false);
-    } else {
-      notify('เพิ่มไม่ได้', 'error');
-    }
-  }
+  const top3 = players.slice(0, 3);
+  const rest = players.slice(3);
 
   return (
     <div className={styles.app}>
       <header className={styles.header}>
-        <div className={styles.headerContent}>
-          <div className={styles.logo}>
-            <span className={styles.logoIcon}>🎯</span>
-            <span className={styles.logoText}>TikTok Live Leaderboard</span>
-          </div>
-          <div className={styles.headerActions}>
-            <button className={styles.btnOutline} onClick={() => setShowAdd(true)}>
-              + เพิ่มผู้เล่น
-            </button>
-            <button className={styles.btnDanger} onClick={handleReset}>
-              ล้างข้อมูล
-            </button>
-          </div>
-        </div>
+        <div className={styles.logo}>🏆 WIN Leaderboard</div>
+        <button className={styles.resetBtn} onClick={handleReset}>ล้างข้อมูล</button>
       </header>
 
       <main className={styles.main}>
-        <ConnectPanel
-          status={status}
-          onConnect={handleConnect}
-          onDisconnect={handleDisconnect}
-        />
-        <Leaderboard
-          players={players}
-          onEdit={setEditPlayer}
-        />
+        <AddPlayer onAdd={handleAdd} />
+
+        {players.length === 0 ? (
+          <div className={styles.empty}>
+            <div className={styles.emptyIcon}>🎮</div>
+            <p>เพิ่มผู้เล่นเพื่อเริ่มต้น</p>
+          </div>
+        ) : (
+          <>
+            <Podium players={top3} onWin={handleWin} />
+            {rest.length > 0 && (
+              <PlayerList players={rest} onWin={handleWin} onDelete={handleDelete} />
+            )}
+          </>
+        )}
       </main>
 
-      {editPlayer && (
-        <EditPlayerModal
-          player={editPlayer}
-          onSave={handleSavePlayer}
-          onClose={() => setEditPlayer(null)}
-        />
-      )}
-
-      {showAdd && (
-        <AddPlayerModal
-          onSave={handleAddPlayer}
-          onClose={() => setShowAdd(false)}
-        />
-      )}
-
-      {notification && (
-        <div className={`${styles.notification} ${styles[notification.type]}`}>
-          {notification.msg}
+      {toast && (
+        <div className={`${styles.toast} ${styles[toast.type]}`}>
+          {toast.msg}
         </div>
       )}
     </div>

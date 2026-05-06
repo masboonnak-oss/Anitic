@@ -14,14 +14,14 @@ const players = new Map();
 
 function broadcast() {
   const sorted = Array.from(players.values())
-    .sort((a, b) => b.win - a.win || b.village - a.village)
+    .sort((a, b) => b.win - a.win)
     .map((p, i) => ({ ...p, rank: i + 1 }));
   io.emit('players', sorted);
 }
 
 app.get('/api/players', (req, res) => {
   const sorted = Array.from(players.values())
-    .sort((a, b) => b.win - a.win || b.village - a.village)
+    .sort((a, b) => b.win - a.win)
     .map((p, i) => ({ ...p, rank: i + 1 }));
   res.json(sorted);
 });
@@ -31,7 +31,7 @@ app.post('/api/player', (req, res) => {
   if (!username) return res.status(400).json({ error: 'username required' });
   const id = username.trim();
   if (players.has(id)) return res.status(409).json({ error: 'มีผู้เล่นนี้อยู่แล้ว' });
-  players.set(id, { id, username: id, village: 0, win: 0, joinedAt: Date.now() });
+  players.set(id, { id, username: id, win: 0, joinedAt: Date.now() });
   broadcast();
   res.json(players.get(id));
 });
@@ -42,16 +42,6 @@ app.delete('/api/player/:id', (req, res) => {
   players.delete(id);
   broadcast();
   res.json({ ok: true });
-});
-
-app.patch('/api/player/:id/village', (req, res) => {
-  const { id } = req.params;
-  const { delta } = req.body;
-  if (!players.has(id)) return res.status(404).json({ error: 'ไม่พบผู้เล่น' });
-  const p = players.get(id);
-  p.village = Math.max(0, p.village + (delta || 0));
-  broadcast();
-  res.json(p);
 });
 
 app.patch('/api/player/:id/win', (req, res) => {
@@ -72,7 +62,7 @@ app.post('/api/reset', (req, res) => {
 
 io.on('connection', (socket) => {
   const sorted = Array.from(players.values())
-    .sort((a, b) => b.win - a.win || b.village - a.village)
+    .sort((a, b) => b.win - a.win)
     .map((p, i) => ({ ...p, rank: i + 1 }));
   socket.emit('players', sorted);
 });

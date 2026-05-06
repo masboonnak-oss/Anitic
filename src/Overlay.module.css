@@ -102,32 +102,34 @@
 }
 
 /* ───── AVATAR ───── */
-.avatarWrap {
+.avatarWrap2 {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
-.avatarOuter {
+/* Frame sits behind, wings extend outward */
+.frameImg {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  border-radius: 50%;
-  padding: 3px;
-  position: relative;
+  object-fit: contain;
+  pointer-events: none;
+  z-index: 1;
+  filter: drop-shadow(0 0 10px rgba(255,200,0,0.55));
 }
 
-.gold   { background: linear-gradient(135deg,#fff7a0,#ffd700,#ff9900,#ffd700,#fff7a0); box-shadow: 0 0 20px #ffd70099, 0 0 40px #ffd70044; }
-.silver { background: linear-gradient(135deg,#e8e8ff,#a0a0c0,#e8e8ff); box-shadow: 0 0 12px #aaaadd66; }
-.bronze { background: linear-gradient(135deg,#f4c090,#cd7f32,#f4c090); box-shadow: 0 0 10px #cd7f3266; }
-
-.avatarInner {
-  width: 100%;
-  height: 100%;
+/* Profile picture circle sits on top of the frame */
+.avatarCircle {
   border-radius: 50%;
   overflow: hidden;
-  background: #222;
-  border: 2px solid rgba(0,0,0,0.4);
+  background: #111;
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
 }
 
 .avatarImg {

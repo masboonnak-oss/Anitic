@@ -41,11 +41,19 @@ function Sparkles() {
   );
 }
 
+const FRAME_FILTER = {
+  gold:   'none',
+  silver: 'grayscale(0.55) brightness(1.25) contrast(1.05)',
+  bronze: 'sepia(0.7) brightness(0.95) saturate(1.4)',
+};
+
 function Avatar({ player, cfg }) {
   const [err, setErr] = useState(false);
+  const size = cfg.avatarSize;
   return (
-    <div className={`${styles.avatarOuter} ${styles[cfg.label]}`}>
-      <div className={styles.avatarInner}>
+    <div className={styles.avatarWrap2} style={{ width: size + 40, height: size + 40 }}>
+      {/* Profile picture circle */}
+      <div className={styles.avatarCircle} style={{ width: size, height: size }}>
         {!err && player.profilePicUrl ? (
           <img
             src={player.profilePicUrl}
@@ -59,6 +67,14 @@ function Avatar({ player, cfg }) {
           </div>
         )}
       </div>
+      {/* Decorative gold wing frame overlaid on top */}
+      <img
+        src="/gold-frame.avif"
+        className={styles.frameImg}
+        style={{ filter: FRAME_FILTER[cfg.label] }}
+        alt=""
+        draggable={false}
+      />
     </div>
   );
 }
@@ -97,12 +113,7 @@ export default function Overlay() {
                 </div>
 
                 {/* Avatar */}
-                <div
-                  className={styles.avatarWrap}
-                  style={{ width: cfg.avatarSize + 12, height: cfg.avatarSize + 12 }}
-                >
-                  <Avatar player={p} cfg={cfg} />
-                </div>
+                <Avatar player={p} cfg={cfg} />
 
                 {/* Name */}
                 <div className={`${styles.playerName} ${isFirst ? styles.nameFirst : ''}`}>

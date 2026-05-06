@@ -13,12 +13,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
+  padding: 14px 24px;
   background: #13131f;
   border-bottom: 1px solid #222235;
   position: sticky;
   top: 0;
   z-index: 10;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .logo {
@@ -28,21 +30,74 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  flex-shrink: 0;
+}
+
+.headerActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.copyBtn {
+  background: linear-gradient(135deg, #1d1d2e, #2a2a40);
+  border: 1.5px solid #25f4ee;
+  color: #25f4ee;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-family: 'Kanit', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+}
+.copyBtn:hover {
+  background: rgba(37,244,238,0.1);
+  box-shadow: 0 0 12px #25f4ee44;
 }
 
 .resetBtn {
   background: transparent;
   border: 1.5px solid #ff4444;
   color: #ff4444;
-  padding: 7px 16px;
+  padding: 7px 14px;
   border-radius: 8px;
   font-family: 'Kanit', sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+  white-space: nowrap;
 }
 .resetBtn:hover { background: rgba(255,68,68,0.1); }
+
+.overlayHint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 24px;
+  background: rgba(37,244,238,0.05);
+  border-bottom: 1px solid rgba(37,244,238,0.1);
+  font-size: 13px;
+  color: #888;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.urlCode {
+  background: #1a1a2e;
+  color: #25f4ee;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid #25f4ee33;
+  transition: background 0.2s;
+  user-select: all;
+}
+.urlCode:hover { background: rgba(37,244,238,0.1); }
 
 .main {
   max-width: 960px;

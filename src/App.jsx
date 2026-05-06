@@ -10,6 +10,7 @@ const socket = io('/', { transports: ['websocket', 'polling'] });
 export default function App() {
   const [players, setPlayers] = useState([]);
   const [toast, setToast] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     socket.on('players', setPlayers);
@@ -19,6 +20,14 @@ export default function App() {
   function notify(msg, type = 'success') {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 2500);
+  }
+
+  function copyOverlayUrl() {
+    const url = `${window.location.origin}/overlay`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   }
 
   async function handleAdd({ username, displayName, profilePicUrl }) {
@@ -58,8 +67,20 @@ export default function App() {
     <div className={styles.app}>
       <header className={styles.header}>
         <div className={styles.logo}>🏆 WIN Leaderboard</div>
-        <button className={styles.resetBtn} onClick={handleReset}>ล้างข้อมูล</button>
+        <div className={styles.headerActions}>
+          <button className={styles.copyBtn} onClick={copyOverlayUrl}>
+            {copied ? '✓ คัดลอกแล้ว!' : '📺 คัดลอก URL Overlay'}
+          </button>
+          <button className={styles.resetBtn} onClick={handleReset}>ล้างข้อมูล</button>
+        </div>
       </header>
+
+      <div className={styles.overlayHint}>
+        <span>🎬 วาง URL Overlay ใน TikTok Live Studio → Browser Source</span>
+        <code onClick={copyOverlayUrl} className={styles.urlCode}>
+          {window.location.origin}/overlay
+        </code>
+      </div>
 
       <main className={styles.main}>
         <AddPlayer onAdd={handleAdd} />

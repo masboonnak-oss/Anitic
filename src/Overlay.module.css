@@ -94,16 +94,7 @@
   flex-shrink: 0;
 }
 
-/* Profile picture — behind the frame */
-.avatarCircle {
-  border-radius: 50%;
-  overflow: hidden;
-  background: #0a0a18;
-  position: absolute;
-  z-index: 1;
-}
-
-/* Frame on top — mix-blend-mode:screen makes black → transparent */
+/* Frame behind the profile picture */
 .frameImg {
   position: absolute;
   inset: 0;
@@ -111,8 +102,16 @@
   height: 100%;
   object-fit: contain;
   pointer-events: none;
+  z-index: 1;
+}
+
+/* Profile picture — in front of the frame */
+.avatarCircle {
+  border-radius: 50%;
+  overflow: hidden;
+  background: #0a0a18;
+  position: absolute;
   z-index: 2;
-  mix-blend-mode: screen;
 }
 
 /* Gold: original warm gold, pulsing glow */

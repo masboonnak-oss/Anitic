@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const { WebcastPushConnection } = require('tiktok-live-connector');
+const { TikTokLiveConnection, WebcastEvent } = require('tiktok-live-connector');
 
 const app = express();
 app.use(cors());
@@ -19,11 +19,23 @@ let currentUsername = null;
 
 const players = new Map();
 
-function getOrCreatePlayer(uniqueId, nickname, profilePictureUrl) {
-  if (!players.has(uniqueId)) {
-    players.set(uniqueId, {
-      uniqueId,
-      nickname: nickname || uniqueId,
+function getProfilePic(user) {
+  if (!user) return '';
+  if (user.profilePicture && Array.isArray(user.profilePicture.url) && user.profilePicture.url.length > 0) {
+    return user.profilePicture.url[0];
+  }
+  if (user.profilePictureMedium && Array.isArray(user.profilePictureMedium.url) && user.profilePictureMedium.url.length > 0) {
+    return user.profilePictureMedium.url[0];
+  }
+  return '';
+}
+
+function getOrCreatePlayer(userId, nickname, profilePictureUrl) {
+  if (!userId) return null;
+  if (!players.has(userId)) {
+    players.set(userId, {
+      uniqueId: userId,
+      nickname: nickname || userId,
       profilePictureUrl: profilePictureUrl || '',
       likeCount: 0,
       commentCount: 0,
@@ -33,11 +45,11 @@ function getOrCreatePlayer(uniqueId, nickname, profilePictureUrl) {
       joinedAt: Date.now()
     });
   } else {
-    const p = players.get(uniqueId);
+    const p = players.get(userId);
     if (nickname) p.nickname = nickname;
     if (profilePictureUrl) p.profilePictureUrl = profilePictureUrl;
   }
-  return players.get(uniqueId);
+  return players.get(userId);
 }
 
 function broadcastLeaderboard() {
@@ -55,48 +67,79 @@ function connectToTikTok(username) {
   isConnected = false;
   currentUsername = username;
 
-  tiktokConn = new WebcastPushConnection(username);
+  tiktokConn = new TikTokLiveConnection(username);
 
-  tiktokConn.connect().then(() => {
+  tiktokConn.connect().then((state) => {
     isConnected = true;
-    console.log(`Connected to TikTok Live: @${username}`);
+    console.log(`Connected to TikTok Live: @${username} (roomId: ${state?.roomId})`);
     io.emit('status', { connected: true, username });
   }).catch(err => {
     isConnected = false;
-    console.error('Connection error:', err.message);
-    io.emit('status', { connected: false, username, error: err.message });
+    const errMsg = err?.message || err?.toString() || 'ไม่สามารถเชื่อมต่อได้ — ตรวจสอบว่าคุณกำลังไลฟ์อยู่';
+    console.error('Connection error:', errMsg, err);
+    io.emit('status', { connected: false, username, error: errMsg });
   });
 
-  tiktokConn.on('like', data => {
-    const player = getOrCreatePlayer(data.uniqueId, data.nickname, data.profilePictureUrl);
+  tiktokConn.on(WebcastEvent.LIKE, data => {
+    if (!data.user) return;
+    const player = getOrCreatePlayer(
+      data.user.userId,
+      data.user.nickname,
+      getProfilePic(data.user)
+    );
+    if (!player) return;
     player.likeCount += data.likeCount || 1;
     player.score = player.likeCount * 1 + player.commentCount * 2;
     broadcastLeaderboard();
   });
 
-  tiktokConn.on('chat', data => {
-    const player = getOrCreatePlayer(data.uniqueId, data.nickname, data.profilePictureUrl);
+  tiktokConn.on(WebcastEvent.CHAT, data => {
+    if (!data.user) return;
+    const player = getOrCreatePlayer(
+      data.user.userId,
+      data.user.nickname,
+      getProfilePic(data.user)
+    );
+    if (!player) return;
     player.commentCount += 1;
     player.score = player.likeCount * 1 + player.commentCount * 2;
     broadcastLeaderboard();
   });
 
-  tiktokConn.on('gift', data => {
-    const player = getOrCreatePlayer(data.uniqueId, data.nickname, data.profilePictureUrl);
-    player.score += (data.diamondCount || 0) * 5;
+  tiktokConn.on(WebcastEvent.GIFT, data => {
+    if (!data.user) return;
+    const player = getOrCreatePlayer(
+      data.user.userId,
+      data.user.nickname,
+      getProfilePic(data.user)
+    );
+    if (!player) return;
+    const diamonds = data.giftDetails?.diamondCount || 0;
+    const count = data.comboCount || data.repeatCount || 1;
+    player.score += diamonds * count * 5;
     broadcastLeaderboard();
   });
 
-  tiktokConn.on('disconnect', () => {
+  tiktokConn.on(WebcastEvent.MEMBER, data => {
+    if (!data.user) return;
+    getOrCreatePlayer(
+      data.user.userId,
+      data.user.nickname,
+      getProfilePic(data.user)
+    );
+    broadcastLeaderboard();
+  });
+
+  tiktokConn.on(WebcastEvent.STREAM_END, () => {
     isConnected = false;
-    io.emit('status', { connected: false, username });
+    io.emit('status', { connected: false, username, error: 'ไลฟ์จบแล้ว' });
   });
 }
 
 app.post('/api/connect', (req, res) => {
   const { username } = req.body;
   if (!username) return res.status(400).json({ error: 'Username required' });
-  connectToTikTok(username.replace('@', ''));
+  connectToTikTok(username.replace('@', '').trim());
   res.json({ ok: true, message: `Connecting to @${username}...` });
 });
 

@@ -17,7 +17,14 @@ export default function App() {
 
   useEffect(() => {
     socket.on('leaderboard', setPlayers);
-    socket.on('status', setStatus);
+    socket.on('status', (s) => {
+      setStatus(s);
+      if (s.error) {
+        notify(s.error, 'error');
+      } else if (s.connected) {
+        notify(`เชื่อมต่อ @${s.username} สำเร็จ!`, 'success');
+      }
+    });
     return () => {
       socket.off('leaderboard');
       socket.off('status');

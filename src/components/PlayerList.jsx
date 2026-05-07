@@ -1,18 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styles from './PlayerList.module.css';
 
+function uiAvatar(name) {
+  const initials = encodeURIComponent((name || '?').slice(0, 2).toUpperCase());
+  return `https://ui-avatars.com/api/?name=${initials}&background=1a1a2e&color=ffd700&bold=true&size=128`;
+}
+
 function Avatar({ player }) {
+  const [err, setErr] = useState(false);
+  const src = player.profilePicUrl;
   return (
     <div className={styles.avatarWrap}>
-      <img
-        className={styles.avatarImg}
-        src={player.profilePicUrl}
-        alt={player.displayName}
-        onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-      />
-      <div className={styles.avatarFallback} style={{ display: 'none' }}>
-        {(player.displayName || player.username)[0].toUpperCase()}
-      </div>
+      {!err && src
+        ? <img className={styles.avatarImg} src={src} alt={player.displayName} onError={() => setErr(true)} />
+        : <div className={styles.avatarFallback}>
+            {(player.displayName || player.username || '?')[0].toUpperCase()}
+          </div>
+      }
     </div>
   );
 }

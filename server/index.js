@@ -105,8 +105,13 @@ function broadcastCommenters() {
 }
 
 /* ── Proxy a TikTok CDN pic through our server ── */
+function uiAvatar(username) {
+  const initials = encodeURIComponent((username || '?').slice(0, 2).toUpperCase());
+  return `https://ui-avatars.com/api/?name=${initials}&background=1a1a2e&color=ffd700&bold=true&size=128`;
+}
+
 function proxiedPic(url, username) {
-  if (!url) return `https://unavatar.io/tiktok/${username}`;
+  if (!url) return uiAvatar(username);
   // Wrap TikTok CDN URLs through our proxy
   if (url.includes('tiktokcdn') || url.includes('tiktok.com') || url.includes('muscdn')) {
     return `/api/img?url=${encodeURIComponent(url)}`;

@@ -1,21 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styles from './Podium.module.css';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 const COLORS = ['#ffd700', '#c0c0c0', '#cd7f32'];
 
 function Avatar({ player, size = 72 }) {
+  const [err, setErr] = useState(false);
+  const src = player.profilePicUrl;
   return (
     <div className={styles.avatarWrap} style={{ width: size, height: size }}>
-      <img
-        className={styles.avatarImg}
-        src={player.profilePicUrl}
-        alt={player.displayName}
-        onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-      />
-      <div className={styles.avatarFallback} style={{ display: 'none' }}>
-        {(player.displayName || player.username)[0].toUpperCase()}
-      </div>
+      {!err && src
+        ? <img className={styles.avatarImg} src={src} alt={player.displayName} onError={() => setErr(true)} />
+        : <div className={styles.avatarFallback}>
+            {(player.displayName || player.username || '?')[0].toUpperCase()}
+          </div>
+      }
     </div>
   );
 }

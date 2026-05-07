@@ -1,8 +1,10 @@
 import React, { useState, useRef } from 'react';
 import styles from './AddPlayer.module.css';
 
-const proxyPic = (uname) =>
-  `/api/img?url=${encodeURIComponent(`https://unavatar.io/tiktok/${uname}`)}`;
+const proxyPic = (uname) => {
+  const initials = encodeURIComponent((uname || '?').slice(0, 2).toUpperCase());
+  return `https://ui-avatars.com/api/?name=${initials}&background=1a1a2e&color=ffd700&bold=true&size=128`;
+};
 
 export default function AddPlayer({ onAdd }) {
   const [username, setUsername] = useState('');

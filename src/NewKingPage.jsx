@@ -42,13 +42,19 @@ function LightningRing({ size }) {
   const r1 = size * 0.48, r2 = size * 0.56;
   const [b1, setB1] = useState(() => buildLightning(cx, cy, r1));
   const [b2, setB2] = useState(() => buildLightning(cx, cy, r2));
-  const iv = useRef(null);
+  const rafRef = useRef(null);
+  const lastRef = useRef(0);
   useEffect(() => {
-    iv.current = setInterval(() => {
+    const INTERVAL = 1000 / 30; // refresh lightning at 30Hz — noise doesn't need 60
+    const tick = (now) => {
+      rafRef.current = requestAnimationFrame(tick);
+      if (now - lastRef.current < INTERVAL) return;
+      lastRef.current = now;
       setB1(buildLightning(cx, cy, r1));
       setB2(buildLightning(cx, cy, r2));
-    }, 42);
-    return () => clearInterval(iv.current);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
   }, []);
 
   return (

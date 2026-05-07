@@ -15,6 +15,7 @@
 .flash {
   position: absolute; inset: 0; z-index: 100;
   background: rgba(255,240,120,0.85);
+  will-change: opacity;
   animation: flashAnim 0.55s ease-out forwards;
   pointer-events: none;
 }
@@ -30,6 +31,7 @@
     rgba(60,30,0,0.96) 0%,
     rgba(15,8,0,0.98) 55%,
     rgba(0,0,0,1) 100%);
+  will-change: opacity;
   animation: backdropReveal 0.5s ease-out forwards;
 }
 @keyframes backdropReveal {
@@ -53,6 +55,7 @@
     transparent 272deg, rgba(255,240,80,0.20) 277deg,transparent 282deg,
     transparent 315deg, rgba(255,200,30,0.16) 320deg,transparent 325deg
   );
+  will-change: transform;
   animation: raysRotate 20s linear infinite;
   pointer-events: none; z-index: 1;
 }
@@ -66,7 +69,6 @@
   position: absolute;
   width: 700px; height: 700px;
   top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
   background: radial-gradient(ellipse at 50% 50%,
     rgba(255,220,60,0.50)  0%,
     rgba(255,160,0,0.28)   25%,
@@ -74,6 +76,7 @@
     transparent            80%);
   border-radius: 50%;
   pointer-events: none; z-index: 2;
+  will-change: transform, opacity;
   animation: bloomPulse 1.8s ease-in-out infinite;
 }
 @keyframes bloomPulse {
@@ -81,7 +84,7 @@
   50%     { transform: translate(-50%,-50%) scale(1.10); opacity: 1.00; }
 }
 
-/* ── SHOCKWAVE RINGS ── */
+/* ── SHOCKWAVE RINGS — scale() only, zero layout cost ── */
 .shockwaves {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
@@ -89,17 +92,19 @@
 }
 .wave {
   position: absolute;
+  width: 200px; height: 200px;
   border-radius: 50%;
   border: 3px solid rgba(255,215,0,0.9);
+  will-change: transform, opacity;
   animation: waveExpand 2.4s ease-out infinite;
 }
-.wave:nth-child(1) { width: 20px; height: 20px; animation-delay: 0.0s; }
-.wave:nth-child(2) { width: 20px; height: 20px; animation-delay: 0.6s; }
-.wave:nth-child(3) { width: 20px; height: 20px; animation-delay: 1.2s; }
-.wave:nth-child(4) { width: 20px; height: 20px; animation-delay: 1.8s; border-color: rgba(255,150,0,0.7); }
+.wave:nth-child(1) { animation-delay: 0.0s; }
+.wave:nth-child(2) { animation-delay: 0.6s; }
+.wave:nth-child(3) { animation-delay: 1.2s; }
+.wave:nth-child(4) { animation-delay: 1.8s; border-color: rgba(255,150,0,0.7); }
 @keyframes waveExpand {
-  0%   { width: 20px; height: 20px; opacity: 1; }
-  100% { width: 900px; height: 900px; opacity: 0; border-width: 1px; }
+  0%   { transform: scale(0.05); opacity: 1; }
+  100% { transform: scale(4.6);  opacity: 0; }
 }
 
 /* ── FIREWORK BURSTS ── */
@@ -107,27 +112,8 @@
   position: absolute; inset: 0;
   pointer-events: none; z-index: 4;
 }
-.fwBurst {
-  position: absolute;
-  animation: fwPop var(--fw-dur, 1.8s) ease-out infinite;
-  animation-delay: var(--fw-del, 0s);
-}
-.fwSpark {
-  position: absolute;
-  width: 3px; height: 3px;
-  border-radius: 50%;
-  background: var(--fw-col, #ffd700);
-  box-shadow: 0 0 6px var(--fw-col, #ffd700), 0 0 12px var(--fw-col, #ffd700);
-  transform-origin: 0 0;
-}
-@keyframes fwPop {
-  0%   { opacity: 0; transform: scale(0); }
-  10%  { opacity: 1; transform: scale(1); }
-  80%  { opacity: 0.6; }
-  100% { opacity: 0; transform: scale(1.2); }
-}
 
-/* ── CONFETTI ── */
+/* ── CONFETTI — transform + opacity only ── */
 .confetti {
   position: absolute; inset: 0; overflow: hidden;
   pointer-events: none; z-index: 5;
@@ -140,18 +126,19 @@
   height: var(--h);
   background: var(--c);
   border-radius: var(--br);
+  will-change: transform, opacity;
   animation: fall var(--dur) ease-in infinite;
   animation-delay: var(--del);
   opacity: 0;
 }
 @keyframes fall {
-  0%   { transform: translateY(0) rotate(0deg) scaleX(1);       opacity: 0; }
+  0%   { transform: translateY(0)       rotate(0deg)          scaleX(1);   opacity: 0; }
   8%   { opacity: 1; }
   70%  { opacity: 0.85; }
-  100% { transform: translateY(115vh) rotate(var(--spin)) scaleX(0.5); opacity: 0; }
+  100% { transform: translateY(115vh)   rotate(var(--spin))   scaleX(0.5); opacity: 0; }
 }
 
-/* ── PARTICLE ORBIT RING ── */
+/* ── PARTICLE ORBIT RING — transform only ── */
 .orbitRing {
   position: absolute; top: 50%; left: 50%;
   width: 0; height: 0;
@@ -163,6 +150,7 @@
   border-radius: 50%;
   background: radial-gradient(circle, #ffffff 0%, #ffd700 50%, #ff8800 100%);
   box-shadow: 0 0 8px #ffd700, 0 0 16px #ff8800;
+  will-change: transform;
   animation: orbit var(--od, 3s) linear infinite;
   animation-delay: var(--odel, 0s);
 }
@@ -171,7 +159,7 @@
   to   { transform: rotate(calc(var(--ostart) + 360deg)) translateX(var(--or)) scale(0.8); }
 }
 
-/* ── FIRE PARTICLES ── */
+/* ── FIRE PARTICLES — transform + opacity only ── */
 .fire {
   position: absolute; bottom: 0; left: 0; right: 0;
   height: 100%; pointer-events: none; z-index: 6;
@@ -182,11 +170,12 @@
   border-radius: 50%;
   background: radial-gradient(circle, #fff5a0 0%, #ff8800 55%, transparent 100%);
   box-shadow: 0 0 8px #ff8800, 0 0 18px #ff4400;
+  will-change: transform, opacity;
   animation: fireRise var(--fd, 2s) ease-out infinite;
   animation-delay: var(--fdd, 0s);
 }
 @keyframes fireRise {
-  0%   { transform: translateY(0) translateX(0) scale(1);       opacity: 0; }
+  0%   { transform: translateY(0) translateX(0) scale(1);                     opacity: 0; }
   12%  { opacity: 0.95; }
   70%  { opacity: 0.5; }
   100% { transform: translateY(-200px) translateX(var(--fx, 0px)) scale(0.1); opacity: 0; }
@@ -199,13 +188,14 @@
   gap: 8px;
 }
 
-/* ── CROWN ── */
+/* ── CROWN — transform + opacity only ── */
 .crown {
   width: 140px; height: auto;
   filter:
     drop-shadow(0 0 20px #ffd700)
     drop-shadow(0 0 50px #ff8800)
     drop-shadow(0 0 100px #ff440088);
+  will-change: transform, opacity;
   animation: crownDrop 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards,
              crownFloat 2.2s 0.7s ease-in-out infinite;
   transform-origin: center bottom;
@@ -217,13 +207,14 @@
   to   { transform: translateY(0)      scale(1.0) rotate(0deg);  opacity: 1; }
 }
 @keyframes crownFloat {
-  0%,100% { transform: translateY(0)    rotate(-3deg) scale(1.00); filter: drop-shadow(0 0 20px #ffd700) drop-shadow(0 0 50px #ff8800); }
-  50%     { transform: translateY(-16px) rotate(3deg)  scale(1.08); filter: drop-shadow(0 0 36px #ffd700) drop-shadow(0 0 80px #ff8800) drop-shadow(0 0 120px #ffcc00aa); }
+  0%,100% { transform: translateY(0)     rotate(-3deg) scale(1.00); opacity: 1; }
+  50%     { transform: translateY(-16px) rotate(3deg)  scale(1.08); opacity: 1; }
 }
 
-/* ── TITLE ── */
+/* ── TITLE — transform + opacity only ── */
 .title {
   display: flex; flex-direction: column; align-items: center; gap: 4px;
+  will-change: transform, opacity;
   animation: titleReveal 0.5s 0.3s ease-out both;
 }
 @keyframes titleReveal {
@@ -236,12 +227,14 @@
   background-size: 300% 100%;
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   background-clip: text;
+  will-change: background-position;
   animation: titleShimmer 2s linear infinite;
   filter: drop-shadow(0 0 12px #ffd700bb);
 }
 .titleEn {
   font-size: 15px; font-weight: 700; letter-spacing: 0.45em;
   color: rgba(255,220,80,0.75); text-transform: uppercase;
+  will-change: opacity;
   animation: titleEnPulse 2s ease-in-out infinite;
 }
 @keyframes titleShimmer {
@@ -249,8 +242,8 @@
   100% { background-position: 300% 50%; }
 }
 @keyframes titleEnPulse {
-  0%,100% { opacity: 0.65; letter-spacing: 0.45em; }
-  50%     { opacity: 1.00; letter-spacing: 0.55em; }
+  0%,100% { opacity: 0.65; }
+  50%     { opacity: 1.00; }
 }
 
 /* ── AVATAR SECTION ── */
@@ -258,6 +251,7 @@
   position: relative;
   width: 220px; height: 220px;
   display: flex; align-items: center; justify-content: center;
+  will-change: transform, opacity;
   animation: avatarReveal 0.6s 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
 }
 @keyframes avatarReveal {
@@ -265,21 +259,21 @@
   to   { transform: scale(1) rotate(0deg);   opacity: 1; }
 }
 
-/* Multiple rotating rings */
+/* Multiple rotating rings — transform only ── */
 .ringOuter {
   position: absolute;
   width: 210px; height: 210px;
   border-radius: 50%;
-  border: 2px solid rgba(255,215,0,0.55);
-  border-style: dashed;
+  border: 2px dashed rgba(255,215,0,0.55);
+  will-change: transform;
   animation: ringRotate 8s linear infinite;
 }
 .ringMid {
   position: absolute;
   width: 185px; height: 185px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255,180,0,0.40);
-  border-style: dotted;
+  border: 1.5px dotted rgba(255,180,0,0.40);
+  will-change: transform;
   animation: ringRotate 5s linear infinite reverse;
 }
 .ringInner {
@@ -287,7 +281,8 @@
   width: 162px; height: 162px;
   border-radius: 50%;
   border: 2px solid rgba(255,215,0,0.70);
-  box-shadow: 0 0 18px #ffd70055, inset 0 0 18px #ffd70033;
+  box-shadow: 0 0 22px #ffd70066, inset 0 0 18px #ffd70033;
+  will-change: opacity;
   animation: ringInnerPulse 2s ease-in-out infinite;
 }
 @keyframes ringRotate {
@@ -295,11 +290,11 @@
   to   { transform: rotate(360deg); }
 }
 @keyframes ringInnerPulse {
-  0%,100% { box-shadow: 0 0 18px #ffd70066, inset 0 0 18px #ffd70033; border-color: rgba(255,215,0,0.70); }
-  50%     { box-shadow: 0 0 40px #ffd700cc, inset 0 0 30px #ffd70055; border-color: rgba(255,255,150,1.00); }
+  0%,100% { opacity: 0.70; }
+  50%     { opacity: 1.00; }
 }
 
-/* Glow behind avatar */
+/* Glow behind avatar — transform + opacity only ── */
 .avatarGlow {
   position: absolute;
   width: 230px; height: 230px;
@@ -308,6 +303,7 @@
     rgba(255,220,50,0.65) 0%,
     rgba(255,150,0,0.32)  40%,
     transparent 70%);
+  will-change: transform, opacity;
   animation: glowPulse 1.6s ease-in-out infinite;
 }
 @keyframes glowPulse {
@@ -315,7 +311,7 @@
   50%     { transform: scale(1.15); opacity: 1.00; }
 }
 
-/* Avatar circle */
+/* Avatar circle — separate glow layer animates opacity ── */
 .avatarCircle {
   position: absolute;
   width: 140px; height: 140px;
@@ -323,15 +319,23 @@
   border: 4px solid #ffd700;
   box-shadow:
     0 0 0 3px rgba(255,215,0,0.40),
-    0 0 30px #ffd700cc,
-    0 0 70px #ff880077,
-    inset 0 0 20px rgba(255,215,0,0.15);
-  animation: avatarRing 1.8s ease-in-out infinite;
+    0 0 36px #ffd700bb,
+    0 0 70px #ff880077;
   z-index: 3;
 }
-@keyframes avatarRing {
-  0%,100% { box-shadow: 0 0 0 3px rgba(255,215,0,0.40), 0 0 28px #ffd700bb, 0 0 60px #ff880066; }
-  50%     { box-shadow: 0 0 0 5px rgba(255,235,0,0.65), 0 0 55px #ffd700ff, 0 0 110px #ff8800cc; }
+/* Pulsing ring overlay — opacity only, zero layout ── */
+.avatarCircle::after {
+  content: '';
+  position: absolute; inset: -8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, transparent 55%, rgba(255,215,0,0.40) 75%, transparent 100%);
+  will-change: opacity, transform;
+  animation: avatarRingPulse 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes avatarRingPulse {
+  0%,100% { opacity: 0.5; transform: scale(1.00); }
+  50%     { opacity: 1.0; transform: scale(1.20); }
 }
 .avatarImg { width: 100%; height: 100%; object-fit: cover; display: block; }
 .avatarFallback {
@@ -344,9 +348,10 @@
 /* Lightning SVG */
 .lightning {
   position: absolute; pointer-events: none; z-index: 4; overflow: visible;
+  will-change: contents;
 }
 
-/* ── NAME ── */
+/* ── NAME — transform + opacity only ── */
 .name {
   font-size: 30px; font-weight: 900;
   text-align: center; max-width: 360px;
@@ -355,6 +360,7 @@
   background-size: 300% 100%;
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   background-clip: text;
+  will-change: background-position, opacity, transform;
   animation: titleShimmer 2.5s linear infinite, nameReveal 0.5s 0.9s ease-out both;
   filter: drop-shadow(0 0 16px #ffd700bb);
 }
@@ -363,13 +369,14 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── WIN BADGE ── */
+/* ── WIN BADGE — opacity + transform only ── */
 .wins {
   display: flex; flex-direction: column; align-items: center;
   background: rgba(255,215,0,0.15);
   border: 2px solid rgba(255,215,0,0.80);
   border-radius: 18px; padding: 8px 40px 10px;
   box-shadow: 0 0 32px #ffd70088, inset 0 1px 0 rgba(255,255,180,0.35);
+  will-change: transform, opacity;
   animation: winsBadgeReveal 0.5s 1.1s ease-out both, winsBadgePulse 2s 1.6s ease-in-out infinite;
 }
 @keyframes winsBadgeReveal {
@@ -377,8 +384,8 @@
   to   { opacity: 1; transform: scale(1); }
 }
 @keyframes winsBadgePulse {
-  0%,100% { box-shadow: 0 0 24px #ffd70077, inset 0 1px 0 rgba(255,255,180,0.3); }
-  50%     { box-shadow: 0 0 56px #ffd700cc, inset 0 1px 0 rgba(255,255,220,0.5); }
+  0%,100% { transform: scale(1.00); opacity: 0.85; }
+  50%     { transform: scale(1.04); opacity: 1.00; }
 }
 .winsNum {
   font-size: 60px; font-weight: 900; line-height: 1;

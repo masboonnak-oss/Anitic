@@ -10,6 +10,55 @@ const path = require('path');
 const CACHE_DIR = path.join(__dirname, '../cache');
 if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
 
+const AVATAR_DIR = path.join(__dirname, '../cache/avatars');
+if (!fs.existsSync(AVATAR_DIR)) fs.mkdirSync(AVATAR_DIR, { recursive: true });
+
+/* Download avatar image and save to disk; returns stable local URL */
+async function downloadAvatar(username, remoteUrl) {
+  const filePath = path.join(AVATAR_DIR, `${username}.jpg`);
+  try {
+    const response = await axios.get(remoteUrl, {
+      responseType: 'arraybuffer',
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15',
+        'Referer': 'https://www.tiktok.com/',
+      },
+      maxRedirects: 5,
+    });
+    fs.writeFileSync(filePath, response.data);
+    console.log(`[avatar] saved @${username} (${Math.round(response.data.byteLength / 1024)}KB)`);
+    return `/api/avatar/${encodeURIComponent(username)}`;
+  } catch (e) {
+    console.warn(`[avatar] download failed for @${username}:`, e.message);
+    return null;
+  }
+}
+
+/* Fetch real TikTok user info from tikwm.com, download avatar, return {displayName, profilePicUrl} */
+async function fetchTikwmUser(username) {
+  try {
+    const tikwm = await axios.get(
+      `https://www.tikwm.com/api/user/info?unique_id=${encodeURIComponent(username)}`,
+      { timeout: 8000, headers: { 'User-Agent': 'Mozilla/5.0' } }
+    );
+    const user = tikwm.data?.data?.user;
+    if (!user) return null;
+    const displayName = user.nickname || username;
+    const avatarUrl = user.avatarLarger || user.avatarMedium || user.avatarThumb;
+    let profilePicUrl = uiAvatar(username);
+    if (avatarUrl) {
+      const local = await downloadAvatar(username, avatarUrl);
+      if (local) profilePicUrl = local;
+    }
+    console.log(`[tikwm] @${username} → "${displayName}" pic=${profilePicUrl}`);
+    return { displayName, profilePicUrl };
+  } catch (e) {
+    console.warn(`[tikwm] failed for @${username}:`, e.message);
+    return null;
+  }
+}
+
 function saveToCache(uniqueId, data) {
   try {
     const file = path.join(CACHE_DIR, `${uniqueId}.json`);
@@ -369,41 +418,42 @@ app.get('/api/tiktok-info/:username', async (req, res) => {
     return res.json({ username, displayName: c.nickname, profilePicUrl: c.profilePicUrl });
   }
 
-  // 2. Cache folder
+  // 2. Cache folder — only use if avatar is already downloaded locally
   const cached = loadFromCache(username);
-  if (cached?.displayName && cached?.profilePicUrl) {
+  if (cached?.displayName && cached?.profilePicUrl?.startsWith('/api/avatar/')) {
     return res.json({ username, displayName: cached.displayName, profilePicUrl: cached.profilePicUrl });
   }
 
-  // 3. Fetch from tikwm.com (public TikTok scraper — returns real avatar + nickname)
-  let displayName = username;
-  let profilePicUrl = uiAvatar(username);
-  try {
-    const tikwm = await axios.get(
-      `https://www.tikwm.com/api/user/info?unique_id=${encodeURIComponent(username)}`,
-      { timeout: 8000, headers: { 'User-Agent': 'Mozilla/5.0' } }
-    );
-    const user = tikwm.data?.data?.user;
-    if (user) {
-      if (user.nickname) displayName = user.nickname;
-      const avatarUrl = user.avatarLarger || user.avatarMedium || user.avatarThumb;
-      if (avatarUrl) profilePicUrl = `/api/img?url=${encodeURIComponent(avatarUrl)}`;
-      console.log(`[tiktok-info] @${username} → "${displayName}" pic=${avatarUrl?.slice(0,60)}...`);
-    }
-  } catch (e) {
-    console.warn(`[tiktok-info] tikwm failed for @${username}:`, e.message);
-    // 4. Fallback: TikTok oEmbed (display name only)
+  // 3. Fetch from tikwm.com — downloads avatar locally so URL never expires
+  const info = await fetchTikwmUser(username);
+  const displayName = info?.displayName || username;
+  const profilePicUrl = info?.profilePicUrl || uiAvatar(username);
+
+  if (!info) {
+    // Fallback: TikTok oEmbed for display name only
     try {
       const oEmbed = await axios.get(
         `https://www.tiktok.com/oembed?url=https://www.tiktok.com/@${username}`,
         { timeout: 5000, headers: { 'User-Agent': 'Mozilla/5.0' } }
       );
-      if (oEmbed.data?.author_name) displayName = oEmbed.data.author_name;
+      if (oEmbed.data?.author_name) {
+        saveToCache(username, { uniqueId: username, displayName: oEmbed.data.author_name, profilePicUrl });
+        return res.json({ username, displayName: oEmbed.data.author_name, profilePicUrl });
+      }
     } catch (_) {}
   }
 
   saveToCache(username, { uniqueId: username, displayName, profilePicUrl });
   res.json({ username, displayName, profilePicUrl });
+});
+
+/* ── Serve locally-cached avatar images ── */
+app.get('/api/avatar/:username', (req, res) => {
+  const username = decodeURIComponent(req.params.username);
+  const filePath = path.join(AVATAR_DIR, `${username}.jpg`);
+  if (!fs.existsSync(filePath)) return res.status(404).send('no avatar');
+  res.set('Cache-Control', 'public, max-age=86400');
+  res.sendFile(filePath);
 });
 
 /* ── Cache API ── */
@@ -430,33 +480,27 @@ app.post('/api/player', async (req, res) => {
   const id = username.trim().replace('@', '');
   if (players.has(id)) return res.status(409).json({ error: 'มีผู้เล่นนี้อยู่แล้ว' });
 
-  // Determine pic: already proxied, raw CDN, or needs fresh fetch
   let pic = profilePicUrl || '';
   let name = displayName || id;
 
-  if (!pic || pic.includes('ui-avatars.com')) {
-    // No real pic yet — fetch from tikwm or cache
+  const needsFetch = !pic || pic.includes('ui-avatars.com') || pic.includes('unavatar');
+
+  if (needsFetch) {
+    // Try cache first (only if avatar is already downloaded locally)
     const cached = loadFromCache(id);
-    if (cached?.profilePicUrl && !cached.profilePicUrl.includes('ui-avatars.com')) {
+    const cachedHasRealPic = cached?.profilePicUrl?.startsWith('/api/avatar/');
+    if (cachedHasRealPic) {
       pic = cached.profilePicUrl;
       if (!displayName || displayName === id) name = cached.displayName || id;
     } else {
-      try {
-        const tikwm = await axios.get(
-          `https://www.tikwm.com/api/user/info?unique_id=${encodeURIComponent(id)}`,
-          { timeout: 8000, headers: { 'User-Agent': 'Mozilla/5.0' } }
-        );
-        const user = tikwm.data?.data?.user;
-        if (user) {
-          if (!displayName || displayName === id) name = user.nickname || id;
-          const avatarUrl = user.avatarLarger || user.avatarMedium || user.avatarThumb;
-          if (avatarUrl) pic = `/api/img?url=${encodeURIComponent(avatarUrl)}`;
-          saveToCache(id, { uniqueId: id, displayName: name, profilePicUrl: pic });
-        }
-      } catch (_) {}
+      // Fetch fresh from tikwm — downloads avatar to disk
+      const info = await fetchTikwmUser(id);
+      if (info) {
+        pic = info.profilePicUrl;
+        if (!displayName || displayName === id) name = info.displayName;
+        saveToCache(id, { uniqueId: id, displayName: name, profilePicUrl: pic });
+      }
     }
-  } else if (pic.includes('tiktokcdn') || pic.includes('muscdn')) {
-    pic = `/api/img?url=${encodeURIComponent(pic)}`;
   }
 
   if (!pic) pic = uiAvatar(id);

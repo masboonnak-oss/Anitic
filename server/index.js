@@ -583,8 +583,14 @@ app.post('/api/reset', (req, res) => {
   res.json({ ok: true });
 });
 
+// threshold ของ Top1 — { id, win } หรือ null — เก็บไว้ server side ให้ OBS reload ก็รอด
+let top1Threshold = null;
+
 app.post('/api/reset-top1', (req, res) => {
-  io.emit('top1Reset');
+  const sorted = Array.from(players.values()).sort((a, b) => b.win - a.win);
+  const top = sorted[0];
+  top1Threshold = top ? { id: top.id, win: top.win } : null;
+  io.emit('top1Reset', top1Threshold);
   res.json({ ok: true });
 });
 
@@ -595,6 +601,8 @@ io.on('connection', (socket) => {
   socket.emit('players', sorted);
   socket.emit('liveStatus', { status: liveStatus, host: liveHost, error: liveError, commenterCount: commenters.size });
   socket.emit('commenters', Array.from(commenters.values()).sort((a, b) => b.lastSeen - a.lastSeen).slice(0, MAX_COMMENTERS));
+  // ส่ง threshold ปัจจุบันให้ทุก client ที่ connect ใหม่ (รวม OBS reload)
+  socket.emit('top1Threshold', top1Threshold);
 });
 
 const PORT = 3001;

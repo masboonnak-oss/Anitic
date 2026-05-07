@@ -201,13 +201,19 @@ export default function Top1Page() {
     document.body.style.background = 'transparent';
     document.documentElement.style.background = 'transparent';
 
-    socket.on('top1Reset', () => {
+    // รับ threshold จาก server ตอน connect ใหม่ (OBS reload ก็รอด)
+    socket.on('top1Threshold', (threshold) => {
+      thresholdRef.current = threshold;
+      // ถ้ามี threshold และ lockedTop ปัจจุบันคือคนที่ถูก reset → ล้างจอ
       const cur = lockedRef.current;
-      if (cur) {
-        thresholdRef.current = { id: cur.id, win: cur.win };
-      } else {
-        thresholdRef.current = null;
+      if (threshold && cur && cur.id === threshold.id && cur.win <= threshold.win) {
+        lockedRef.current = null;
+        setLockedTop(null);
       }
+    });
+
+    socket.on('top1Reset', (threshold) => {
+      thresholdRef.current = threshold; // threshold มาจาก server โดยตรง
       lockedRef.current = null;
       setLockedTop(null);
     });
@@ -247,7 +253,7 @@ export default function Top1Page() {
       // ทุกกรณีอื่น — ล็อคไว้
     });
 
-    return () => { socket.off('players'); socket.off('top1Reset'); };
+    return () => { socket.off('players'); socket.off('top1Reset'); socket.off('top1Threshold'); };
   }, []);
 
   return (

@@ -441,14 +441,12 @@ function NewKingOverlay({ king, onDone }) {
 
 export default function Overlay() {
   const [players, setPlayers] = useState([]);
-  const [newKing, setNewKing] = useState(null);
 
   useEffect(() => {
     document.body.style.background = 'transparent';
     document.documentElement.style.background = 'transparent';
     socket.on('players', setPlayers);
-    socket.on('newKing', (king) => setNewKing(king));
-    return () => { socket.off('players'); socket.off('newKing'); };
+    return () => socket.off('players');
   }, []);
 
   const top3 = players.slice(0, 3);
@@ -499,10 +497,6 @@ export default function Overlay() {
           );
         })}
       </div>
-
-      {newKing && (
-        <NewKingOverlay key={newKing.id + '_' + newKing.win} king={newKing} onDone={() => setNewKing(null)} />
-      )}
     </div>
   );
 }

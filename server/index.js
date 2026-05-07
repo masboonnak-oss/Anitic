@@ -115,7 +115,29 @@ function proxiedPic(url, username) {
 }
 
 /* ── TikTok Live connection ── */
+let retryTimer = null;
+let retryAttempt = 0;
+const MAX_RETRIES = 6;
+
+function classifyError(msg) {
+  if (msg.includes('UserOffline') || msg.includes('not live') || msg.includes('OFFLINE'))
+    return { code: 'OFFLINE', th: 'ผู้ใช้ไม่ได้ไลฟ์อยู่' };
+  if (msg.includes('Room ID') || msg.includes('sources'))
+    return { code: 'ROOM_NOT_FOUND', th: 'หา Room ID ไม่เจอ — อาจไม่ได้ไลฟ์ หรือ IP ถูกบล็อค' };
+  if (msg.includes('Access Denied') || msg.includes('403') || msg.includes('Forbidden'))
+    return { code: 'IP_BANNED', th: 'IP ถูกบล็อค (Access Denied 403)' };
+  if (msg.includes('Session') || msg.includes('Unauthorized') || msg.includes('401') || msg.includes('sessionid'))
+    return { code: 'SESSION_EXPIRED', th: 'Session หมดอายุ — กรุณาอัปเดต TIKTOK_SESSION_ID ใหม่' };
+  if (msg.includes('timeout') || msg.includes('ETIMEDOUT') || msg.includes('ECONNREFUSED'))
+    return { code: 'NETWORK', th: 'Network timeout / เชื่อมต่อไม่ได้' };
+  if (msg.includes('Sign') || msg.includes('signature') || msg.includes('eulerstream'))
+    return { code: 'SIGN_FAIL', th: 'Euler sign server ตอบสนองไม่ได้' };
+  return { code: 'UNKNOWN', th: msg.slice(0, 120) };
+}
+
 function disconnectLive() {
+  if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+  retryAttempt = 0;
   if (liveConnection) {
     try { liveConnection.disconnect(); } catch (_) {}
     liveConnection = null;
@@ -126,8 +148,17 @@ function disconnectLive() {
   broadcastLiveStatus();
 }
 
-function connectLive(username) {
-  disconnectLive();
+function connectLive(username, attempt) {
+  if (attempt === undefined) {
+    // Fresh connect — reset retries
+    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+    retryAttempt = 0;
+    if (liveConnection) {
+      try { liveConnection.disconnect(); } catch (_) {}
+      liveConnection = null;
+    }
+    liveHost = username;
+  }
 
   if (!TikTokLiveConnection) {
     liveStatus = 'error';
@@ -136,21 +167,34 @@ function connectLive(username) {
     return;
   }
 
-  liveHost = username;
   liveStatus = 'connecting';
-  liveError = null;
+  liveError = attempt > 0 ? `กำลัง retry ครั้งที่ ${attempt}/${MAX_RETRIES}...` : null;
   broadcastLiveStatus();
+
+  const sessionId = process.env.TIKTOK_SESSION_ID;
+
+  const connOptions = {
+    processInitialData: true,
+    fetchRoomInfoOnConnect: true,
+    enableExtendedGiftInfo: false,
+    ...(sessionId ? {
+      session: { cookie: { sessionId } },
+      authenticateWs: true,
+    } : {}),
+  };
+
+  console.log(`[TikTok] Connecting to @${username}` +
+    (attempt > 0 ? ` (retry ${attempt}/${MAX_RETRIES})` : '') +
+    (sessionId ? ' [Session Cookie ✓]' : ' [No Session — anonymous]'));
 
   let conn;
   try {
-    conn = new TikTokLiveConnection(username, {
-      processInitialData: false,
-      fetchRoomInfoOnConnect: false,
-      enableExtendedGiftInfo: false,
-    });
+    conn = new TikTokLiveConnection(username, connOptions);
   } catch (e) {
+    console.error('[TikTok] Failed to create connection:', e.message);
     liveStatus = 'error';
     liveError = e.message || 'สร้าง connection ไม่ได้';
+    liveConnection = null;
     broadcastLiveStatus();
     return;
   }
@@ -159,20 +203,35 @@ function connectLive(username) {
 
   conn.connect()
     .then(() => {
+      console.log(`[TikTok] ✅ Connected to @${username}`);
+      retryAttempt = 0;
       liveStatus = 'connected';
       liveError = null;
       broadcastLiveStatus();
     })
     .catch((err) => {
       const msg = err?.message || String(err);
-      // Detect known IP-block errors
-      const isBlocked = msg.includes('Room ID') || msg.includes('sources') || msg.includes('fetch') || msg.includes('Response');
-      liveStatus = 'error';
-      liveError = isBlocked
-        ? 'TikTok บล็อค Cloud Server\nต้องรันแอปบนเครื่องตัวเองเท่านั้น (localhost) — ไม่ใช่ Replit cloud'
-        : (msg || 'เชื่อมต่อไม่ได้');
+      const { code, th } = classifyError(msg);
+      console.error(`[TikTok] ❌ Connect failed [${code}]: ${msg}`);
       liveConnection = null;
-      broadcastLiveStatus();
+
+      // Non-retryable errors
+      const noRetry = code === 'OFFLINE' || code === 'SESSION_EXPIRED';
+      const canRetry = !noRetry && retryAttempt < MAX_RETRIES;
+
+      if (canRetry) {
+        retryAttempt++;
+        const delay = Math.min(2000 * Math.pow(2, retryAttempt - 1), 60000); // 2s, 4s, 8s … 60s
+        console.log(`[TikTok] Retry ${retryAttempt}/${MAX_RETRIES} in ${delay / 1000}s...`);
+        liveStatus = 'connecting';
+        liveError = `[${code}] ${th} — retry ${retryAttempt}/${MAX_RETRIES} ใน ${delay / 1000}s`;
+        broadcastLiveStatus();
+        retryTimer = setTimeout(() => connectLive(username, retryAttempt), delay);
+      } else {
+        liveStatus = 'error';
+        liveError = `[${code}] ${th}`;
+        broadcastLiveStatus();
+      }
     });
 
   // New API: use WebcastEvent constants or plain strings

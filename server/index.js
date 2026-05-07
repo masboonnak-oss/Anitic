@@ -177,6 +177,52 @@ function connectLive(username) {
   });
 }
 
+/* ── External chat endpoint (from bookmarklet running in browser on tiktok.com) ── */
+app.post('/api/external-chat', (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  const { uniqueId, nickname, profilePicUrl } = req.body;
+  if (!uniqueId) return res.status(400).json({ error: 'uniqueId required' });
+
+  const uid = String(uniqueId).trim().replace('@', '');
+  if (!uid) return res.status(400).json({ error: 'invalid uniqueId' });
+
+  const existing = commenters.get(uid);
+  commenters.set(uid, {
+    uniqueId: uid,
+    nickname: nickname || existing?.nickname || uid,
+    profilePicUrl: (() => {
+      const raw = profilePicUrl || existing?.profilePicUrl || '';
+      if (!raw) return `/api/img?url=${encodeURIComponent(`https://unavatar.io/tiktok/${uid}`)}`;
+      if (raw.includes('tiktokcdn') || raw.includes('muscdn')) return `/api/img?url=${encodeURIComponent(raw)}`;
+      return raw;
+    })(),
+    lastSeen: Date.now(),
+    msgCount: (existing?.msgCount || 0) + 1,
+    lastMsg: existing?.lastMsg || '',
+    source: 'bookmarklet',
+  });
+
+  broadcastCommenters();
+  res.json({ ok: true, count: commenters.size });
+});
+
+/* preflight for bookmarklet CORS */
+app.options('/api/external-chat', (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+  res.set('Access-Control-Allow-Methods', 'POST');
+  res.sendStatus(204);
+});
+
+/* ── Serve bookmarklet.js from public/ with correct Content-Type ── */
+const path = require('path');
+app.get('/bookmarklet.js', (req, res) => {
+  res.set('Content-Type', 'application/javascript');
+  res.set('Cache-Control', 'no-cache');
+  res.set('Access-Control-Allow-Origin', '*');
+  res.sendFile(path.join(__dirname, '../public/bookmarklet.js'));
+});
+
 /* ── Live API ── */
 app.post('/api/live/connect', (req, res) => {
   const { username } = req.body;

@@ -1,0 +1,175 @@
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;700;900&display=swap');
+
+.wrap {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1.5px solid #2a2010;
+  margin-bottom: 12px;
+}
+
+/* ── Toggle ── */
+.toggle {
+  width: 100%;
+  display: flex; align-items: center; gap: 10px;
+  background: #100e00;
+  border: none; color: #ccc;
+  padding: 11px 16px;
+  font-family: 'Kanit', sans-serif; font-size: 14px; font-weight: 700;
+  cursor: pointer; text-align: left;
+  transition: background 0.2s;
+}
+.toggle:hover { background: #1a1500; }
+.toggleOpen   { background: #131000; color: #ffd700; }
+.icon  { font-size: 16px; }
+.badge {
+  display: inline-block;
+  background: #fe2c55; color: #fff;
+  font-size: 11px; font-weight: 900;
+  border-radius: 99px; padding: 1px 8px;
+  margin-left: 4px;
+}
+.tag {
+  margin-left: auto;
+  background: #1a2800; color: #66cc44;
+  font-size: 10px; font-weight: 900;
+  border-radius: 6px; padding: 2px 8px;
+  border: 1px solid #335500;
+  white-space: nowrap;
+}
+.chevron { font-size: 10px; color: #555; }
+
+/* ── Panel ── */
+.panel {
+  background: #0a0900;
+  border-top: 1px solid #2a2010;
+  display: flex; flex-direction: column; gap: 0;
+}
+
+/* ── How-to box ── */
+.howBox {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid #1a1500;
+}
+.howTitle {
+  font-family: 'Kanit', sans-serif;
+  font-size: 13px; font-weight: 900; color: #ffd700;
+  margin-bottom: 8px;
+}
+.steps {
+  font-family: 'Kanit', sans-serif;
+  font-size: 12px; color: #aaa; line-height: 1.85;
+  padding-left: 18px; margin: 0;
+}
+.steps strong { color: #fff; }
+.steps li { margin-bottom: 2px; }
+
+/* ── Drag box ── */
+.dragBox {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px 4px;
+}
+.dragLink {
+  display: inline-block;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #ffd700, #ffaa00);
+  color: #000;
+  font-family: 'Kanit', sans-serif; font-size: 13px; font-weight: 900;
+  border-radius: 10px;
+  text-decoration: none;
+  cursor: grab;
+  box-shadow: 0 0 18px rgba(255,215,0,0.45), 0 2px 8px rgba(0,0,0,0.5);
+  border: 2px solid #fff3;
+  transition: transform 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+  user-select: none;
+}
+.dragLink:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 28px rgba(255,215,0,0.65), 0 2px 12px rgba(0,0,0,0.6);
+}
+.dragLink:active { cursor: grabbing; }
+.copyBtn {
+  padding: 8px 14px;
+  background: #1a1a2e; border: 1.5px solid #333; border-radius: 8px;
+  color: #ccc; font-family: 'Kanit', sans-serif; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: background 0.15s;
+  white-space: nowrap;
+}
+.copyBtn:hover { background: #22223a; color: #fff; }
+
+.dragHint {
+  padding: 4px 16px 14px;
+  font-size: 11px; color: #555; font-style: italic;
+  font-family: 'Kanit', sans-serif;
+}
+
+/* ── List header ── */
+.listHdr {
+  padding: 10px 16px 8px;
+  font-family: 'Kanit', sans-serif;
+  font-size: 12px; color: #888;
+  border-top: 1px solid #1a1500;
+}
+.listHdr strong { color: #ffd700; }
+
+/* ── Commenter rows ── */
+.list {
+  display: flex; flex-direction: column; gap: 0;
+  max-height: 340px; overflow-y: auto;
+}
+.list::-webkit-scrollbar { width: 5px; }
+.list::-webkit-scrollbar-track { background: #0a0900; }
+.list::-webkit-scrollbar-thumb { background: #2a2010; border-radius: 3px; }
+
+.row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px;
+  border-bottom: 1px solid #111008;
+  transition: background 0.12s;
+}
+.row:hover { background: #120f00; }
+.rowAdded  { opacity: 0.5; }
+
+.avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  object-fit: cover; flex-shrink: 0;
+  border: 1.5px solid #2a2010;
+}
+.info {
+  display: flex; flex-direction: column; gap: 1px;
+  flex: 1; min-width: 0;
+}
+.nick {
+  font-family: 'Kanit', sans-serif;
+  font-size: 13px; font-weight: 700; color: #fff;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.uid  {
+  font-size: 11px; color: #666;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.msg {
+  font-size: 11px; color: #444;
+  max-width: 120px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+  font-style: italic;
+}
+
+.addBtn {
+  flex-shrink: 0;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: #fe2c55; border: none; color: #fff;
+  font-size: 18px; font-weight: 900; line-height: 1;
+  cursor: pointer; transition: background 0.12s, transform 0.12s;
+  display: flex; align-items: center; justify-content: center;
+}
+.addBtn:hover:not(:disabled) { background: #ff5577; transform: scale(1.1); }
+.addedBtn { background: #224433 !important; color: #66cc88 !important; font-size: 14px; cursor: default !important; }
+.addBtn:disabled { cursor: default; }
+
+.waiting {
+  padding: 24px 16px; text-align: center;
+  font-family: 'Kanit', sans-serif;
+  font-size: 13px; color: #444; line-height: 1.7;
+}

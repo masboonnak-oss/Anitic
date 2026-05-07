@@ -277,8 +277,8 @@
 .goldBloom {
   position: absolute;
   top: 50%; left: 50%;
-  width: 420px; height: 420px;
-  margin: -210px 0 0 -210px;
+  width: 320px; height: 320px;
+  margin: -160px 0 0 -160px;
   background: radial-gradient(ellipse at 50% 52%,
     rgba(255,255,200,0.60) 0%,
     rgba(255,220,60,0.38)  18%,
@@ -361,21 +361,20 @@
 .silverBloom {
   position: absolute;
   top: 50%; left: 50%;
-  width: 340px; height: 340px;
-  margin: -170px 0 0 -170px;
+  width: 200px; height: 200px;
+  margin: -100px 0 0 -100px;
   background: radial-gradient(ellipse at 50% 52%,
-    rgba(210,240,255,0.55) 0%,
-    rgba(120,190,255,0.32) 22%,
-    rgba(60,120,230,0.18)  48%,
-    rgba(30,60,180,0.07)   68%,
-    transparent            82%);
+    rgba(210,240,255,0.50) 0%,
+    rgba(120,190,255,0.30) 35%,
+    rgba(60,120,230,0.14)  65%,
+    transparent            85%);
   border-radius: 50%;
   pointer-events: none; z-index: -2;
   animation: silverBloomPulse 3.4s ease-in-out infinite;
 }
 @keyframes silverBloomPulse {
-  0%,100% { opacity: 0.60; transform: scale(0.93); }
-  50%     { opacity: 1.00; transform: scale(1.08); }
+  0%,100% { opacity: 0.55; transform: scale(0.95); }
+  50%     { opacity: 0.90; transform: scale(1.08); }
 }
 
 /* Rotating dashed frost rings */
@@ -423,14 +422,13 @@
 .bronzeBloom {
   position: absolute;
   top: 50%; left: 50%;
-  width: 320px; height: 320px;
-  margin: -160px 0 0 -160px;
+  width: 190px; height: 190px;
+  margin: -95px 0 0 -95px;
   background: radial-gradient(ellipse at 50% 55%,
-    rgba(255,210,80,0.55)  0%,
-    rgba(255,130,20,0.35)  20%,
-    rgba(220,70,0,0.20)    44%,
-    rgba(150,30,0,0.08)    65%,
-    transparent            80%);
+    rgba(255,210,80,0.52)  0%,
+    rgba(255,130,20,0.30)  30%,
+    rgba(220,70,0,0.16)    60%,
+    transparent            82%);
   border-radius: 50%;
   pointer-events: none; z-index: -2;
   animation: bronzeFlicker 1.6s ease-in-out infinite;

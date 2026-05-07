@@ -181,8 +181,6 @@ function FxGold() {
   return (
     <>
       <div className={styles.goldBloom} />
-      <div className={styles.goldGodRays} />
-      <div className={styles.goldShaft} />
       {[
         { s: 9,  t: '10%', l: '12%', c: '#fff9c0', fd: '2.1s', fd2: '0.0s' },
         { s: 5,  t:  '7%', r: '16%', c: '#ffe566', fd: '2.8s', fd2: '0.7s' },

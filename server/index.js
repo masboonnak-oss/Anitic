@@ -375,16 +375,32 @@ app.get('/api/tiktok-info/:username', async (req, res) => {
     return res.json({ username, displayName: cached.displayName, profilePicUrl: cached.profilePicUrl });
   }
 
-  // 3. Fetch from TikTok oEmbed
-  const profilePicUrl = `/api/img?url=${encodeURIComponent(`https://unavatar.io/tiktok/${username}`)}`;
+  // 3. Fetch from tikwm.com (public TikTok scraper — returns real avatar + nickname)
   let displayName = username;
+  let profilePicUrl = uiAvatar(username);
   try {
-    const oEmbed = await axios.get(
-      `https://www.tiktok.com/oembed?url=https://www.tiktok.com/@${username}`,
-      { timeout: 5000, headers: { 'User-Agent': 'Mozilla/5.0' } }
+    const tikwm = await axios.get(
+      `https://www.tikwm.com/api/user/info?unique_id=${encodeURIComponent(username)}`,
+      { timeout: 8000, headers: { 'User-Agent': 'Mozilla/5.0' } }
     );
-    if (oEmbed.data?.author_name) displayName = oEmbed.data.author_name;
-  } catch (_) {}
+    const user = tikwm.data?.data?.user;
+    if (user) {
+      if (user.nickname) displayName = user.nickname;
+      const avatarUrl = user.avatarLarger || user.avatarMedium || user.avatarThumb;
+      if (avatarUrl) profilePicUrl = `/api/img?url=${encodeURIComponent(avatarUrl)}`;
+      console.log(`[tiktok-info] @${username} → "${displayName}" pic=${avatarUrl?.slice(0,60)}...`);
+    }
+  } catch (e) {
+    console.warn(`[tiktok-info] tikwm failed for @${username}:`, e.message);
+    // 4. Fallback: TikTok oEmbed (display name only)
+    try {
+      const oEmbed = await axios.get(
+        `https://www.tiktok.com/oembed?url=https://www.tiktok.com/@${username}`,
+        { timeout: 5000, headers: { 'User-Agent': 'Mozilla/5.0' } }
+      );
+      if (oEmbed.data?.author_name) displayName = oEmbed.data.author_name;
+    } catch (_) {}
+  }
 
   saveToCache(username, { uniqueId: username, displayName, profilePicUrl });
   res.json({ username, displayName, profilePicUrl });
@@ -408,16 +424,44 @@ app.get('/api/players', (req, res) => {
   res.json(sorted);
 });
 
-app.post('/api/player', (req, res) => {
+app.post('/api/player', async (req, res) => {
   const { username, displayName, profilePicUrl } = req.body;
   if (!username) return res.status(400).json({ error: 'username required' });
   const id = username.trim().replace('@', '');
   if (players.has(id)) return res.status(409).json({ error: 'มีผู้เล่นนี้อยู่แล้ว' });
-  // Proxy the pic if it's a TikTok CDN URL
-  const pic = profilePicUrl && (profilePicUrl.includes('tiktokcdn') || profilePicUrl.includes('muscdn'))
-    ? `/api/img?url=${encodeURIComponent(profilePicUrl)}`
-    : (profilePicUrl || `/api/img?url=${encodeURIComponent(`https://unavatar.io/tiktok/${id}`)}`);
-  players.set(id, { id, username: id, displayName: displayName || id, profilePicUrl: pic, win: 0, joinedAt: Date.now() });
+
+  // Determine pic: already proxied, raw CDN, or needs fresh fetch
+  let pic = profilePicUrl || '';
+  let name = displayName || id;
+
+  if (!pic || pic.includes('ui-avatars.com')) {
+    // No real pic yet — fetch from tikwm or cache
+    const cached = loadFromCache(id);
+    if (cached?.profilePicUrl && !cached.profilePicUrl.includes('ui-avatars.com')) {
+      pic = cached.profilePicUrl;
+      if (!displayName || displayName === id) name = cached.displayName || id;
+    } else {
+      try {
+        const tikwm = await axios.get(
+          `https://www.tikwm.com/api/user/info?unique_id=${encodeURIComponent(id)}`,
+          { timeout: 8000, headers: { 'User-Agent': 'Mozilla/5.0' } }
+        );
+        const user = tikwm.data?.data?.user;
+        if (user) {
+          if (!displayName || displayName === id) name = user.nickname || id;
+          const avatarUrl = user.avatarLarger || user.avatarMedium || user.avatarThumb;
+          if (avatarUrl) pic = `/api/img?url=${encodeURIComponent(avatarUrl)}`;
+          saveToCache(id, { uniqueId: id, displayName: name, profilePicUrl: pic });
+        }
+      } catch (_) {}
+    }
+  } else if (pic.includes('tiktokcdn') || pic.includes('muscdn')) {
+    pic = `/api/img?url=${encodeURIComponent(pic)}`;
+  }
+
+  if (!pic) pic = uiAvatar(id);
+
+  players.set(id, { id, username: id, displayName: name, profilePicUrl: pic, win: 0, joinedAt: Date.now() });
   broadcast();
   res.json(players.get(id));
 });

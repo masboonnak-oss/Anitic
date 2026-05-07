@@ -150,13 +150,20 @@ function connectLive(username) {
     const picRaw    = data?.user?.profilePictureUrl || data?.user?.avatarUrl || data?.profilePictureUrl;
     if (!uid) return;
 
+    const picUrl = proxiedPic(picRaw, uid);
     commenters.set(uid, {
       uniqueId: uid,
       nickname: nickname || uid,
-      profilePicUrl: proxiedPic(picRaw, uid),
+      profilePicUrl: picUrl,
       lastSeen: Date.now(),
       msgCount: (commenters.get(uid)?.msgCount || 0) + 1,
       lastMsg: data?.comment || '',
+    });
+
+    io.emit('chatCapture', {
+      uniqueId: uid,
+      displayName: nickname || uid,
+      profilePicUrl: picUrl,
     });
 
     // Trim excess

@@ -25,28 +25,28 @@ const CONFIGS = [
   },
 ];
 
-/* Lightning colour themes — 4 shades from light → dark */
+/* Lightning colour themes */
 const LC = {
   gold:   { strokes: ['#fffde0', '#ffd700', '#ffaa00', '#ff6600'] },
   silver: { strokes: ['#eef4ff', '#aaccff', '#5588ff', '#2244bb'] },
   bronze: { strokes: ['#ffeedd', '#ffcc88', '#ff7722', '#bb2200'] },
 };
 
-/* ── Orbiting lightning ring ── */
+/* ── Flowing electric current (dashoffset animation) ── */
 function LightningOrbit({ label, frameSize }) {
   const lc = LC[label];
-  const pad = 20;
+  const pad = 22;
   const svgSz = frameSize + pad * 2;
   const cx = svgSz / 2;
   const cy = svgSz / 2;
   const baseR = frameSize / 2;
 
-  /* [radiusOffset, strokeWidth, dashArray, speed, clockwise, colorIdx, opacity] */
+  /* [radiusOffset, strokeWidth, dashRatio (lit/gap), speed(s), clockwise, colorIdx, opacity] */
   const rings = [
-    [  5, 2.2, '24 16 6 60',  3.2,  true,  0, 1.00],
-    [ 11, 1.6, '14 24 4 58',  6.0,  false, 2, 0.85],
-    [  1, 1.3, '8  30',        2.1,  true,  1, 0.75],
-    [ 16, 1.0, '5  42',        8.5,  false, 3, 0.50],
+    [  5, 2.4, [0.18, 0.06, 0.04],  2.8,  true,  0, 1.00],
+    [ 11, 1.7, [0.10, 0.10],         5.0,  false, 2, 0.85],
+    [  1, 1.3, [0.07, 0.15],         1.9,  true,  1, 0.72],
+    [ 16, 1.0, [0.04, 0.20],         7.5,  false, 3, 0.55],
   ];
 
   return (
@@ -57,29 +57,35 @@ function LightningOrbit({ label, frameSize }) {
     >
       <defs>
         <filter id={`og-${label}`} x="-40%" y="-40%" width="180%" height="180%">
-          <feGaussianBlur stdDeviation="3" result="b" />
+          <feGaussianBlur stdDeviation="2.8" result="b" />
           <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
       </defs>
 
-      {rings.map(([rOff, sw, dash, spd, cw, ci, op], i) => (
-        <circle
-          key={i}
-          cx={cx} cy={cy}
-          r={baseR + rOff}
-          fill="none"
-          stroke={lc.strokes[ci]}
-          strokeWidth={sw}
-          strokeDasharray={dash}
-          strokeLinecap="round"
-          opacity={op}
-          filter={`url(#og-${label})`}
-          style={{
-            transformOrigin: `${cx}px ${cy}px`,
-            animation: `${cw ? 'orbitCW' : 'orbitCCW'} ${spd}s linear infinite`,
-          }}
-        />
-      ))}
+      {rings.map(([rOff, sw, dashRatios, spd, cw, ci, op], i) => {
+        const r = baseR + rOff;
+        const circ = 2 * Math.PI * r;
+        /* Build dasharray from ratios of circumference */
+        const dashArr = dashRatios.map(ratio => (circ * ratio).toFixed(1)).join(' ');
+        return (
+          <circle
+            key={i}
+            cx={cx} cy={cy} r={r}
+            fill="none"
+            stroke={lc.strokes[ci]}
+            strokeWidth={sw}
+            strokeDasharray={dashArr}
+            strokeLinecap="round"
+            opacity={op}
+            filter={`url(#og-${label})`}
+            style={{
+              '--circ': circ.toFixed(1),
+              '--spd': `${spd}s`,
+              animation: `${cw ? 'flowCW' : 'flowCCW'} ${spd}s linear infinite`,
+            }}
+          />
+        );
+      })}
     </svg>
   );
 }
@@ -98,22 +104,13 @@ function Avatar({ player, cfg }) {
   const [err, setErr] = useState(false);
   return (
     <div className={styles.avatarWrap} style={{ width: cfg.frameSize, height: cfg.frameSize }}>
-      {/* Orbiting lightning — behind everything */}
       <LightningOrbit label={cfg.label} frameSize={cfg.frameSize} />
-
-      {/* Decorative frame */}
       <img
         src="/gold-frame2.png"
         className={`${styles.frameImg} ${styles['frame_' + cfg.label]}`}
-        alt=""
-        draggable={false}
+        alt="" draggable={false}
       />
-
-      {/* Profile circle — front */}
-      <div
-        className={styles.avatarCircle}
-        style={{ width: cfg.avatarSize, height: cfg.avatarSize }}
-      >
+      <div className={styles.avatarCircle} style={{ width: cfg.avatarSize, height: cfg.avatarSize }}>
         {!err && player.profilePicUrl ? (
           <img
             src={player.profilePicUrl}
@@ -159,25 +156,25 @@ export default function Overlay() {
 
                 {/* Crown / medal */}
                 <div className={`${styles.crownWrap} ${isFirst ? styles.crownFirst : styles.crownSmall}`}>
-                  {isFirst
-                    ? <span className={styles.crownGold}>👑</span>
-                    : <span className={cfg.rank === 2 ? styles.crownSilver : styles.crownBronze}>
-                        {cfg.rank === 2 ? '🥈' : '🥉'}
-                      </span>
-                  }
+                  {isFirst ? (
+                    <img src="/crown-king.png" className={styles.crownKing} alt="crown" draggable={false} />
+                  ) : (
+                    <span className={cfg.rank === 2 ? styles.crownSilver : styles.crownBronze}>
+                      {cfg.rank === 2 ? '🥈' : '🥉'}
+                    </span>
+                  )}
                 </div>
 
                 <Avatar player={p} cfg={cfg} />
 
+                {/* Display name (falls back to username) */}
                 <div className={`${styles.playerName} ${isFirst ? styles.nameFirst : ''}`}>
-                  {p.displayName || p.username}
+                  {p.displayName && p.displayName !== p.username ? p.displayName : p.username}
                 </div>
 
-                {/* WIN counter — big and clear */}
+                {/* WIN counter */}
                 <div className={`${styles.winsBadge} ${styles[cfg.label + 'WinsBadge']}`}>
-                  <span className={`${styles.winsNum} ${styles[cfg.label + 'WinsNum']}`}>
-                    {p.win}
-                  </span>
+                  <span className={`${styles.winsNum} ${styles[cfg.label + 'WinsNum']}`}>{p.win}</span>
                   <span className={styles.winsLabel}>WINS</span>
                 </div>
               </div>

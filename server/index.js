@@ -27,24 +27,29 @@ app.get('/api/tiktok-info/:username', async (req, res) => {
 
   const profilePicUrl = `https://unavatar.io/tiktok/${username}`;
 
-  // Try to get display name from TikTok page
+  // Try TikTok oEmbed API to get real display name
   let displayName = username;
   try {
-    const r = await axios.get(`https://www.tiktok.com/@${username}`, {
-      timeout: 6000,
-      maxRedirects: 5,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-      }
-    });
-    const html = r.data;
-    // Try to extract nickname from page JSON
-    const nickMatch = html.match(/"nickname":"([^"]+)"/);
-    if (nickMatch) displayName = nickMatch[1];
+    const oEmbed = await axios.get(
+      `https://www.tiktok.com/oembed?url=https://www.tiktok.com/@${username}`,
+      { timeout: 6000, headers: { 'User-Agent': 'Mozilla/5.0' } }
+    );
+    if (oEmbed.data && oEmbed.data.author_name) {
+      displayName = oEmbed.data.author_name;
+    }
   } catch (e) {
-    // fallback to username
+    // fallback: try scraping nickname from profile page
+    try {
+      const r = await axios.get(`https://www.tiktok.com/@${username}`, {
+        timeout: 6000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15',
+          'Accept-Language': 'en-US,en;q=0.9',
+        }
+      });
+      const nickMatch = r.data.match(/"nickname":"([^"]+)"/);
+      if (nickMatch) displayName = nickMatch[1];
+    } catch (_) { /* use username as fallback */ }
   }
 
   res.json({ username, displayName, profilePicUrl });

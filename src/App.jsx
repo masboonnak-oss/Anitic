@@ -3,7 +3,6 @@ import { io } from 'socket.io-client';
 import Podium from './components/Podium.jsx';
 import PlayerList from './components/PlayerList.jsx';
 import AddPlayer from './components/AddPlayer.jsx';
-import ChatCapture from './components/ChatCapture.jsx';
 import styles from './App.module.css';
 
 const socket = io('/', { transports: ['websocket', 'polling'] });
@@ -84,15 +83,6 @@ export default function App() {
       </div>
 
       <main className={styles.main}>
-        <ChatCapture onAddPlayer={async (c) => {
-          await handleAdd({
-            username: c.uniqueId,
-            displayName: c.displayName || c.uniqueId,
-            profilePicUrl: c.profilePicUrl || '',
-          });
-          notify(`เพิ่ม ${c.displayName || c.uniqueId} แล้ว`);
-        }} />
-
         <AddPlayer onAdd={handleAdd} />
 
         {players.length === 0 ? (

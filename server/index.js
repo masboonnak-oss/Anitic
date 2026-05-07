@@ -3,6 +3,40 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+
+/* ── Cache folder ── */
+const CACHE_DIR = path.join(__dirname, '../cache');
+if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
+
+function saveToCache(uniqueId, data) {
+  try {
+    const file = path.join(CACHE_DIR, `${uniqueId}.json`);
+    const existing = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
+    fs.writeFileSync(file, JSON.stringify({ ...existing, ...data, updatedAt: Date.now() }, null, 2));
+  } catch (_) {}
+}
+
+function loadFromCache(uniqueId) {
+  try {
+    const file = path.join(CACHE_DIR, `${uniqueId}.json`);
+    if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch (_) {}
+  return null;
+}
+
+function loadAllCache() {
+  try {
+    return fs.readdirSync(CACHE_DIR)
+      .filter(f => f.endsWith('.json'))
+      .map(f => {
+        try { return JSON.parse(fs.readFileSync(path.join(CACHE_DIR, f), 'utf8')); }
+        catch (_) { return null; }
+      })
+      .filter(Boolean);
+  } catch (_) { return []; }
+}
 
 let TikTokLiveConnection, WebcastEvent;
 try {
@@ -151,20 +185,19 @@ function connectLive(username) {
     if (!uid) return;
 
     const picUrl = proxiedPic(picRaw, uid);
+    const displayName = nickname || uid;
     commenters.set(uid, {
       uniqueId: uid,
-      nickname: nickname || uid,
+      nickname: displayName,
       profilePicUrl: picUrl,
       lastSeen: Date.now(),
       msgCount: (commenters.get(uid)?.msgCount || 0) + 1,
       lastMsg: data?.comment || '',
     });
 
-    io.emit('chatCapture', {
-      uniqueId: uid,
-      displayName: nickname || uid,
-      profilePicUrl: picUrl,
-    });
+    saveToCache(uid, { uniqueId: uid, displayName, profilePicUrl: picUrl });
+
+    io.emit('chatCapture', { uniqueId: uid, displayName, profilePicUrl: picUrl });
 
     // Trim excess
     if (commenters.size > MAX_COMMENTERS * 2) {
@@ -228,7 +261,6 @@ app.options('/api/external-chat', (req, res) => {
 });
 
 /* ── Serve bookmarklet.js from public/ with correct Content-Type ── */
-const path = require('path');
 app.get('/bookmarklet.js', (req, res) => {
   res.set('Content-Type', 'application/javascript');
   res.set('Cache-Control', 'no-cache');
@@ -267,12 +299,19 @@ app.get('/api/tiktok-info/:username', async (req, res) => {
   const username = req.params.username.replace('@', '').trim();
   if (!username) return res.status(400).json({ error: 'username required' });
 
-  // Check live commenters first (has real nickname!)
+  // 1. Live commenters (most fresh data)
   if (commenters.has(username)) {
     const c = commenters.get(username);
     return res.json({ username, displayName: c.nickname, profilePicUrl: c.profilePicUrl });
   }
 
+  // 2. Cache folder
+  const cached = loadFromCache(username);
+  if (cached?.displayName && cached?.profilePicUrl) {
+    return res.json({ username, displayName: cached.displayName, profilePicUrl: cached.profilePicUrl });
+  }
+
+  // 3. Fetch from TikTok oEmbed
   const profilePicUrl = `/api/img?url=${encodeURIComponent(`https://unavatar.io/tiktok/${username}`)}`;
   let displayName = username;
   try {
@@ -283,7 +322,19 @@ app.get('/api/tiktok-info/:username', async (req, res) => {
     if (oEmbed.data?.author_name) displayName = oEmbed.data.author_name;
   } catch (_) {}
 
+  saveToCache(username, { uniqueId: username, displayName, profilePicUrl });
   res.json({ username, displayName, profilePicUrl });
+});
+
+/* ── Cache API ── */
+app.get('/api/cache', (req, res) => {
+  res.json(loadAllCache());
+});
+
+app.get('/api/cache/:username', (req, res) => {
+  const data = loadFromCache(req.params.username);
+  if (!data) return res.status(404).json({ error: 'not in cache' });
+  res.json(data);
 });
 
 app.get('/api/players', (req, res) => {

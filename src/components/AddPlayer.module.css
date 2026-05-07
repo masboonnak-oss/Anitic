@@ -7,13 +7,41 @@
 .form {
   display: flex;
   gap: 10px;
+  align-items: flex-start;
+  flex-wrap: wrap;
 }
 
 .inputWrap {
   flex: 1;
+  min-width: 180px;
   position: relative;
   display: flex;
   align-items: center;
+}
+
+.nameWrap {
+  flex: 1;
+  min-width: 180px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.nameAvatar {
+  position: absolute;
+  left: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid #25f4ee;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.nameInput {
+  padding-left: 46px !important;
 }
 
 .at {
@@ -39,6 +67,7 @@
   transition: border-color 0.2s;
 }
 .input:focus { border-color: #fe2c55; }
+.input::placeholder { color: #555; }
 
 .spinner {
   position: absolute;
@@ -49,6 +78,7 @@
   border-top-color: #fe2c55;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
+  pointer-events: none;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -64,46 +94,7 @@
   cursor: pointer;
   white-space: nowrap;
   transition: opacity 0.2s;
+  align-self: flex-start;
 }
 .btn:hover:not(:disabled) { opacity: 0.85; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-.preview {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #13131f;
-  border: 1.5px solid #25f4ee44;
-  border-radius: 10px;
-  padding: 10px 16px;
-  animation: fadeIn 0.25s ease;
-}
-@keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
-
-.previewImg {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #25f4ee;
-  flex-shrink: 0;
-}
-
-.previewInfo { flex: 1; }
-
-.previewName {
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.previewUser {
-  font-size: 12px;
-  color: #666;
-  margin-top: 2px;
-}
-
-.previewCheck {
-  font-size: 13px;
-  font-weight: 600;
-  color: #22c55e;
-}

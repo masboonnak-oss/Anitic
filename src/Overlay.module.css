@@ -110,15 +110,6 @@
   overflow: visible;
 }
 
-/* Flowing electric current via stroke-dashoffset */
-@keyframes flowCW  {
-  from { stroke-dashoffset: 0; }
-  to   { stroke-dashoffset: calc(-1 * var(--circ)); }
-}
-@keyframes flowCCW {
-  from { stroke-dashoffset: 0; }
-  to   { stroke-dashoffset: var(--circ); }
-}
 
 /* ── FRAME ── */
 .frameImg {

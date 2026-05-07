@@ -2,81 +2,96 @@ import React, { useState, useRef } from 'react';
 import styles from './AddPlayer.module.css';
 
 export default function AddPlayer({ onAdd }) {
-  const [input, setInput] = useState('');
-  const [preview, setPreview] = useState(null);
+  const [username, setUsername] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [profilePicUrl, setProfilePicUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef(null);
 
-  function handleChange(e) {
+  function handleUsernameChange(e) {
     const val = e.target.value;
-    setInput(val);
-    setPreview(null);
+    setUsername(val);
+    setDisplayName('');
+    setProfilePicUrl('');
 
-    const username = val.trim().replace('@', '');
-    if (!username || username.length < 2) return;
+    const uname = val.trim().replace('@', '');
+    if (!uname || uname.length < 2) return;
 
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/tiktok-info/${encodeURIComponent(username)}`);
+        const res = await fetch(`/api/tiktok-info/${encodeURIComponent(uname)}`);
         const data = await res.json();
-        setPreview(data);
-      } catch (e) {
-        setPreview({ username, displayName: username, profilePicUrl: `https://unavatar.io/tiktok/${username}` });
+        setProfilePicUrl(data.profilePicUrl || `https://unavatar.io/tiktok/${uname}`);
+        // Only pre-fill name if server returned something different from username
+        if (data.displayName && data.displayName !== uname) {
+          setDisplayName(data.displayName);
+        }
+      } catch (_) {
+        setProfilePicUrl(`https://unavatar.io/tiktok/${uname}`);
       } finally {
         setLoading(false);
       }
-    }, 700);
+    }, 600);
   }
 
   function submit(e) {
     e.preventDefault();
-    const username = input.trim().replace('@', '');
-    if (!username) return;
-    onAdd({
-      username,
-      displayName: preview?.displayName || username,
-      profilePicUrl: preview?.profilePicUrl || `https://unavatar.io/tiktok/${username}`
-    });
-    setInput('');
-    setPreview(null);
+    const uname = username.trim().replace('@', '');
+    if (!uname) return;
+    const finalName = displayName.trim() || uname;
+    const finalPic = profilePicUrl || `https://unavatar.io/tiktok/${uname}`;
+    onAdd({ username: uname, displayName: finalName, profilePicUrl: finalPic });
+    setUsername('');
+    setDisplayName('');
+    setProfilePicUrl('');
   }
+
+  const uname = username.trim().replace('@', '');
+  const picSrc = profilePicUrl || (uname.length >= 2 ? `https://unavatar.io/tiktok/${uname}` : null);
 
   return (
     <div className={styles.wrapper}>
       <form className={styles.form} onSubmit={submit}>
+        {/* Username field */}
         <div className={styles.inputWrap}>
           <span className={styles.at}>@</span>
           <input
             className={styles.input}
             placeholder="TikTok username..."
-            value={input}
-            onChange={handleChange}
+            value={username}
+            onChange={handleUsernameChange}
             autoComplete="off"
           />
           {loading && <span className={styles.spinner} />}
         </div>
-        <button className={styles.btn} type="submit" disabled={!input.trim()}>
+
+        {/* Display name field — shows when username is typed */}
+        {uname.length >= 2 && (
+          <div className={styles.nameWrap}>
+            {picSrc && (
+              <img
+                className={styles.nameAvatar}
+                src={picSrc}
+                alt=""
+                onError={e => { e.target.style.display = 'none'; }}
+              />
+            )}
+            <input
+              className={`${styles.input} ${styles.nameInput}`}
+              placeholder="ชื่อที่แสดง (กรอกเองได้)"
+              value={displayName}
+              onChange={e => setDisplayName(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+        )}
+
+        <button className={styles.btn} type="submit" disabled={!uname}>
           + เพิ่ม
         </button>
       </form>
-
-      {preview && (
-        <div className={styles.preview}>
-          <img
-            className={styles.previewImg}
-            src={preview.profilePicUrl}
-            alt={preview.displayName}
-            onError={e => { e.target.style.display = 'none'; }}
-          />
-          <div className={styles.previewInfo}>
-            <div className={styles.previewName}>{preview.displayName}</div>
-            <div className={styles.previewUser}>@{preview.username}</div>
-          </div>
-          <div className={styles.previewCheck}>✓ พร้อมเพิ่ม</div>
-        </div>
-      )}
     </div>
   );
 }

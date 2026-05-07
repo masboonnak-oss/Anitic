@@ -192,20 +192,43 @@ function Top1Card({ player }) {
 }
 
 export default function Top1Page() {
-  const [players, setPlayers] = useState([]);
+  const [lockedTop, setLockedTop] = useState(null);
+  const lockedRef = useRef(null);
 
   useEffect(() => {
     document.body.style.background = 'transparent';
     document.documentElement.style.background = 'transparent';
-    socket.on('players', setPlayers);
+
+    socket.on('players', (players) => {
+      const top = players[0];
+      if (!top) return;
+
+      const cur = lockedRef.current;
+
+      if (!cur) {
+        lockedRef.current = top;
+        setLockedTop(top);
+        return;
+      }
+
+      if (top.id === cur.id) {
+        // อัปเดต win ของคนเดิม
+        lockedRef.current = top;
+        setLockedTop(top);
+      } else if (top.win > cur.win) {
+        // คนใหม่ win มากกว่าจริงๆ — เปลี่ยนราชา
+        lockedRef.current = top;
+        setLockedTop(top);
+      }
+      // คนอื่น win เท่ากันหรือน้อยกว่า — ไม่เปลี่ยน
+    });
+
     return () => socket.off('players');
   }, []);
 
-  const top = players[0] || null;
-
   return (
     <div className={s.page}>
-      {top && <Top1Card key={top.id} player={top} />}
+      {lockedTop && <Top1Card key={lockedTop.id} player={lockedTop} />}
     </div>
   );
 }

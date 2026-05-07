@@ -5,126 +5,181 @@ import styles from './Overlay.module.css';
 const socket = io('/', { transports: ['websocket', 'polling'] });
 
 const CONFIGS = [
-  { playerIdx: 1, rank: 2, barH: 105, barGrad: 'linear-gradient(180deg,#c8c8e0 0%,#6a6a8a 100%)', avatarSize: 70, frameSize: 144, label: 'silver' },
-  { playerIdx: 0, rank: 1, barH: 148, barGrad: 'linear-gradient(180deg,#ffe066 0%,#f0a000 50%,#c07000 100%)', avatarSize: 90, frameSize: 182, label: 'gold' },
-  { playerIdx: 2, rank: 3, barH: 80, barGrad: 'linear-gradient(180deg,#d49060 0%,#8a4020 100%)', avatarSize: 62, frameSize: 128, label: 'bronze' },
+  { playerIdx: 1, rank: 2, barH: 105, barGrad: 'linear-gradient(180deg,#c8c8e0 0%,#6a6a8a 100%)', avatarSize: 70,  frameSize: 144, label: 'silver' },
+  { playerIdx: 0, rank: 1, barH: 148, barGrad: 'linear-gradient(180deg,#ffe566 0%,#f0a800 45%,#c06000 100%)',      avatarSize: 94,  frameSize: 192, label: 'gold'   },
+  { playerIdx: 2, rank: 3, barH: 80,  barGrad: 'linear-gradient(180deg,#d49060 0%,#8a4020 100%)', avatarSize: 62,  frameSize: 128, label: 'bronze' },
 ];
 
-const RANK_COLORS = {
-  gold:   { core: '#ffffff', mid: '#ffe566', outer: '#ff8800', glow: '#ffd700' },
-  silver: { core: '#ffffff', mid: '#c8e8ff', outer: '#2255ee', glow: '#66aaff' },
-  bronze: { core: '#ffffff', mid: '#ffcc88', outer: '#cc2200', glow: '#ff6600' },
+const RC = {
+  gold:   { core:'#ffffff', hi:'#fff9c0', mid:'#ffe566', outer:'#ff8800', glow:'#ffd700', ray:'#ffe03a' },
+  silver: { core:'#ffffff', hi:'#e8f4ff', mid:'#c8e4ff', outer:'#2255ee', glow:'#66aaff', ray:'#99ccff' },
+  bronze: { core:'#ffffff', hi:'#fff0dd', mid:'#ffcc88', outer:'#cc3300', glow:'#ff6600', ray:'#ffaa44' },
 };
 
-/* ─── Real electric lightning ─── */
-function makeBolt(cx, cy, r, startDeg, arcDeg, jitter, color, opacity) {
-  const steps = Math.max(4, Math.floor(arcDeg / 5));
+/* ─── zigzag lightning bolt along a circle ─── */
+function makeBolt(cx, cy, r, startDeg, arcDeg, jitter, color, opacity, thick) {
+  const steps = Math.max(5, Math.floor(arcDeg / 4));
   const pts = [];
   for (let i = 0; i <= steps; i++) {
     const angle = ((startDeg + (arcDeg * i) / steps) * Math.PI) / 180;
-    const ripple = (Math.random() - 0.5) * jitter * 2;
-    const ri = r + ripple;
+    const rip = i === 0 || i === steps ? 0 : (Math.random() - 0.5) * jitter * 2;
+    const ri = r + rip;
     pts.push([cx + ri * Math.cos(angle), cy + ri * Math.sin(angle)]);
   }
-  const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0].toFixed(2)} ${p[1].toFixed(2)}`).join(' ');
-  return { d, color, opacity };
+  const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+  return { d, color, opacity, thick: thick || false };
 }
 
-function generateBolts(cx, cy, r, label) {
-  const c = RANK_COLORS[label];
+function buildFrame(cx, cy, r, label, isGold) {
+  const c = RC[label];
   const bolts = [];
-  const numBolts = 2 + Math.floor(Math.random() * 3); // 2–4 bolts
+  const count = isGold ? 6 : 3;
 
-  for (let b = 0; b < numBolts; b++) {
+  for (let b = 0; b < count; b++) {
     const start = Math.random() * 360;
-    const arc = 20 + Math.random() * 80;
-    const jitter = 4 + Math.random() * 6;
+    const arc = isGold ? 25 + Math.random() * 100 : 18 + Math.random() * 70;
+    const jit  = isGold ? 6 + Math.random() * 8 : 4 + Math.random() * 5;
     const roll = Math.random();
-    const color = roll < 0.3 ? c.core : roll < 0.65 ? c.mid : c.outer;
-    const opacity = 0.55 + Math.random() * 0.45;
-    bolts.push(makeBolt(cx, cy, r, start, arc, jitter, color, opacity));
-
-    // thin glow echo slightly bigger radius
-    if (Math.random() > 0.4) {
-      bolts.push(makeBolt(cx, cy, r + 3, start, arc * 0.8, jitter * 0.5, c.outer, opacity * 0.35));
-    }
+    const col  = roll < 0.25 ? c.core : roll < 0.55 ? c.hi : roll < 0.78 ? c.mid : c.outer;
+    const op   = 0.6 + Math.random() * 0.4;
+    bolts.push(makeBolt(cx, cy, r, start, arc, jit, col, op, roll < 0.2));
+    // glow echo
+    if (Math.random() > 0.35)
+      bolts.push(makeBolt(cx, cy, r + 4, start, arc * 0.7, jit * 0.4, c.outer, op * 0.3, false));
   }
 
-  // always-on faint base ring segments
-  for (let s = 0; s < 3; s++) {
-    const start = s * 120 + Math.random() * 20;
-    const arc = 25 + Math.random() * 30;
-    bolts.push(makeBolt(cx, cy, r - 2, start, arc, 1.5, c.glow, 0.18 + Math.random() * 0.12));
+  // base shimmer arcs
+  const shimmerCount = isGold ? 5 : 3;
+  for (let s = 0; s < shimmerCount; s++) {
+    const start = (s * (360 / shimmerCount)) + Math.random() * 18;
+    const arc   = 18 + Math.random() * 28;
+    bolts.push(makeBolt(cx, cy, r - 3, start, arc, 1.2, c.glow, 0.14 + Math.random() * 0.1, false));
   }
 
   return bolts;
 }
 
-function LightningOrbit({ label, frameSize }) {
-  const c = RANK_COLORS[label];
-  const pad = 28;
-  const svgSz = frameSize + pad * 2;
-  const cx = svgSz / 2;
-  const cy = svgSz / 2;
-  const r = frameSize / 2 + 2;
+/* ─── extra outer ring for gold ─── */
+function buildOuterRing(cx, cy, r, label) {
+  const c = RC[label];
+  const bolts = [];
+  for (let b = 0; b < 5; b++) {
+    const start = Math.random() * 360;
+    const arc   = 15 + Math.random() * 60;
+    const jit   = 5 + Math.random() * 9;
+    const col   = Math.random() < 0.5 ? c.mid : c.outer;
+    bolts.push(makeBolt(cx, cy, r, start, arc, jit, col, 0.4 + Math.random() * 0.4, false));
+  }
+  return bolts;
+}
 
-  const [bolts, setBolts] = useState(() => generateBolts(cx, cy, r, label));
-  const intervalRef = useRef(null);
+function LightningOrbit({ label, frameSize, isGold }) {
+  const c = RC[label];
+  const pad  = isGold ? 42 : 30;
+  const svgSz = frameSize + pad * 2;
+  const cx   = svgSz / 2, cy = svgSz / 2;
+  const r    = frameSize / 2 + 2;
+  const rOuter = frameSize / 2 + (isGold ? 20 : 0);
+
+  const [inner, setInner] = useState(() => buildFrame(cx, cy, r, label, isGold));
+  const [outer, setOuter] = useState(() => isGold ? buildOuterRing(cx, cy, rOuter, label) : []);
+  const ref = useRef(null);
 
   useEffect(() => {
-    // Flicker: fast base tick, with occasional bright flash
-    let tick = 0;
-    intervalRef.current = setInterval(() => {
-      tick++;
-      setBolts(generateBolts(cx, cy, r, label));
-    }, 55 + Math.random() * 30); // ~16–24fps flicker
-    return () => clearInterval(intervalRef.current);
+    let t = 0;
+    ref.current = setInterval(() => {
+      t++;
+      setInner(buildFrame(cx, cy, r, label, isGold));
+      if (isGold) setOuter(buildOuterRing(cx, cy, rOuter, label));
+    }, isGold ? 48 : 60);
+    return () => clearInterval(ref.current);
   }, []);
 
-  const filterId = `lg-${label}`;
+  const fid = `f-${label}`;
+  const fidSoft = `fs-${label}`;
 
   return (
-    <svg
-      className={styles.orbitSvg}
+    <svg className={styles.orbitSvg}
       style={{ width: svgSz, height: svgSz, top: -pad, left: -pad }}
-      viewBox={`0 0 ${svgSz} ${svgSz}`}
-    >
+      viewBox={`0 0 ${svgSz} ${svgSz}`}>
       <defs>
-        <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="3.5" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
+        <filter id={fid} x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation={isGold ? '4' : '3'} result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id={fidSoft} x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="7" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
       </defs>
 
-      {/* soft ambient ring always underneath */}
-      <circle cx={cx} cy={cy} r={r} fill="none"
-        stroke={c.glow} strokeWidth="6" opacity="0.08"
-        filter={`url(#${filterId})`} />
+      {/* ambient halo rings */}
+      <circle cx={cx} cy={cy} r={r}        fill="none" stroke={c.glow} strokeWidth={isGold?10:6} opacity={isGold?'0.12':'0.07'} filter={`url(#${fidSoft})`}/>
+      {isGold && <circle cx={cx} cy={cy} r={rOuter} fill="none" stroke={c.outer} strokeWidth="6" opacity="0.08" filter={`url(#${fidSoft})`}/>}
 
-      {/* electric bolts */}
-      {bolts.map((bolt, i) => (
-        <path key={i} d={bolt.d} fill="none"
-          stroke={bolt.color}
-          strokeWidth={i % 3 === 0 ? 2.2 : 1.3}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          opacity={bolt.opacity}
-          filter={`url(#${filterId})`}
-        />
+      {/* inner ring bolts */}
+      {inner.map((b, i) => (
+        <path key={`i${i}`} d={b.d} fill="none"
+          stroke={b.color} strokeWidth={b.thick ? 2.8 : 1.4}
+          strokeLinecap="round" strokeLinejoin="round"
+          opacity={b.opacity} filter={`url(#${fid})`}/>
+      ))}
+
+      {/* outer ring bolts (gold only) */}
+      {isGold && outer.map((b, i) => (
+        <path key={`o${i}`} d={b.d} fill="none"
+          stroke={b.color} strokeWidth="1.2"
+          strokeLinecap="round" strokeLinejoin="round"
+          opacity={b.opacity} filter={`url(#${fid})`}/>
       ))}
     </svg>
   );
 }
 
-function Sparkles() {
+/* ─── Rotating golden rays (gold only) ─── */
+function GoldenRays({ size }) {
+  const n = 12;
+  const cx = size / 2, cy = size / 2;
+  const inner = size * 0.44, outer = size * 0.62;
+  const rays = Array.from({ length: n }, (_, i) => {
+    const a = (i * 360 / n) * Math.PI / 180;
+    return { x1: cx + inner * Math.cos(a), y1: cy + inner * Math.sin(a), x2: cx + outer * Math.cos(a), y2: cy + outer * Math.sin(a) };
+  });
+  return (
+    <svg className={styles.rayssvg} style={{ width: size, height: size }}>
+      <defs>
+        <filter id="rayblur" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="5"/>
+        </filter>
+      </defs>
+      {rays.map((r, i) => (
+        <line key={i} x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2}
+          stroke="#ffe566" strokeWidth="3" opacity="0.55" filter="url(#rayblur)"/>
+      ))}
+      {rays.map((r, i) => (
+        <line key={`c${i}`} x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2}
+          stroke="#ffffff" strokeWidth="1" opacity="0.4"/>
+      ))}
+    </svg>
+  );
+}
+
+/* ─── Floating particles (gold only) ─── */
+function Particles({ count = 16, areaSize }) {
+  return (
+    <div className={styles.particles} style={{ width: areaSize, height: areaSize, top: -areaSize * 0.1, left: -areaSize * 0.1 }}>
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className={styles.particle} style={{ '--pi': i, '--pt': count }} />
+      ))}
+    </div>
+  );
+}
+
+function Sparkles({ count = 10 }) {
   return (
     <div className={styles.sparkles}>
-      {[...Array(7)].map((_, i) => (
-        <div key={i} className={styles.sparkle} style={{ '--i': i }} />
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className={styles.sparkle} style={{ '--i': i, '--n': count }} />
       ))}
     </div>
   );
@@ -132,18 +187,19 @@ function Sparkles() {
 
 function Avatar({ player, cfg }) {
   const [err, setErr] = useState(false);
+  const isGold = cfg.rank === 1;
   return (
     <div className={styles.avatarWrap} style={{ width: cfg.frameSize, height: cfg.frameSize }}>
-      <LightningOrbit label={cfg.label} frameSize={cfg.frameSize} />
-      <img
-        src="/gold-frame2.png"
+      <LightningOrbit label={cfg.label} frameSize={cfg.frameSize} isGold={isGold} />
+      {isGold && <GoldenRays size={cfg.frameSize * 1.3} />}
+      <img src="/gold-frame2.png"
         className={`${styles.frameImg} ${styles['frame_' + cfg.label]}`}
-        alt="" draggable={false}
-      />
-      <div className={styles.avatarCircle} style={{ width: cfg.avatarSize, height: cfg.avatarSize }}>
+        alt="" draggable={false}/>
+      <div className={`${styles.avatarCircle} ${isGold ? styles.avatarCircleGold : ''}`}
+        style={{ width: cfg.avatarSize, height: cfg.avatarSize }}>
         {!err && player.profilePicUrl ? (
           <img src={player.profilePicUrl} alt={player.displayName}
-            className={styles.avatarImg} onError={() => setErr(true)} />
+            className={styles.avatarImg} onError={() => setErr(true)}/>
         ) : (
           <div className={styles.avatarFallback}>
             {(player.displayName || player.username)[0].toUpperCase()}
@@ -178,11 +234,12 @@ export default function Overlay() {
           return (
             <div key={p.id} className={`${styles.column} ${isFirst ? styles.colFirst : ''}`}>
               <div className={`${styles.card} ${styles[cfg.label + 'Card']}`}>
-                {isFirst && <Sparkles />}
+                {isFirst && <Sparkles count={12} />}
+                {isFirst && <Particles count={18} areaSize={cfg.frameSize * 1.6} />}
 
                 <div className={`${styles.crownWrap} ${isFirst ? styles.crownFirst : styles.crownSmall}`}>
                   {isFirst ? (
-                    <img src="/crown-king.png" className={styles.crownKing} alt="crown" draggable={false} />
+                    <img src="/crown-king.png" className={styles.crownKing} alt="crown" draggable={false}/>
                   ) : (
                     <span className={cfg.rank === 2 ? styles.crownSilver : styles.crownBronze}>
                       {cfg.rank === 2 ? '🥈' : '🥉'}
@@ -204,7 +261,7 @@ export default function Overlay() {
 
               <div className={`${styles.bar} ${styles[cfg.label + 'Bar']}`}
                 style={{ height: cfg.barH, background: cfg.barGrad }}>
-                <div className={styles.barShine} />
+                <div className={styles.barShine}/>
                 <div className={`${styles.rankBadge} ${styles[cfg.label + 'RankBadge']}`}>{cfg.rank}</div>
               </div>
             </div>

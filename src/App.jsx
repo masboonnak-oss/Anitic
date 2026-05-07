@@ -3,6 +3,7 @@ import { io } from 'socket.io-client';
 import Podium from './components/Podium.jsx';
 import PlayerList from './components/PlayerList.jsx';
 import AddPlayer from './components/AddPlayer.jsx';
+import LiveConnect from './components/LiveConnect.jsx';
 import styles from './App.module.css';
 
 const socket = io('/', { transports: ['websocket', 'polling'] });
@@ -83,6 +84,10 @@ export default function App() {
       </div>
 
       <main className={styles.main}>
+        {/* TikTok Live connector — ดักจับชื่อจากคอมเมนต์ */}
+        <LiveConnect onAddPlayer={(uid) => notify(`เพิ่ม @${uid} จาก Live แล้ว`)} />
+
+        {/* Manual add */}
         <AddPlayer onAdd={handleAdd} />
 
         {players.length === 0 ? (

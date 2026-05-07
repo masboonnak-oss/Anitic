@@ -1,0 +1,249 @@
+.panel {
+  background: #1a1a2e;
+  border: 1px solid #2a2a4a;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.icon { font-size: 18px; }
+
+.title {
+  font-weight: 700;
+  font-size: 15px;
+  color: #e0e0ff;
+  flex: 1;
+}
+
+.liveBadge {
+  background: #e53935;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+  animation: blink 1.2s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+.form { margin-bottom: 8px; }
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #0d0d1a;
+  border: 1px solid #333366;
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+
+.at {
+  color: #7777aa;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: #e0e0ff;
+  font-size: 14px;
+  padding: 6px 0;
+  font-family: inherit;
+}
+.input::placeholder { color: #44445a; }
+
+.btn {
+  background: linear-gradient(135deg, #7c4dff, #448aff);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn:not(:disabled):hover { opacity: 0.85; }
+
+.hint {
+  color: #55557a;
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+
+/* Step-by-step instructions */
+.instructions {
+  background: #0d0d22;
+  border: 1px solid #2a2a5a;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-top: 8px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #c0c0e0;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.stepNum {
+  width: 20px;
+  height: 20px;
+  background: #7c4dff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+kbd {
+  display: inline-block;
+  background: #2a2a4a;
+  border: 1px solid #44447a;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+  color: #9090cc;
+  font-family: monospace;
+  margin-left: 6px;
+}
+
+.copyStatus {
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 4px;
+  padding: 6px 0;
+}
+.ok { color: #4caf50; }
+.dim { color: #55557a; }
+
+.recopyBtn {
+  background: #2a2a4a;
+  border: 1px solid #44447a;
+  color: #9090dd;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: background 0.2s;
+}
+.recopyBtn:hover { background: #33335a; }
+
+.waiting {
+  color: #55557a;
+  font-size: 12px;
+  margin-top: 8px;
+  margin-bottom: 0;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+/* Commenter list */
+.list {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.list::-webkit-scrollbar { width: 4px; }
+.list::-webkit-scrollbar-track { background: transparent; }
+.list::-webkit-scrollbar-thumb { background: #33336a; border-radius: 2px; }
+
+.commenter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #12122a;
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.avatarFallback {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c4dff, #448aff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.info { flex: 1; min-width: 0; }
+
+.name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e0e0ff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.uid {
+  font-size: 11px;
+  color: #55557a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.addBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: #7c4dff;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.addBtn:hover:not(:disabled) { background: #9c6dff; }
+
+.addedBtn {
+  background: #2a5a2a;
+  color: #4caf50;
+  cursor: default;
+  font-size: 14px;
+}

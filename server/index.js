@@ -202,6 +202,12 @@ app.post('/api/external-chat', (req, res) => {
     source: 'bookmarklet',
   });
 
+  const entry = commenters.get(uid);
+  io.emit('chatCapture', {
+    uniqueId: entry.uniqueId,
+    displayName: entry.nickname,
+    profilePicUrl: entry.profilePicUrl,
+  });
   broadcastCommenters();
   res.json({ ok: true, count: commenters.size });
 });

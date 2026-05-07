@@ -268,6 +268,8 @@ function Sparkles({ count = 10 }) {
 function Avatar({ player, cfg }) {
   const [err, setErr] = useState(false);
   const isGold = cfg.rank === 1;
+  // Reset error when player changes (key is locked to rank, so must reset manually)
+  useEffect(() => { setErr(false); }, [player.id, player.profilePicUrl]);
   return (
     <div className={styles.avatarWrap} style={{ width: cfg.frameSize, height: cfg.frameSize }}>
       <LightningOrbit label={cfg.label} frameSize={cfg.frameSize} isGold={isGold} />

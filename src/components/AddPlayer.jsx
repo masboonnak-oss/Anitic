@@ -1,6 +1,9 @@
 import React, { useState, useRef } from 'react';
 import styles from './AddPlayer.module.css';
 
+const proxyPic = (uname) =>
+  `/api/img?url=${encodeURIComponent(`https://unavatar.io/tiktok/${uname}`)}`;
+
 export default function AddPlayer({ onAdd }) {
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -23,13 +26,12 @@ export default function AddPlayer({ onAdd }) {
       try {
         const res = await fetch(`/api/tiktok-info/${encodeURIComponent(uname)}`);
         const data = await res.json();
-        setProfilePicUrl(data.profilePicUrl || `https://unavatar.io/tiktok/${uname}`);
-        // Only pre-fill name if server returned something different from username
+        setProfilePicUrl(data.profilePicUrl || proxyPic(uname));
         if (data.displayName && data.displayName !== uname) {
           setDisplayName(data.displayName);
         }
       } catch (_) {
-        setProfilePicUrl(`https://unavatar.io/tiktok/${uname}`);
+        setProfilePicUrl(proxyPic(uname));
       } finally {
         setLoading(false);
       }
@@ -41,7 +43,7 @@ export default function AddPlayer({ onAdd }) {
     const uname = username.trim().replace('@', '');
     if (!uname) return;
     const finalName = displayName.trim() || uname;
-    const finalPic = profilePicUrl || `https://unavatar.io/tiktok/${uname}`;
+    const finalPic = profilePicUrl || proxyPic(uname);
     onAdd({ username: uname, displayName: finalName, profilePicUrl: finalPic });
     setUsername('');
     setDisplayName('');
@@ -49,12 +51,11 @@ export default function AddPlayer({ onAdd }) {
   }
 
   const uname = username.trim().replace('@', '');
-  const picSrc = profilePicUrl || (uname.length >= 2 ? `https://unavatar.io/tiktok/${uname}` : null);
+  const picSrc = profilePicUrl || (uname.length >= 2 ? proxyPic(uname) : null);
 
   return (
     <div className={styles.wrapper}>
       <form className={styles.form} onSubmit={submit}>
-        {/* Username field */}
         <div className={styles.inputWrap}>
           <span className={styles.at}>@</span>
           <input
@@ -67,7 +68,6 @@ export default function AddPlayer({ onAdd }) {
           {loading && <span className={styles.spinner} />}
         </div>
 
-        {/* Display name field — shows when username is typed */}
         {uname.length >= 2 && (
           <div className={styles.nameWrap}>
             {picSrc && (

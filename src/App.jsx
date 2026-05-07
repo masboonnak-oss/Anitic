@@ -3,8 +3,7 @@ import { io } from 'socket.io-client';
 import Podium from './components/Podium.jsx';
 import PlayerList from './components/PlayerList.jsx';
 import AddPlayer from './components/AddPlayer.jsx';
-import LiveConnect from './components/LiveConnect.jsx';
-import BookmarkletPanel from './components/BookmarkletPanel.jsx';
+import ChatCapture from './components/ChatCapture.jsx';
 import styles from './App.module.css';
 
 const socket = io('/', { transports: ['websocket', 'polling'] });
@@ -85,13 +84,15 @@ export default function App() {
       </div>
 
       <main className={styles.main}>
-        {/* Bookmarklet — ดักจับ chat จาก browser (ทำงานบน Replit ได้) */}
-        <BookmarkletPanel onAddPlayer={(name) => notify(`เพิ่ม ${name} จาก Chat แล้ว`)} />
+        <ChatCapture onAddPlayer={async (c) => {
+          await handleAdd({
+            username: c.uniqueId,
+            displayName: c.displayName || c.uniqueId,
+            profilePicUrl: c.profilePicUrl || '',
+          });
+          notify(`เพิ่ม ${c.displayName || c.uniqueId} แล้ว`);
+        }} />
 
-        {/* TikTok Live connector — ดักจับชื่อจากคอมเมนต์ (ต้อง run local) */}
-        <LiveConnect onAddPlayer={(uid) => notify(`เพิ่ม @${uid} จาก Live แล้ว`)} />
-
-        {/* Manual add */}
         <AddPlayer onAdd={handleAdd} />
 
         {players.length === 0 ? (

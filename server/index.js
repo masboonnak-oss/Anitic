@@ -3,7 +3,15 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const axios = require('axios');
-const { WebcastPushConnection } = require('tiktok-live-connector');
+
+let TikTokLiveConnection, WebcastEvent;
+try {
+  const pkg = require('tiktok-live-connector');
+  TikTokLiveConnection = pkg.TikTokLiveConnection;
+  WebcastEvent = pkg.WebcastEvent;
+} catch (e) {
+  console.log('tiktok-live-connector not available:', e.message);
+}
 
 const app = express();
 app.use(cors());
@@ -12,18 +20,37 @@ app.use(express.json());
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
+/* ── Image proxy (avoids CORS + TikTok CDN blocks in browser) ── */
+app.get('/api/img', async (req, res) => {
+  const url = req.query.url;
+  if (!url) return res.status(400).send('missing url');
+  try {
+    const r = await axios.get(url, {
+      responseType: 'arraybuffer',
+      timeout: 8000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15',
+        'Referer': 'https://www.tiktok.com/',
+      },
+      maxRedirects: 5,
+    });
+    res.set('Content-Type', r.headers['content-type'] || 'image/jpeg');
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(r.data);
+  } catch (e) {
+    res.status(502).send('proxy error');
+  }
+});
+
 /* ── In-memory state ── */
 const players = new Map();
 
-// Live capture state
 let liveConnection = null;
 let liveHost = null;
-let liveStatus = 'disconnected'; // 'disconnected' | 'connecting' | 'connected' | 'error'
+let liveStatus = 'disconnected';
 let liveError = null;
-
-// Recent commenters seen in the live (uniqueId → commenter info)
 const commenters = new Map();
-const MAX_COMMENTERS = 50;
+const MAX_COMMENTERS = 60;
 
 function broadcast() {
   const sorted = Array.from(players.values())
@@ -33,12 +60,7 @@ function broadcast() {
 }
 
 function broadcastLiveStatus() {
-  io.emit('liveStatus', {
-    status: liveStatus,
-    host: liveHost,
-    error: liveError,
-    commenterCount: commenters.size,
-  });
+  io.emit('liveStatus', { status: liveStatus, host: liveHost, error: liveError, commenterCount: commenters.size });
 }
 
 function broadcastCommenters() {
@@ -48,7 +70,17 @@ function broadcastCommenters() {
   io.emit('commenters', list);
 }
 
-/* ── TikTok Live ── */
+/* ── Proxy a TikTok CDN pic through our server ── */
+function proxiedPic(url, username) {
+  if (!url) return `https://unavatar.io/tiktok/${username}`;
+  // Wrap TikTok CDN URLs through our proxy
+  if (url.includes('tiktokcdn') || url.includes('tiktok.com') || url.includes('muscdn')) {
+    return `/api/img?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
+/* ── TikTok Live connection ── */
 function disconnectLive() {
   if (liveConnection) {
     try { liveConnection.disconnect(); } catch (_) {}
@@ -62,17 +94,33 @@ function disconnectLive() {
 
 function connectLive(username) {
   disconnectLive();
+
+  if (!TikTokLiveConnection) {
+    liveStatus = 'error';
+    liveError = 'tiktok-live-connector ไม่พร้อมใช้งาน';
+    broadcastLiveStatus();
+    return;
+  }
+
   liveHost = username;
   liveStatus = 'connecting';
   liveError = null;
   broadcastLiveStatus();
 
-  const conn = new WebcastPushConnection(username, {
-    processInitialData: false,
-    enableWebsocketUpgrade: true,
-    requestPollingIntervalMs: 2000,
-    sessionId: undefined,
-  });
+  let conn;
+  try {
+    conn = new TikTokLiveConnection(username, {
+      processInitialData: false,
+      fetchRoomInfoOnConnect: false,
+      enableExtendedGiftInfo: false,
+    });
+  } catch (e) {
+    liveStatus = 'error';
+    liveError = e.message || 'สร้าง connection ไม่ได้';
+    broadcastLiveStatus();
+    return;
+  }
+
   liveConnection = conn;
 
   conn.connect()
@@ -82,28 +130,40 @@ function connectLive(username) {
       broadcastLiveStatus();
     })
     .catch((err) => {
+      const msg = err?.message || String(err);
+      // Detect known IP-block errors
+      const isBlocked = msg.includes('Room ID') || msg.includes('sources') || msg.includes('fetch') || msg.includes('Response');
       liveStatus = 'error';
-      liveError = err.message || 'ไม่สามารถเชื่อมต่อได้';
+      liveError = isBlocked
+        ? 'TikTok บล็อค Cloud Server\nต้องรันแอปบนเครื่องตัวเองเท่านั้น (localhost) — ไม่ใช่ Replit cloud'
+        : (msg || 'เชื่อมต่อไม่ได้');
       liveConnection = null;
       broadcastLiveStatus();
     });
 
-  conn.on('chat', (data) => {
-    const uid = data.uniqueId;
+  // New API: use WebcastEvent constants or plain strings
+  const chatEvent = WebcastEvent?.CHAT || 'chat';
+  conn.on(chatEvent, (data) => {
+    // New v2.3 data format: data.user.uniqueId, data.comment
+    const uid       = data?.user?.uniqueId || data?.uniqueId;
+    const nickname  = data?.user?.nickname  || data?.nickname || uid;
+    const picRaw    = data?.user?.profilePictureUrl || data?.user?.avatarUrl || data?.profilePictureUrl;
     if (!uid) return;
+
     commenters.set(uid, {
       uniqueId: uid,
-      nickname: data.nickname || uid,
-      profilePicUrl: data.profilePictureUrl || `https://unavatar.io/tiktok/${uid}`,
+      nickname: nickname || uid,
+      profilePicUrl: proxiedPic(picRaw, uid),
       lastSeen: Date.now(),
       msgCount: (commenters.get(uid)?.msgCount || 0) + 1,
-      lastMsg: data.comment || '',
+      lastMsg: data?.comment || '',
     });
-    // Trim if too big
+
+    // Trim excess
     if (commenters.size > MAX_COMMENTERS * 2) {
-      const sorted = [...commenters.entries()].sort((a,b) => b[1].lastSeen - a[1].lastSeen);
+      const sorted = [...commenters.entries()].sort((a, b) => b[1].lastSeen - a[1].lastSeen);
       commenters.clear();
-      sorted.slice(0, MAX_COMMENTERS).forEach(([k,v]) => commenters.set(k, v));
+      sorted.slice(0, MAX_COMMENTERS).forEach(([k, v]) => commenters.set(k, v));
     }
     broadcastCommenters();
   });
@@ -133,12 +193,7 @@ app.post('/api/live/disconnect', (req, res) => {
 });
 
 app.get('/api/live/status', (req, res) => {
-  res.json({
-    status: liveStatus,
-    host: liveHost,
-    error: liveError,
-    commenterCount: commenters.size,
-  });
+  res.json({ status: liveStatus, host: liveHost, error: liveError, commenterCount: commenters.size });
 });
 
 app.get('/api/live/commenters', (req, res) => {
@@ -153,13 +208,13 @@ app.get('/api/tiktok-info/:username', async (req, res) => {
   const username = req.params.username.replace('@', '').trim();
   if (!username) return res.status(400).json({ error: 'username required' });
 
-  // Check if we have this person in live commenters (has real name!)
+  // Check live commenters first (has real nickname!)
   if (commenters.has(username)) {
     const c = commenters.get(username);
     return res.json({ username, displayName: c.nickname, profilePicUrl: c.profilePicUrl });
   }
 
-  const profilePicUrl = `https://unavatar.io/tiktok/${username}`;
+  const profilePicUrl = `/api/img?url=${encodeURIComponent(`https://unavatar.io/tiktok/${username}`)}`;
   let displayName = username;
   try {
     const oEmbed = await axios.get(
@@ -184,12 +239,11 @@ app.post('/api/player', (req, res) => {
   if (!username) return res.status(400).json({ error: 'username required' });
   const id = username.trim().replace('@', '');
   if (players.has(id)) return res.status(409).json({ error: 'มีผู้เล่นนี้อยู่แล้ว' });
-  players.set(id, {
-    id, username: id,
-    displayName: displayName || id,
-    profilePicUrl: profilePicUrl || `https://unavatar.io/tiktok/${id}`,
-    win: 0, joinedAt: Date.now()
-  });
+  // Proxy the pic if it's a TikTok CDN URL
+  const pic = profilePicUrl && (profilePicUrl.includes('tiktokcdn') || profilePicUrl.includes('muscdn'))
+    ? `/api/img?url=${encodeURIComponent(profilePicUrl)}`
+    : (profilePicUrl || `/api/img?url=${encodeURIComponent(`https://unavatar.io/tiktok/${id}`)}`);
+  players.set(id, { id, username: id, displayName: displayName || id, profilePicUrl: pic, win: 0, joinedAt: Date.now() });
   broadcast();
   res.json(players.get(id));
 });
@@ -224,8 +278,7 @@ io.on('connection', (socket) => {
     .map((p, i) => ({ ...p, rank: i + 1 }));
   socket.emit('players', sorted);
   socket.emit('liveStatus', { status: liveStatus, host: liveHost, error: liveError, commenterCount: commenters.size });
-  const commenterList = Array.from(commenters.values()).sort((a,b)=>b.lastSeen-a.lastSeen).slice(0,MAX_COMMENTERS);
-  socket.emit('commenters', commenterList);
+  socket.emit('commenters', Array.from(commenters.values()).sort((a, b) => b.lastSeen - a.lastSeen).slice(0, MAX_COMMENTERS));
 });
 
 const PORT = 3001;

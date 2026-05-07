@@ -179,3 +179,28 @@
   padding: 20px 14px; text-align: center;
   color: #444; font-size: 13px;
 }
+
+/* ── Cloud IP block warning ── */
+.toggleErr { background: #1a0a0a; }
+.cloudWarn {
+  padding: 14px 16px;
+  border-bottom: 1px solid #2a1010;
+  background: #100808;
+}
+.cloudTitle {
+  font-size: 13px; font-weight: 900; color: #ff6655;
+  margin-bottom: 6px;
+}
+.cloudBody {
+  font-size: 12px; color: #aa8888; line-height: 1.5;
+  margin-bottom: 10px;
+}
+.cloudSteps {
+  font-size: 12px; color: #888; line-height: 1.7;
+}
+.cloudSteps strong { color: #bbb; }
+.cloudSteps ol { padding-left: 18px; margin-top: 4px; }
+.cloudSteps code {
+  background: #1e1e2e; color: #aaddff;
+  padding: 1px 6px; border-radius: 4px; font-size: 11px;
+}

@@ -260,11 +260,6 @@ export default function Overlay() {
                 </div>
               </div>
 
-              <div className={`${styles.bar} ${styles[cfg.label + 'Bar']}`}
-                style={{ height: cfg.barH, background: cfg.barGrad }}>
-                <div className={styles.barShine}/>
-                <div className={`${styles.rankBadge} ${styles[cfg.label + 'RankBadge']}`}>{cfg.rank}</div>
-              </div>
             </div>
           );
         })}

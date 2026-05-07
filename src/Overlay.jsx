@@ -233,7 +233,7 @@ export default function Overlay() {
           const isFirst = cfg.rank === 1;
 
           return (
-            <div key={p.id} className={`${styles.column} ${isFirst ? styles.colFirst : ''}`}>
+            <div key={cfg.rank} className={`${styles.column} ${isFirst ? styles.colFirst : ''}`}>
               <div className={`${styles.card} ${styles[cfg.label + 'Card']}`}>
                 {isFirst && <Sparkles count={12} />}
                 {isFirst && <Particles count={18} areaSize={cfg.frameSize * 1.6} />}

@@ -278,9 +278,9 @@ function Avatar({ player, cfg }) {
     return (
       <>
         <div className={styles.silverBloomInner}
-          style={{ width: sz, height: sz, marginLeft: -sz/2, marginTop: -sz/2 }} />
+          style={{ width: sz, height: sz }} />
         <div className={styles.silverRingWrap}
-          style={{ width: sz, height: sz, marginLeft: -sz/2, marginTop: -sz/2 }}>
+          style={{ width: sz, height: sz }}>
           <svg className={styles.silverRingSvg} viewBox="0 0 100 100">
             <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(160,220,255,0.40)" strokeWidth="0.6" strokeDasharray="8 10" />
             <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(200,240,255,0.25)" strokeWidth="0.4" strokeDasharray="4 14" />
@@ -316,9 +316,9 @@ function Avatar({ player, cfg }) {
     return (
       <>
         <div className={styles.bronzeBloomInner}
-          style={{ width: sz, height: sz, marginLeft: -sz/2, marginTop: -sz/2 }} />
+          style={{ width: sz, height: sz }} />
         <div className={styles.bronzeInnerGlowInner}
-          style={{ width: szInner, height: szInner, marginLeft: -szInner/2, marginTop: -szInner/2 }} />
+          style={{ width: szInner, height: szInner }} />
         {embers.map((e, i) => (
           <div key={i} className={styles.ember}
             style={{ left: e.l, bottom: '-10%', '--ed': e.ed, '--edd': e.edd, '--ex': e.ex }} />

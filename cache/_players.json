@@ -22,5 +22,13 @@
     "profilePicUrl": "/api/avatar/nuchana555",
     "win": 1,
     "joinedAt": 1778181759795
+  },
+  {
+    "id": "pannittaya",
+    "username": "pannittaya",
+    "displayName": "🫧PETER_PAN❤️‍🩹🐼",
+    "profilePicUrl": "/api/avatar/pannittaya",
+    "win": 0,
+    "joinedAt": 1778182087781
   }
 ]

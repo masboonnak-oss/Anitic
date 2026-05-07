@@ -25,88 +25,58 @@ const CONFIGS = [
   },
 ];
 
-/* ── Lightning colour themes per rank ── */
+/* Lightning colour themes — 4 shades from light → dark */
 const LC = {
-  gold: {
-    strokes: ['#ffffff', '#fff9c4', '#ffd700', '#ffaa00'],
-    glow: '#ffd700', shadow: '#ff7700',
-  },
-  silver: {
-    strokes: ['#ffffff', '#d0e8ff', '#88bbff', '#4477dd'],
-    glow: '#99ccff', shadow: '#2244aa',
-  },
-  bronze: {
-    strokes: ['#ffffff', '#ffddb0', '#ff8833', '#cc3300'],
-    glow: '#ff8833', shadow: '#991100',
-  },
+  gold:   { strokes: ['#fffde0', '#ffd700', '#ffaa00', '#ff6600'] },
+  silver: { strokes: ['#eef4ff', '#aaccff', '#5588ff', '#2244bb'] },
+  bronze: { strokes: ['#ffeedd', '#ffcc88', '#ff7722', '#bb2200'] },
 };
 
-/* Pre-defined bolt descriptors: [angleDeg, length, zigZag, strokeIdx, delay, dur] */
-const BOLT_DEFS = [
-  [-90,  44,  -8, 0, 0.00, 0.85],
-  [-65,  32,   6, 1, 0.18, 0.72],
-  [-115, 32,  -6, 2, 0.32, 0.90],
-  [-40,  24,   5, 3, 0.50, 0.78],
-  [-140, 24,  -5, 1, 0.65, 0.95],
-  [  0,  22,   7, 0, 0.08, 0.88],
-  [180,  22,  -7, 2, 0.42, 0.80],
-  [ 30,  18,   4, 3, 0.55, 1.00],
-  [-210, 18,  -4, 0, 0.22, 0.70],
-  [-78,  28,   5, 1, 0.38, 0.82],
-  [-102, 28,  -5, 2, 0.12, 0.93],
-];
-
-function LightningRing({ label, frameSize }) {
+/* ── Orbiting lightning ring ── */
+function LightningOrbit({ label, frameSize }) {
   const lc = LC[label];
-  const margin = 50;
-  const svgW = frameSize + margin * 2;
-  const svgH = frameSize + margin * 2;
-  const cx = svgW / 2;
-  const cy = svgH / 2;
-  const rEdge = frameSize * 0.50; // outer radius of the decorative frame ring
+  const pad = 20;
+  const svgSz = frameSize + pad * 2;
+  const cx = svgSz / 2;
+  const cy = svgSz / 2;
+  const baseR = frameSize / 2;
 
-  const paths = BOLT_DEFS.map(([angleDeg, len, zz, si, delay, dur]) => {
-    const rad = angleDeg * Math.PI / 180;
-    const perp = rad + Math.PI / 2;
-    const x1 = cx + rEdge * Math.cos(rad);
-    const y1 = cy + rEdge * Math.sin(rad);
-    const m1x = cx + (rEdge + len * 0.35) * Math.cos(rad) + zz * Math.cos(perp);
-    const m1y = cy + (rEdge + len * 0.35) * Math.sin(rad) + zz * Math.sin(perp);
-    const m2x = cx + (rEdge + len * 0.70) * Math.cos(rad) - zz * 0.6 * Math.cos(perp);
-    const m2y = cy + (rEdge + len * 0.70) * Math.sin(rad) - zz * 0.6 * Math.sin(perp);
-    const x2 = cx + (rEdge + len) * Math.cos(rad);
-    const y2 = cy + (rEdge + len) * Math.sin(rad);
-    return { x1, y1, m1x, m1y, m2x, m2y, x2, y2, color: lc.strokes[si], delay, dur };
-  });
+  /* [radiusOffset, strokeWidth, dashArray, speed, clockwise, colorIdx, opacity] */
+  const rings = [
+    [  5, 2.2, '24 16 6 60',  3.2,  true,  0, 1.00],
+    [ 11, 1.6, '14 24 4 58',  6.0,  false, 2, 0.85],
+    [  1, 1.3, '8  30',        2.1,  true,  1, 0.75],
+    [ 16, 1.0, '5  42',        8.5,  false, 3, 0.50],
+  ];
 
   return (
     <svg
-      className={styles.lightningRing}
-      viewBox={`0 0 ${svgW} ${svgH}`}
-      style={{ width: svgW, height: svgH, top: -margin, left: -margin }}
+      className={styles.orbitSvg}
+      viewBox={`0 0 ${svgSz} ${svgSz}`}
+      style={{ width: svgSz, height: svgSz, top: -pad, left: -pad }}
     >
       <defs>
-        <filter id={`glow-${label}`} x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="2.5" result="blur" />
-          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        <filter id={`og-${label}`} x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="3" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
       </defs>
-      {paths.map((p, i) => (
-        <polyline
+
+      {rings.map(([rOff, sw, dash, spd, cw, ci, op], i) => (
+        <circle
           key={i}
-          points={`${p.x1},${p.y1} ${p.m1x},${p.m1y} ${p.m2x},${p.m2y} ${p.x2},${p.y2}`}
+          cx={cx} cy={cy}
+          r={baseR + rOff}
           fill="none"
-          stroke={p.color}
-          strokeWidth={i < 3 ? 2.2 : 1.5}
+          stroke={lc.strokes[ci]}
+          strokeWidth={sw}
+          strokeDasharray={dash}
           strokeLinecap="round"
-          strokeLinejoin="round"
-          filter={`url(#glow-${label})`}
-          className={styles.boltPath}
+          opacity={op}
+          filter={`url(#og-${label})`}
           style={{
-            '--bolt-glow': lc.glow,
-            '--bolt-shadow': lc.shadow,
-            '--bolt-delay': `${p.delay}s`,
-            '--bolt-dur':   `${p.dur}s`,
+            transformOrigin: `${cx}px ${cy}px`,
+            animation: `${cw ? 'orbitCW' : 'orbitCCW'} ${spd}s linear infinite`,
           }}
         />
       ))}
@@ -128,10 +98,10 @@ function Avatar({ player, cfg }) {
   const [err, setErr] = useState(false);
   return (
     <div className={styles.avatarWrap} style={{ width: cfg.frameSize, height: cfg.frameSize }}>
-      {/* Lightning behind everything */}
-      <LightningRing label={cfg.label} frameSize={cfg.frameSize} />
+      {/* Orbiting lightning — behind everything */}
+      <LightningOrbit label={cfg.label} frameSize={cfg.frameSize} />
 
-      {/* Frame */}
+      {/* Decorative frame */}
       <img
         src="/gold-frame2.png"
         className={`${styles.frameImg} ${styles['frame_' + cfg.label]}`}
@@ -139,8 +109,11 @@ function Avatar({ player, cfg }) {
         draggable={false}
       />
 
-      {/* Profile circle — in front */}
-      <div className={styles.avatarCircle} style={{ width: cfg.avatarSize, height: cfg.avatarSize }}>
+      {/* Profile circle — front */}
+      <div
+        className={styles.avatarCircle}
+        style={{ width: cfg.avatarSize, height: cfg.avatarSize }}
+      >
         {!err && player.profilePicUrl ? (
           <img
             src={player.profilePicUrl}
@@ -200,9 +173,12 @@ export default function Overlay() {
                   {p.displayName || p.username}
                 </div>
 
-                <div className={`${styles.winsWrap} ${styles[cfg.label + 'Wins']}`}>
-                  <span className={styles.winsNum}>{p.win}</span>
-                  <span className={styles.winsText}>WINS</span>
+                {/* WIN counter — big and clear */}
+                <div className={`${styles.winsBadge} ${styles[cfg.label + 'WinsBadge']}`}>
+                  <span className={`${styles.winsNum} ${styles[cfg.label + 'WinsNum']}`}>
+                    {p.win}
+                  </span>
+                  <span className={styles.winsLabel}>WINS</span>
                 </div>
               </div>
 
@@ -212,7 +188,7 @@ export default function Overlay() {
                 style={{ height: cfg.barH, background: cfg.barGrad }}
               >
                 <div className={styles.barShine} />
-                <div className={`${styles.rankBadge} ${styles[cfg.label + 'Badge']}`}>
+                <div className={`${styles.rankBadge} ${styles[cfg.label + 'RankBadge']}`}>
                   {cfg.rank}
                 </div>
               </div>

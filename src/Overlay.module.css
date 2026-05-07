@@ -20,18 +20,12 @@
   justify-content: center;
   gap: 4px;
   width: 100%;
-  max-width: 580px;
+  max-width: 600px;
   padding: 0 6px;
 }
 
-.column {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
-}
-.colFirst { flex: 1.18; z-index: 10; }
+.column    { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
+.colFirst  { flex: 1.18; z-index: 10; }
 
 /* ───── CARD ───── */
 .card {
@@ -41,72 +35,59 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 8px 4px 6px;
+  padding: 8px 6px 8px;
   border-radius: 14px 14px 0 0;
   backdrop-filter: blur(8px);
   overflow: visible;
 }
 
 .goldCard {
-  background: linear-gradient(180deg, rgba(255,220,50,0.20) 0%, rgba(160,80,0,0.10) 100%);
-  border: 1.5px solid rgba(255,215,0,0.60);
+  background: linear-gradient(180deg, rgba(255,225,60,0.22) 0%, rgba(150,75,0,0.10) 100%);
+  border: 1.5px solid rgba(255,215,0,0.65);
   border-bottom: none;
-  box-shadow: 0 0 32px rgba(255,215,0,0.40), 0 0 80px rgba(255,180,0,0.14),
-              inset 0 1px 0 rgba(255,255,200,0.35);
+  box-shadow: 0 0 36px rgba(255,215,0,0.42), 0 0 80px rgba(255,170,0,0.14),
+              inset 0 1px 0 rgba(255,255,200,0.38);
 }
 .silverCard {
-  background: linear-gradient(180deg, rgba(180,190,240,0.18) 0%, rgba(80,85,130,0.08) 100%);
-  border: 1.5px solid rgba(160,180,240,0.50);
+  background: linear-gradient(180deg, rgba(170,190,255,0.18) 0%, rgba(70,80,140,0.08) 100%);
+  border: 1.5px solid rgba(150,180,255,0.52);
   border-bottom: none;
-  box-shadow: 0 0 20px rgba(140,170,255,0.28), inset 0 1px 0 rgba(180,200,255,0.22);
+  box-shadow: 0 0 22px rgba(130,165,255,0.30), inset 0 1px 0 rgba(180,205,255,0.24);
 }
 .bronzeCard {
-  background: linear-gradient(180deg, rgba(210,120,50,0.18) 0%, rgba(100,50,10,0.08) 100%);
-  border: 1.5px solid rgba(200,120,50,0.48);
+  background: linear-gradient(180deg, rgba(220,130,55,0.20) 0%, rgba(95,45,8,0.08) 100%);
+  border: 1.5px solid rgba(205,125,55,0.52);
   border-bottom: none;
-  box-shadow: 0 0 18px rgba(210,130,50,0.26), inset 0 1px 0 rgba(230,170,90,0.22);
+  box-shadow: 0 0 20px rgba(215,135,55,0.28), inset 0 1px 0 rgba(235,175,95,0.24);
 }
 
 /* ───── CROWN ───── */
 .crownWrap { line-height: 1; }
-
 .crownFirst { margin-bottom: -6px; }
 .crownSmall { margin-bottom: -3px; }
 
-/* Gold crown — big, warm glow, floating */
 .crownGold {
-  display: block;
-  font-size: 46px;
-  filter:
-    drop-shadow(0 0  6px #fff9a0)
-    drop-shadow(0 0 14px #ffd700)
-    drop-shadow(0 0 28px #ff8800);
+  display: block; font-size: 48px;
+  filter: drop-shadow(0 0 6px #fff9a0) drop-shadow(0 0 16px #ffd700) drop-shadow(0 0 32px #ff8800);
   animation: crownGoldFloat 2s ease-in-out infinite;
 }
 @keyframes crownGoldFloat {
-  0%,100% { transform: translateY(0)   rotate(-4deg) scale(1.00); }
-  50%      { transform: translateY(-8px) rotate(4deg)  scale(1.06); }
+  0%,100% { transform: translateY(0)    rotate(-4deg) scale(1.00); }
+  50%     { transform: translateY(-9px) rotate(4deg)  scale(1.07); }
 }
-
-/* Silver medal */
 .crownSilver {
-  display: block;
-  font-size: 26px;
-  filter: drop-shadow(0 0 5px #aaccff) drop-shadow(0 0 12px #4466cc);
-  animation: crownSmallFloat 2.5s ease-in-out infinite;
+  display: block; font-size: 28px;
+  filter: drop-shadow(0 0 5px #c8deff) drop-shadow(0 0 12px #4466cc);
+  animation: crownSmallFloat 2.6s ease-in-out infinite;
 }
-
-/* Bronze medal */
 .crownBronze {
-  display: block;
-  font-size: 24px;
-  filter: drop-shadow(0 0 5px #ff9944) drop-shadow(0 0 10px #cc4400);
-  animation: crownSmallFloat 3s ease-in-out infinite;
+  display: block; font-size: 26px;
+  filter: drop-shadow(0 0 5px #ffbb88) drop-shadow(0 0 12px #cc4400);
+  animation: crownSmallFloat 3.1s ease-in-out infinite;
 }
-
 @keyframes crownSmallFloat {
   0%,100% { transform: translateY(0); }
-  50%      { transform: translateY(-5px); }
+  50%     { transform: translateY(-5px); }
 }
 
 /* ───── AVATAR WRAP ───── */
@@ -118,54 +99,56 @@
   flex-shrink: 0;
 }
 
-/* Frame behind profile picture */
-.frameImg {
+/* ── ORBITING LIGHTNING SVG ── */
+.orbitSvg {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  overflow: visible;
+}
+
+@keyframes orbitCW  { from { transform: rotate(0deg);   } to { transform: rotate(360deg);  } }
+@keyframes orbitCCW { from { transform: rotate(0deg);   } to { transform: rotate(-360deg); } }
+
+/* ── FRAME ── */
+.frameImg {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
   object-fit: contain;
   pointer-events: none;
   z-index: 1;
 }
 
-/* Gold: warm pulsing glow */
 .frame_gold {
   filter: drop-shadow(0 0 10px #ffd700) drop-shadow(0 0 22px #ff8800) brightness(1.05);
   animation: glowGold 2s ease-in-out infinite;
 }
 @keyframes glowGold {
-  0%,100% { filter: drop-shadow(0 0  8px #ffd700) drop-shadow(0 0 18px #ff8800) brightness(1.00); }
-  50%      { filter: drop-shadow(0 0 20px #fff066) drop-shadow(0 0 40px #ffaa00) brightness(1.15); }
+  0%,100% { filter: drop-shadow(0 0  8px #ffd700) drop-shadow(0 0 18px #ff7700) brightness(1.00); }
+  50%     { filter: drop-shadow(0 0 22px #fff066) drop-shadow(0 0 44px #ffaa00) brightness(1.16); }
 }
 
-/* Silver: cool blue shimmer */
 .frame_silver {
   filter: grayscale(0.6) brightness(1.35) hue-rotate(195deg) saturate(1.3)
           drop-shadow(0 0 8px #88aaff) drop-shadow(0 0 18px #3355cc);
   animation: glowSilver 2.8s ease-in-out infinite;
 }
 @keyframes glowSilver {
-  0%,100% { filter: grayscale(0.6) brightness(1.30) hue-rotate(195deg) saturate(1.3)
-                    drop-shadow(0 0  6px #88aaff) drop-shadow(0 0 14px #3355bb); }
-  50%      { filter: grayscale(0.5) brightness(1.55) hue-rotate(200deg) saturate(1.5)
-                    drop-shadow(0 0 16px #aaddff) drop-shadow(0 0 32px #5588ff); }
+  0%,100% { filter: grayscale(0.6) brightness(1.30) hue-rotate(195deg) saturate(1.3) drop-shadow(0 0  6px #88aaff) drop-shadow(0 0 14px #3355bb); }
+  50%     { filter: grayscale(0.5) brightness(1.55) hue-rotate(200deg) saturate(1.5) drop-shadow(0 0 18px #aaddff) drop-shadow(0 0 36px #5588ff); }
 }
 
-/* Bronze: ember orange glow */
 .frame_bronze {
   filter: sepia(0.85) contrast(1.08) brightness(0.90) saturate(1.3)
           drop-shadow(0 0 8px #cc6600) drop-shadow(0 0 18px #991100);
   animation: glowBronze 3.2s ease-in-out infinite;
 }
 @keyframes glowBronze {
-  0%,100% { filter: sepia(0.85) contrast(1.08) brightness(0.88) saturate(1.3)
-                    drop-shadow(0 0  6px #cc6600) drop-shadow(0 0 14px #880000); }
-  50%      { filter: sepia(0.70) contrast(1.10) brightness(1.04) saturate(1.5)
-                    drop-shadow(0 0 16px #ff9944) drop-shadow(0 0 34px #cc4400); }
+  0%,100% { filter: sepia(0.85) contrast(1.08) brightness(0.88) saturate(1.3) drop-shadow(0 0  6px #cc6600) drop-shadow(0 0 14px #880000); }
+  50%     { filter: sepia(0.70) contrast(1.10) brightness(1.04) saturate(1.5) drop-shadow(0 0 18px #ffaa44) drop-shadow(0 0 38px #cc4400); }
 }
 
-/* Profile picture on top */
+/* ── AVATAR CIRCLE (front) ── */
 .avatarCircle {
   border-radius: 50%;
   overflow: hidden;
@@ -173,143 +156,120 @@
   position: absolute;
   z-index: 2;
 }
-
-.avatarImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
+.avatarImg     { width: 100%; height: 100%; object-fit: cover; display: block; }
 .avatarFallback {
-  width: 100%;
-  height: 100%;
+  width: 100%; height: 100%;
   background: linear-gradient(135deg,#fe2c55,#25f4ee);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: 900;
-  color: #fff;
-}
-
-/* ───── LIGHTNING SVG ───── */
-.lightningRing {
-  position: absolute;
-  pointer-events: none;
-  z-index: 0;
-  overflow: visible;
-}
-
-.boltPath {
-  opacity: 0;
-  animation: boltFlicker var(--bolt-dur, 0.85s) ease-in-out infinite;
-  animation-delay: var(--bolt-delay, 0s);
-}
-
-@keyframes boltFlicker {
-  0%        { opacity: 0;    }
-  2%, 10%   { opacity: 1;    }
-  14%, 24%  { opacity: 0.75; }
-  28%, 58%  { opacity: 0;    }
-  60%, 65%  { opacity: 0.55; }
-  68%, 100% { opacity: 0;    }
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 900; color: #fff;
 }
 
 /* ───── PLAYER NAME ───── */
 .playerName {
-  font-size: 11px;
-  font-weight: 700;
-  color: #fff;
-  text-align: center;
-  max-width: 130px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 11px; font-weight: 700; color: #fff;
+  text-align: center; max-width: 140px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   text-shadow: 0 1px 8px #000, 0 0 16px #000;
 }
-
 .nameFirst {
-  font-size: 13px;
-  font-weight: 900;
-  color: #fff9c4;
+  font-size: 13px; font-weight: 900; color: #fff9c4;
   text-shadow: 0 0 12px #ffd700cc, 0 1px 8px #000;
 }
 
-/* ───── WINS BADGE ───── */
-.winsWrap {
+/* ───── WINS BADGE — big & clear ───── */
+.winsBadge {
   display: flex;
-  align-items: baseline;
-  gap: 3px;
-  padding: 2px 10px 3px;
-  border-radius: 99px;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 18px 6px;
+  border-radius: 14px;
+  min-width: 78px;
 }
-.goldWins   { background: rgba(255,215,0,0.22); border: 1px solid rgba(255,215,0,0.55); box-shadow: 0 0 8px #ffd70066; }
-.silverWins { background: rgba(140,160,230,0.18); border: 1px solid rgba(150,170,240,0.42); }
-.bronzeWins { background: rgba(200,110,30,0.18);  border: 1px solid rgba(210,130,50,0.42); }
 
-.winsNum  { font-size: 18px; font-weight: 900; color: #ffd700; text-shadow: 0 0 8px #ffd70099; line-height: 1; }
-.winsText { font-size: 9px;  font-weight: 700; color: #ccc; letter-spacing: 0.08em; }
+/* Gold wins */
+.goldWinsBadge {
+  background: rgba(255,215,0,0.18);
+  border: 2px solid rgba(255,215,0,0.65);
+  box-shadow: 0 0 14px #ffd70066, inset 0 1px 0 rgba(255,255,180,0.3);
+}
+.goldWinsNum   { color: #ffe44d; text-shadow: 0 0 12px #ffd700bb, 0 2px 0 #8a5000; }
+
+/* Silver wins */
+.silverWinsBadge {
+  background: rgba(130,165,255,0.16);
+  border: 2px solid rgba(140,180,255,0.58);
+  box-shadow: 0 0 12px rgba(130,170,255,0.30);
+}
+.silverWinsNum { color: #aaccff; text-shadow: 0 0 10px #8899ffbb; }
+
+/* Bronze wins */
+.bronzeWinsBadge {
+  background: rgba(205,120,40,0.18);
+  border: 2px solid rgba(215,140,60,0.58);
+  box-shadow: 0 0 12px rgba(210,140,55,0.28);
+}
+.bronzeWinsNum { color: #ffbb66; text-shadow: 0 0 10px #ff7722bb; }
+
+.winsNum {
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.winsLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.70);
+  margin-top: 1px;
+}
 
 /* ───── PODIUM BAR ───── */
 .bar {
-  width: 100%;
-  border-radius: 8px 8px 0 0;
-  position: relative;
-  overflow: hidden;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 100%; border-radius: 8px 8px 0 0;
+  position: relative; overflow: hidden;
+  flex-shrink: 0; display: flex;
+  align-items: center; justify-content: center;
 }
-
-.goldBar   { border-radius: 10px 10px 0 0; box-shadow: 0 -6px 24px rgba(255,215,0,0.45); }
-.silverBar { box-shadow: 0 -4px 16px rgba(150,170,255,0.30); }
-.bronzeBar { box-shadow: 0 -4px 14px rgba(200,130,50,0.28); }
+.goldBar   { border-radius: 10px 10px 0 0; box-shadow: 0 -6px 26px rgba(255,215,0,0.48); }
+.silverBar { box-shadow: 0 -4px 18px rgba(140,168,255,0.32); }
+.bronzeBar { box-shadow: 0 -4px 16px rgba(210,135,55,0.30); }
 
 .barShine {
-  position: absolute; top: 0; left: 0; right: 0;
-  height: 40%;
-  background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 100%);
-  border-radius: 8px 8px 0 0;
-  pointer-events: none;
+  position: absolute; top: 0; left: 0; right: 0; height: 42%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.26) 0%, transparent 100%);
+  border-radius: 8px 8px 0 0; pointer-events: none;
 }
 
-/* ───── RANK NUMBER ───── */
-.rankBadge { font-size: 46px; font-weight: 900; line-height: 1; letter-spacing: -0.02em; position: relative; z-index: 1; }
-.goldBadge   { color: #fff9c4; text-shadow: 0 2px 0 #7a4800, 0 0 24px #ffd70099, 0 4px 14px rgba(0,0,0,0.65); }
-.silverBadge { color: #e8e8ff; text-shadow: 0 2px 0 #404068, 0 4px 12px rgba(0,0,0,0.55); }
-.bronzeBadge { color: #fce8c8; text-shadow: 0 2px 0 #502000, 0 4px 12px rgba(0,0,0,0.55); }
+.rankBadge      { font-size: 48px; font-weight: 900; line-height: 1; letter-spacing: -0.02em; position: relative; z-index: 1; }
+.goldRankBadge  { color: #fff9c4; text-shadow: 0 2px 0 #7a4800, 0 0 26px #ffd700aa, 0 4px 14px rgba(0,0,0,0.7); }
+.silverRankBadge{ color: #e8e8ff; text-shadow: 0 2px 0 #404070, 0 4px 12px rgba(0,0,0,0.55); }
+.bronzeRankBadge{ color: #fce8c8; text-shadow: 0 2px 0 #502000, 0 4px 12px rgba(0,0,0,0.55); }
 
-/* ───── SPARKLES (#1 only) ───── */
+/* ───── SPARKLES (#1) ───── */
 .sparkles { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
-
 .sparkle {
-  position: absolute;
-  width: 4px; height: 4px;
-  background: #ffd700;
-  border-radius: 50%;
+  position: absolute; width: 4px; height: 4px;
+  background: #ffd700; border-radius: 50%;
   box-shadow: 0 0 6px #ffd700, 0 0 12px #ffaa00;
   animation: sparkleAnim 2.4s ease-in-out infinite;
   animation-delay: calc(var(--i) * 0.36s);
 }
-.sparkle:nth-child(1) { top: 8%;  left: 10%; }
+.sparkle:nth-child(1) { top:  8%; left: 10%; }
 .sparkle:nth-child(2) { top: 15%; right: 8%; }
-.sparkle:nth-child(3) { top: 50%; left: 4%;  width: 3px; height: 3px; }
-.sparkle:nth-child(4) { top: 38%; right: 5%; width: 3px; height: 3px; }
-.sparkle:nth-child(5) { top: 70%; left: 14%; width: 2px; height: 2px; }
-.sparkle:nth-child(6) { top: 62%; right:11%; width: 2px; height: 2px; }
-.sparkle:nth-child(7) { top: 28%; left: 50%; width: 3px; height: 3px; }
-
+.sparkle:nth-child(3) { top: 50%; left:  4%; width:3px;height:3px; }
+.sparkle:nth-child(4) { top: 38%; right: 5%; width:3px;height:3px; }
+.sparkle:nth-child(5) { top: 70%; left: 14%; width:2px;height:2px; }
+.sparkle:nth-child(6) { top: 62%; right:11%; width:2px;height:2px; }
+.sparkle:nth-child(7) { top: 28%; left: 50%; width:3px;height:3px; }
 @keyframes sparkleAnim {
-  0%,100% { opacity: 0; transform: scale(0.4); }
-  45%,55% { opacity: 1; transform: scale(1.5); }
+  0%,100% { opacity:0; transform:scale(0.4); }
+  45%,55% { opacity:1; transform:scale(1.5); }
 }
 
 /* ───── WAITING ───── */
 .waiting {
-  width: 100vw; height: 100vh;
-  background: transparent !important;
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'Kanit', sans-serif;
+  width:100vw; height:100vh; background:transparent !important;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Kanit',sans-serif;
 }

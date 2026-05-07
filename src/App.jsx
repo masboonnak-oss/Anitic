@@ -11,6 +11,7 @@ export default function App() {
   const [players, setPlayers] = useState([]);
   const [toast, setToast] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [copiedNK, setCopiedNK] = useState(false);
 
   useEffect(() => {
     socket.on('players', setPlayers);
@@ -27,6 +28,14 @@ export default function App() {
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  function copyNewKingUrl() {
+    const url = `${window.location.origin}/newking`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedNK(true);
+      setTimeout(() => setCopiedNK(false), 2000);
     });
   }
 
@@ -71,6 +80,9 @@ export default function App() {
           <button className={styles.copyBtn} onClick={copyOverlayUrl}>
             {copied ? '✓ คัดลอกแล้ว!' : '📺 คัดลอก URL Overlay'}
           </button>
+          <button className={styles.copyBtnNK} onClick={copyNewKingUrl}>
+            {copiedNK ? '✓ คัดลอกแล้ว!' : '👑 New King'}
+          </button>
           <button className={styles.resetBtn} onClick={handleReset}>ล้างข้อมูล</button>
         </div>
       </header>
@@ -79,6 +91,12 @@ export default function App() {
         <span>🎬 วาง URL Overlay ใน TikTok Live Studio → Browser Source</span>
         <code onClick={copyOverlayUrl} className={styles.urlCode}>
           {window.location.origin}/overlay
+        </code>
+      </div>
+      <div className={styles.overlayHintNK}>
+        <span>👑 New King Overlay (Browser Source แยก)</span>
+        <code onClick={copyNewKingUrl} className={styles.urlCode}>
+          {window.location.origin}/newking
         </code>
       </div>
 

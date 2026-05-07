@@ -57,6 +57,24 @@
   box-shadow: 0 0 12px #25f4ee44;
 }
 
+.copyBtnNK {
+  background: linear-gradient(135deg, #1d1d2e, #2a2a40);
+  border: 1.5px solid #ffd700;
+  color: #ffd700;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-family: 'Kanit', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+}
+.copyBtnNK:hover {
+  background: rgba(255,215,0,0.10);
+  box-shadow: 0 0 12px #ffd70044;
+}
+
 .resetBtn {
   background: transparent;
   border: 1.5px solid #ff4444;
@@ -83,6 +101,18 @@
   color: #888;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.overlayHintNK {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 24px;
+  background: rgba(255,215,0,0.04);
+  border-bottom: 1px solid rgba(255,215,0,0.12);
+  font-size: 13px;
+  color: #888;
+  flex-wrap: wrap;
 }
 
 .urlCode {

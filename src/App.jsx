@@ -12,6 +12,7 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [copied, setCopied] = useState(false);
   const [copiedNK, setCopiedNK] = useState(false);
+  const [copiedT1, setCopiedT1] = useState(false);
 
   useEffect(() => {
     socket.on('players', setPlayers);
@@ -36,6 +37,14 @@ export default function App() {
     navigator.clipboard.writeText(url).then(() => {
       setCopiedNK(true);
       setTimeout(() => setCopiedNK(false), 2000);
+    });
+  }
+
+  function copyTop1Url() {
+    const url = `${window.location.origin}/top1`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedT1(true);
+      setTimeout(() => setCopiedT1(false), 2000);
     });
   }
 
@@ -83,6 +92,9 @@ export default function App() {
           <button className={styles.copyBtnNK} onClick={copyNewKingUrl}>
             {copiedNK ? '✓ คัดลอกแล้ว!' : '👑 New King'}
           </button>
+          <button className={styles.copyBtnT1} onClick={copyTop1Url}>
+            {copiedT1 ? '✓ คัดลอกแล้ว!' : '🥇 Top 1'}
+          </button>
           <button className={styles.resetBtn} onClick={handleReset}>ล้างข้อมูล</button>
         </div>
       </header>
@@ -97,6 +109,12 @@ export default function App() {
         <span>👑 New King Overlay (Browser Source แยก)</span>
         <code onClick={copyNewKingUrl} className={styles.urlCode}>
           {window.location.origin}/newking
+        </code>
+      </div>
+      <div className={styles.overlayHintT1}>
+        <span>🥇 Top 1 Overlay (แสดงอันดับ 1 ตลอดเวลา)</span>
+        <code onClick={copyTop1Url} className={styles.urlCode}>
+          {window.location.origin}/top1
         </code>
       </div>
 

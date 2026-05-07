@@ -97,6 +97,8 @@
 .rayssvg {
   position: absolute; pointer-events: none;
   z-index: 0; overflow: visible;
+  top: 50%; left: 50%;
+  /* centering done via negative margin in JSX so CSS animation (transform:rotate) still works */
   animation: raysRotate 18s linear infinite;
 }
 @keyframes raysRotate {
@@ -135,7 +137,10 @@
 /* ── AVATAR CIRCLE ── */
 .avatarCircle {
   border-radius: 50%; overflow: hidden;
-  background: #0a0a18; position: absolute; z-index: 2;
+  background: #0a0a18;
+  position: absolute; z-index: 2;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
 }
 .avatarCircleGold {
   box-shadow: 0 0 0 3px #ffd700, 0 0 0 5px rgba(255,215,0,0.3), 0 0 20px #ffd70099;

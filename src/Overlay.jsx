@@ -146,7 +146,7 @@ function GoldenRays({ size }) {
     return { x1: cx + inner * Math.cos(a), y1: cy + inner * Math.sin(a), x2: cx + outer * Math.cos(a), y2: cy + outer * Math.sin(a) };
   });
   return (
-    <svg className={styles.rayssvg} style={{ width: size, height: size }}>
+    <svg className={styles.rayssvg} style={{ width: size, height: size, marginLeft: -size / 2, marginTop: -size / 2 }}>
       <defs>
         <filter id="rayblur" x="-40%" y="-40%" width="180%" height="180%">
           <feGaussianBlur stdDeviation="5"/>
@@ -167,7 +167,7 @@ function GoldenRays({ size }) {
 /* ─── Floating particles (gold only) ─── */
 function Particles({ count = 16, areaSize }) {
   return (
-    <div className={styles.particles} style={{ width: areaSize, height: areaSize, top: -areaSize * 0.1, left: -areaSize * 0.1 }}>
+    <div className={styles.particles} style={{ width: areaSize, height: areaSize, top: `calc(50% - ${areaSize / 2}px)`, left: `calc(50% - ${areaSize / 2}px)` }}>
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className={styles.particle} style={{ '--pi': i, '--pt': count }} />
       ))}

@@ -25,19 +25,14 @@ function Top1Card({ player }) {
   if (!player) return null;
 
   return (
-    <div className={`${s.card} ${bump ? s.update : ''}`}
-      key={player.id}>
+    <div className={`${s.widget} ${bump ? s.update : ''}`}>
 
-      <div className={s.label}>
-        <span className={s.labelDot} />
-        อันดับ 1
+      <div className={s.titleWrap}>
+        <span className={s.titleLine}>TOP 1 IN MY LIVE</span>
       </div>
 
-      <div className={s.avatarWrap}>
+      <div className={s.frameWrap}>
         <div className={s.glow} />
-        <div className={s.ringOuter} />
-        <div className={s.ringInner} />
-        <img src="/crown-king.png" className={s.crown} alt="crown" draggable={false} />
         <div className={s.avatarCircle}>
           {!imgErr && player.profilePicUrl ? (
             <img src={player.profilePicUrl} alt={player.displayName}
@@ -48,6 +43,7 @@ function Top1Card({ player }) {
             </div>
           )}
         </div>
+        <img src="/frame-top1.png" className={s.frameImg} alt="" draggable={false} />
       </div>
 
       <div className={s.name}>{player.displayName || player.username}</div>
@@ -56,6 +52,7 @@ function Top1Card({ player }) {
         <span className={s.winsNum}>{player.win}</span>
         <span className={s.winsLabel}>WINS</span>
       </div>
+
     </div>
   );
 }

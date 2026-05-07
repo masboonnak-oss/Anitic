@@ -125,8 +125,34 @@ app.get('/api/img', async (req, res) => {
   }
 });
 
+/* ── Players persistence ── */
+const PLAYERS_FILE = path.join(CACHE_DIR, '_players.json');
+
+function savePlayers() {
+  try {
+    const list = Array.from(players.values());
+    fs.writeFileSync(PLAYERS_FILE, JSON.stringify(list, null, 2));
+  } catch (e) {
+    console.error('[persist] save failed:', e.message);
+  }
+}
+
+function loadPlayers() {
+  try {
+    if (!fs.existsSync(PLAYERS_FILE)) return;
+    const list = JSON.parse(fs.readFileSync(PLAYERS_FILE, 'utf8'));
+    list.forEach(p => {
+      if (p?.id) players.set(p.id, p);
+    });
+    console.log(`[persist] loaded ${players.size} players from backup`);
+  } catch (e) {
+    console.error('[persist] load failed:', e.message);
+  }
+}
+
 /* ── In-memory state ── */
 const players = new Map();
+loadPlayers();
 
 let liveConnection = null;
 let liveHost = null;
@@ -506,6 +532,7 @@ app.post('/api/player', async (req, res) => {
   if (!pic) pic = uiAvatar(id);
 
   players.set(id, { id, username: id, displayName: name, profilePicUrl: pic, win: 0, joinedAt: Date.now() });
+  savePlayers();
   broadcast();
   res.json(players.get(id));
 });
@@ -514,6 +541,7 @@ app.delete('/api/player/:id', (req, res) => {
   const { id } = req.params;
   if (!players.has(id)) return res.status(404).json({ error: 'ไม่พบผู้เล่น' });
   players.delete(id);
+  savePlayers();
   broadcast();
   res.json({ ok: true });
 });
@@ -524,12 +552,14 @@ app.patch('/api/player/:id/win', (req, res) => {
   if (!players.has(id)) return res.status(404).json({ error: 'ไม่พบผู้เล่น' });
   const p = players.get(id);
   p.win = Math.max(0, p.win + (delta || 0));
+  savePlayers();
   broadcast();
   res.json(p);
 });
 
 app.post('/api/reset', (req, res) => {
   players.clear();
+  savePlayers();
   broadcast();
   res.json({ ok: true });
 });

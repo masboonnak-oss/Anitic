@@ -23,7 +23,6 @@
     if (seen.has(key)) return;
     seen.add(key);
     sentCount++;
-    updateToast();
 
     fetch(SERVER + '/api/external-chat', {
       method: 'POST',
@@ -134,26 +133,15 @@
   });
   observer.observe(chatRoot, { childList: true, subtree: true });
 
-  /* ── Toast notification ── */
-  var toastEl = document.createElement('div');
-  toastEl.style.cssText = [
-    'position:fixed', 'bottom:24px', 'right:24px', 'z-index:2147483647',
-    'background:#0d0d1a', 'color:#fff', 'padding:12px 18px',
-    'border-radius:12px', 'font-family:sans-serif', 'font-size:14px',
-    'border:2px solid #ffd700', 'box-shadow:0 4px 24px rgba(0,0,0,0.7)',
-    'min-width:220px', 'transition:opacity 0.4s'
-  ].join(';');
-  document.body.appendChild(toastEl);
-
-  function updateToast() {
-    toastEl.innerHTML = '🏆 <strong>WIN Leaderboard</strong><br><span style="font-size:12px;color:#aaa">ดักจับได้ ' + sentCount + ' คน — เปิดหน้า Admin เพื่อเพิ่มผู้เล่น</span>';
-  }
-  updateToast();
-
   function showToast(msg, color) {
     var t = document.createElement('div');
-    t.style.cssText = toastEl.style.cssText;
-    t.style.borderColor = color || '#ffd700';
+    t.style.cssText = [
+      'position:fixed', 'bottom:24px', 'right:24px', 'z-index:2147483647',
+      'background:#0d0d1a', 'color:#fff', 'padding:10px 16px',
+      'border-radius:10px', 'font-family:sans-serif', 'font-size:13px',
+      'border:2px solid ' + (color || '#ffd700'),
+      'box-shadow:0 4px 24px rgba(0,0,0,0.7)', 'transition:opacity 0.4s'
+    ].join(';');
     t.textContent = msg;
     document.body.appendChild(t);
     setTimeout(function () { t.style.opacity = '0'; setTimeout(function () { t.remove(); }, 400); }, 3000);

@@ -23,33 +23,12 @@
   position: relative; width: 100%;
   display: flex; flex-direction: column; align-items: center;
   gap: 4px; padding: 8px 6px 8px;
-  border-radius: 14px 14px 0 0;
-  backdrop-filter: blur(10px);
   overflow: visible;
+  background: none; border: none; box-shadow: none;
 }
-.goldCard {
-  background: linear-gradient(180deg, rgba(255,230,50,0.26) 0%, rgba(180,90,0,0.12) 100%);
-  border: 2px solid rgba(255,215,0,0.75);
-  border-bottom: none;
-  box-shadow: 0 0 50px rgba(255,215,0,0.55), 0 0 100px rgba(255,160,0,0.20),
-              inset 0 1px 0 rgba(255,255,200,0.50),
-              inset 0 -1px 0 rgba(255,180,0,0.20);
-  animation: goldCardPulse 2.4s ease-in-out infinite;
-}
-@keyframes goldCardPulse {
-  0%,100% { box-shadow: 0 0 40px rgba(255,215,0,0.45), 0 0 80px rgba(255,160,0,0.16), inset 0 1px 0 rgba(255,255,200,0.45); }
-  50%     { box-shadow: 0 0 72px rgba(255,220,0,0.70), 0 0 140px rgba(255,180,0,0.28), inset 0 1px 0 rgba(255,255,220,0.60); }
-}
-.silverCard {
-  background: linear-gradient(180deg, rgba(170,190,255,0.18) 0%, rgba(70,80,140,0.08) 100%);
-  border: 1.5px solid rgba(150,180,255,0.52); border-bottom: none;
-  box-shadow: 0 0 22px rgba(130,165,255,0.30), inset 0 1px 0 rgba(180,205,255,0.24);
-}
-.bronzeCard {
-  background: linear-gradient(180deg, rgba(220,130,55,0.20) 0%, rgba(95,45,8,0.08) 100%);
-  border: 1.5px solid rgba(205,125,55,0.52); border-bottom: none;
-  box-shadow: 0 0 20px rgba(215,135,55,0.28), inset 0 1px 0 rgba(235,175,95,0.24);
-}
+.goldCard   { background: none; border: none; box-shadow: none; }
+.silverCard { background: none; border: none; box-shadow: none; }
+.bronzeCard { background: none; border: none; box-shadow: none; }
 
 /* ───── CROWN ───── */
 .crownWrap  { line-height: 1; }

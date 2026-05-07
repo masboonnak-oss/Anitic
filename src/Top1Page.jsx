@@ -194,12 +194,20 @@ function Top1Card({ player }) {
 export default function Top1Page() {
   const [lockedTop, setLockedTop] = useState(null);
   const lockedRef = useRef(null);
+  // หลัง reset เก็บ { id, win } ของคนที่ถูกล้าง — ต้อง win เกินนี้ถึงจะแสดงใหม่
+  const thresholdRef = useRef(null);
 
   useEffect(() => {
     document.body.style.background = 'transparent';
     document.documentElement.style.background = 'transparent';
 
     socket.on('top1Reset', () => {
+      const cur = lockedRef.current;
+      if (cur) {
+        thresholdRef.current = { id: cur.id, win: cur.win };
+      } else {
+        thresholdRef.current = null;
+      }
       lockedRef.current = null;
       setLockedTop(null);
     });
@@ -209,23 +217,34 @@ export default function Top1Page() {
       if (!top) return;
 
       const cur = lockedRef.current;
+      const threshold = thresholdRef.current;
 
       if (!cur) {
+        // ยังไม่มีราชา — ตรวจว่าผ่าน threshold หรือยัง
+        if (threshold) {
+          if (top.id === threshold.id && top.win <= threshold.win) {
+            // คนเดิม win ยังไม่เกิน threshold — ยังไม่แสดง
+            return;
+          }
+          // ผ่าน threshold แล้ว (คนใหม่ หรือ คนเดิม win เพิ่ม) — ล็อคและล้าง threshold
+          thresholdRef.current = null;
+        }
         lockedRef.current = top;
         setLockedTop(top);
         return;
       }
 
       if (top.id === cur.id && top.win >= cur.win) {
-        // คนเดิม win เพิ่มขึ้น — อัปเดต (ไม่ยอมให้ win ลด เช่น หลัง reset)
+        // คนเดิม win เพิ่ม — อัปเดต
         lockedRef.current = top;
         setLockedTop(top);
       } else if (top.id !== cur.id && top.win > cur.win) {
         // คนใหม่ win มากกว่าจริงๆ — เปลี่ยนราชา
+        thresholdRef.current = null;
         lockedRef.current = top;
         setLockedTop(top);
       }
-      // ทุกกรณีอื่น (reset / win เท่ากัน / น้อยกว่า) — ล็อคไว้
+      // ทุกกรณีอื่น — ล็อคไว้
     });
 
     return () => { socket.off('players'); socket.off('top1Reset'); };

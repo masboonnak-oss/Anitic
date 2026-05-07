@@ -75,11 +75,12 @@ function buildOuterRing(cx, cy, r, label) {
 
 function LightningOrbit({ label, frameSize, isGold }) {
   const c = RC[label];
-  const pad  = isGold ? 42 : 30;
-  const svgSz = frameSize + pad * 2;
-  const cx   = svgSz / 2, cy = svgSz / 2;
-  const r    = frameSize / 2 + 2;
-  const rOuter = frameSize / 2 + (isGold ? 20 : 0);
+  // r matches the outer circular border of the wreath frame image (~87.5% of half-size)
+  const r      = Math.round(frameSize * 0.4375);
+  const rOuter = Math.round(frameSize * 0.505);   // gold outer ring just at frame edge
+  const pad    = isGold ? 28 : 18;
+  const svgSz  = frameSize + pad * 2;
+  const cx     = svgSz / 2, cy = svgSz / 2;
 
   const [inner, setInner] = useState(() => buildFrame(cx, cy, r, label, isGold));
   const [outer, setOuter] = useState(() => isGold ? buildOuterRing(cx, cy, rOuter, label) : []);

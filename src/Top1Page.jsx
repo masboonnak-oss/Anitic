@@ -211,16 +211,16 @@ export default function Top1Page() {
         return;
       }
 
-      if (top.id === cur.id) {
-        // อัปเดต win ของคนเดิม
+      if (top.id === cur.id && top.win >= cur.win) {
+        // คนเดิม win เพิ่มขึ้น — อัปเดต (ไม่ยอมให้ win ลด เช่น หลัง reset)
         lockedRef.current = top;
         setLockedTop(top);
-      } else if (top.win > cur.win) {
+      } else if (top.id !== cur.id && top.win > cur.win) {
         // คนใหม่ win มากกว่าจริงๆ — เปลี่ยนราชา
         lockedRef.current = top;
         setLockedTop(top);
       }
-      // คนอื่น win เท่ากันหรือน้อยกว่า — ไม่เปลี่ยน
+      // ทุกกรณีอื่น (reset / win เท่ากัน / น้อยกว่า) — ล็อคไว้
     });
 
     return () => socket.off('players');

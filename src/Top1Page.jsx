@@ -173,8 +173,6 @@ function Top1Card({ player }) {
         {/* Ornate frame — static, no spin */}
         <img src="/frame-top1.png" className={s.frameImg} alt="" draggable={false} />
 
-        {/* Crown floating above frame */}
-        <img src="/crown-king.png" className={s.crown} alt="crown" draggable={false} />
 
         {/* Rising embers */}
         <Embers count={18} />

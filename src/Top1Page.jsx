@@ -199,6 +199,11 @@ export default function Top1Page() {
     document.body.style.background = 'transparent';
     document.documentElement.style.background = 'transparent';
 
+    socket.on('top1Reset', () => {
+      lockedRef.current = null;
+      setLockedTop(null);
+    });
+
     socket.on('players', (players) => {
       const top = players[0];
       if (!top) return;
@@ -223,7 +228,7 @@ export default function Top1Page() {
       // ทุกกรณีอื่น (reset / win เท่ากัน / น้อยกว่า) — ล็อคไว้
     });
 
-    return () => socket.off('players');
+    return () => { socket.off('players'); socket.off('top1Reset'); };
   }, []);
 
   return (

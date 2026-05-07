@@ -75,6 +75,21 @@
   box-shadow: 0 0 12px #ffd70044;
 }
 
+.resetTop1Btn {
+  background: transparent;
+  border: 1.5px solid #ff6600;
+  color: #ff8833;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-family: 'Kanit', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+.resetTop1Btn:hover { background: rgba(255,102,0,0.1); }
+
 .resetBtn {
   background: transparent;
   border: 1.5px solid #ff4444;

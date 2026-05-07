@@ -583,6 +583,11 @@ app.post('/api/reset', (req, res) => {
   res.json({ ok: true });
 });
 
+app.post('/api/reset-top1', (req, res) => {
+  io.emit('top1Reset');
+  res.json({ ok: true });
+});
+
 io.on('connection', (socket) => {
   const sorted = Array.from(players.values())
     .sort((a, b) => b.win - a.win)

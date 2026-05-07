@@ -4,30 +4,115 @@ import styles from './Overlay.module.css';
 
 const socket = io('/', { transports: ['websocket', 'polling'] });
 
-// col order: 2nd left, 1st center, 3rd right
 const CONFIGS = [
   {
     playerIdx: 1, rank: 2,
-    barH: 110, barGrad: 'linear-gradient(180deg,#c8c8e0 0%,#6a6a8a 100%)',
-    avatarSize: 68,   // inner circle px
-    frameSize: 140,   // total frame container px
+    barH: 105, barGrad: 'linear-gradient(180deg,#c8c8e0 0%,#6a6a8a 100%)',
+    avatarSize: 70, frameSize: 144,
     label: 'silver',
   },
   {
     playerIdx: 0, rank: 1,
-    barH: 155, barGrad: 'linear-gradient(180deg,#ffe066 0%,#f0a000 50%,#c07000 100%)',
-    avatarSize: 88,
-    frameSize: 178,
+    barH: 148, barGrad: 'linear-gradient(180deg,#ffe066 0%,#f0a000 50%,#c07000 100%)',
+    avatarSize: 90, frameSize: 182,
     label: 'gold',
   },
   {
     playerIdx: 2, rank: 3,
-    barH: 85, barGrad: 'linear-gradient(180deg,#d49060 0%,#8a4020 100%)',
-    avatarSize: 60,
-    frameSize: 124,
+    barH: 80, barGrad: 'linear-gradient(180deg,#d49060 0%,#8a4020 100%)',
+    avatarSize: 62, frameSize: 128,
     label: 'bronze',
   },
 ];
+
+/* ── Lightning colour themes per rank ── */
+const LC = {
+  gold: {
+    strokes: ['#ffffff', '#fff9c4', '#ffd700', '#ffaa00'],
+    glow: '#ffd700', shadow: '#ff7700',
+  },
+  silver: {
+    strokes: ['#ffffff', '#d0e8ff', '#88bbff', '#4477dd'],
+    glow: '#99ccff', shadow: '#2244aa',
+  },
+  bronze: {
+    strokes: ['#ffffff', '#ffddb0', '#ff8833', '#cc3300'],
+    glow: '#ff8833', shadow: '#991100',
+  },
+};
+
+/* Pre-defined bolt descriptors: [angleDeg, length, zigZag, strokeIdx, delay, dur] */
+const BOLT_DEFS = [
+  [-90,  44,  -8, 0, 0.00, 0.85],
+  [-65,  32,   6, 1, 0.18, 0.72],
+  [-115, 32,  -6, 2, 0.32, 0.90],
+  [-40,  24,   5, 3, 0.50, 0.78],
+  [-140, 24,  -5, 1, 0.65, 0.95],
+  [  0,  22,   7, 0, 0.08, 0.88],
+  [180,  22,  -7, 2, 0.42, 0.80],
+  [ 30,  18,   4, 3, 0.55, 1.00],
+  [-210, 18,  -4, 0, 0.22, 0.70],
+  [-78,  28,   5, 1, 0.38, 0.82],
+  [-102, 28,  -5, 2, 0.12, 0.93],
+];
+
+function LightningRing({ label, frameSize }) {
+  const lc = LC[label];
+  const margin = 50;
+  const svgW = frameSize + margin * 2;
+  const svgH = frameSize + margin * 2;
+  const cx = svgW / 2;
+  const cy = svgH / 2;
+  const rEdge = frameSize * 0.50; // outer radius of the decorative frame ring
+
+  const paths = BOLT_DEFS.map(([angleDeg, len, zz, si, delay, dur]) => {
+    const rad = angleDeg * Math.PI / 180;
+    const perp = rad + Math.PI / 2;
+    const x1 = cx + rEdge * Math.cos(rad);
+    const y1 = cy + rEdge * Math.sin(rad);
+    const m1x = cx + (rEdge + len * 0.35) * Math.cos(rad) + zz * Math.cos(perp);
+    const m1y = cy + (rEdge + len * 0.35) * Math.sin(rad) + zz * Math.sin(perp);
+    const m2x = cx + (rEdge + len * 0.70) * Math.cos(rad) - zz * 0.6 * Math.cos(perp);
+    const m2y = cy + (rEdge + len * 0.70) * Math.sin(rad) - zz * 0.6 * Math.sin(perp);
+    const x2 = cx + (rEdge + len) * Math.cos(rad);
+    const y2 = cy + (rEdge + len) * Math.sin(rad);
+    return { x1, y1, m1x, m1y, m2x, m2y, x2, y2, color: lc.strokes[si], delay, dur };
+  });
+
+  return (
+    <svg
+      className={styles.lightningRing}
+      viewBox={`0 0 ${svgW} ${svgH}`}
+      style={{ width: svgW, height: svgH, top: -margin, left: -margin }}
+    >
+      <defs>
+        <filter id={`glow-${label}`} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2.5" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+      {paths.map((p, i) => (
+        <polyline
+          key={i}
+          points={`${p.x1},${p.y1} ${p.m1x},${p.m1y} ${p.m2x},${p.m2y} ${p.x2},${p.y2}`}
+          fill="none"
+          stroke={p.color}
+          strokeWidth={i < 3 ? 2.2 : 1.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          filter={`url(#glow-${label})`}
+          className={styles.boltPath}
+          style={{
+            '--bolt-glow': lc.glow,
+            '--bolt-shadow': lc.shadow,
+            '--bolt-delay': `${p.delay}s`,
+            '--bolt-dur':   `${p.dur}s`,
+          }}
+        />
+      ))}
+    </svg>
+  );
+}
 
 function Sparkles() {
   return (
@@ -42,15 +127,20 @@ function Sparkles() {
 function Avatar({ player, cfg }) {
   const [err, setErr] = useState(false);
   return (
-    <div
-      className={styles.avatarWrap}
-      style={{ width: cfg.frameSize, height: cfg.frameSize }}
-    >
-      {/* Profile circle — sits behind, exactly fills the ring opening */}
-      <div
-        className={styles.avatarCircle}
-        style={{ width: cfg.avatarSize, height: cfg.avatarSize }}
-      >
+    <div className={styles.avatarWrap} style={{ width: cfg.frameSize, height: cfg.frameSize }}>
+      {/* Lightning behind everything */}
+      <LightningRing label={cfg.label} frameSize={cfg.frameSize} />
+
+      {/* Frame */}
+      <img
+        src="/gold-frame2.png"
+        className={`${styles.frameImg} ${styles['frame_' + cfg.label]}`}
+        alt=""
+        draggable={false}
+      />
+
+      {/* Profile circle — in front */}
+      <div className={styles.avatarCircle} style={{ width: cfg.avatarSize, height: cfg.avatarSize }}>
         {!err && player.profilePicUrl ? (
           <img
             src={player.profilePicUrl}
@@ -64,14 +154,6 @@ function Avatar({ player, cfg }) {
           </div>
         )}
       </div>
-
-      {/* Frame on top — mix-blend-mode:screen makes black pixels transparent */}
-      <img
-        src="/gold-frame2.png"
-        className={`${styles.frameImg} ${styles['frame_' + cfg.label]}`}
-        alt=""
-        draggable={false}
-      />
     </div>
   );
 }
@@ -99,13 +181,17 @@ export default function Overlay() {
 
           return (
             <div key={p.id} className={`${styles.column} ${isFirst ? styles.colFirst : ''}`}>
-
               <div className={`${styles.card} ${styles[cfg.label + 'Card']}`}>
                 {isFirst && <Sparkles />}
 
                 {/* Crown / medal */}
                 <div className={`${styles.crownWrap} ${isFirst ? styles.crownFirst : styles.crownSmall}`}>
-                  {isFirst ? '👑' : cfg.rank === 2 ? '🥈' : '🥉'}
+                  {isFirst
+                    ? <span className={styles.crownGold}>👑</span>
+                    : <span className={cfg.rank === 2 ? styles.crownSilver : styles.crownBronze}>
+                        {cfg.rank === 2 ? '🥈' : '🥉'}
+                      </span>
+                  }
                 </div>
 
                 <Avatar player={p} cfg={cfg} />
@@ -122,7 +208,7 @@ export default function Overlay() {
 
               {/* Podium bar */}
               <div
-                className={`${styles.bar} ${isFirst ? styles.barFirst : ''}`}
+                className={`${styles.bar} ${styles[cfg.label + 'Bar']}`}
                 style={{ height: cfg.barH, background: cfg.barGrad }}
               >
                 <div className={styles.barShine} />

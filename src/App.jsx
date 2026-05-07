@@ -106,23 +106,34 @@ export default function App() {
         </div>
       </header>
 
-      <div className={styles.overlayHint}>
-        <span>🎬 วาง URL Overlay ใน TikTok Live Studio → Browser Source</span>
-        <code onClick={copyOverlayUrl} className={styles.urlCode}>
-          {window.location.origin}/overlay
-        </code>
-      </div>
-      <div className={styles.overlayHintNK}>
-        <span>👑 New King Overlay (Browser Source แยก)</span>
-        <code onClick={copyNewKingUrl} className={styles.urlCode}>
-          {window.location.origin}/newking
-        </code>
-      </div>
-      <div className={styles.overlayHintT1}>
-        <span>🥇 Top 1 Overlay (แสดงอันดับ 1 ตลอดเวลา)</span>
-        <code onClick={copyTop1Url} className={styles.urlCode}>
-          {window.location.origin}/top1
-        </code>
+      <div className={styles.overlayPanel}>
+        <div className={styles.overlayPanelTitle}>
+          <span className={styles.overlayPanelIcon}>🎬</span>
+          Overlay URLs
+        </div>
+        <div className={styles.overlayRows}>
+          <div className={styles.overlayRow}>
+            <span className={styles.overlayLabel} style={{'--oc':'#25f4ee'}}>📺 Overlay</span>
+            <code className={styles.urlCode} onClick={copyOverlayUrl}>{window.location.origin}/overlay</code>
+            <button className={styles.copyMiniBtn} style={{'--oc':'#25f4ee'}} onClick={copyOverlayUrl}>
+              {copied ? '✓' : 'คัดลอก'}
+            </button>
+          </div>
+          <div className={styles.overlayRow}>
+            <span className={styles.overlayLabel} style={{'--oc':'#ffd700'}}>👑 New King</span>
+            <code className={styles.urlCode} onClick={copyNewKingUrl}>{window.location.origin}/newking</code>
+            <button className={styles.copyMiniBtn} style={{'--oc':'#ffd700'}} onClick={copyNewKingUrl}>
+              {copiedNK ? '✓' : 'คัดลอก'}
+            </button>
+          </div>
+          <div className={styles.overlayRow}>
+            <span className={styles.overlayLabel} style={{'--oc':'#ff9933'}}>🥇 Top 1</span>
+            <code className={styles.urlCode} onClick={copyTop1Url}>{window.location.origin}/top1</code>
+            <button className={styles.copyMiniBtn} style={{'--oc':'#ff9933'}} onClick={copyTop1Url}>
+              {copiedT1 ? '✓' : 'คัดลอก'}
+            </button>
+          </div>
+        </div>
       </div>
 
       <main className={styles.main}>
@@ -135,7 +146,7 @@ export default function App() {
           </div>
         ) : (
           <>
-            <Podium players={top3} onWin={handleWin} />
+            <Podium players={top3} onWin={handleWin} onDelete={handleDelete} />
             {rest.length > 0 && (
               <PlayerList players={rest} onWin={handleWin} onDelete={handleDelete} />
             )}

@@ -19,7 +19,7 @@ function Avatar({ player, size = 72 }) {
   );
 }
 
-export default function Podium({ players, onWin }) {
+export default function Podium({ players, onWin, onDelete }) {
   if (players.length === 0) return null;
 
   return (
@@ -32,6 +32,11 @@ export default function Podium({ players, onWin }) {
             className={styles.card}
             style={{ '--medal-color': COLORS[i] }}
           >
+            {onDelete && (
+              <button className={styles.deleteBtn} onClick={() => onDelete(p.id)} title="ลบออกจากอันดับ">
+                🗑️
+              </button>
+            )}
             <div className={styles.medal}>{MEDALS[i]}</div>
             <Avatar player={p} size={72} />
             <div className={styles.name}>{p.displayName || p.username}</div>

@@ -176,6 +176,87 @@ function Particles({ count = 16, areaSize }) {
   );
 }
 
+/* ─── Gold FX: divine bloom + god rays + lens flares ─── */
+function FxGold() {
+  return (
+    <>
+      <div className={styles.goldBloom} />
+      <div className={styles.goldGodRays} />
+      <div className={styles.goldShaft} />
+      {[
+        { s: 9,  t: '10%', l: '12%', c: '#fff9c0', fd: '2.1s', fd2: '0.0s' },
+        { s: 5,  t:  '7%', r: '16%', c: '#ffe566', fd: '2.8s', fd2: '0.7s' },
+        { s: 13, t: '42%', l:  '6%', c: '#ffffff', fd: '3.4s', fd2: '1.4s' },
+        { s: 6,  t: '28%', r:  '9%', c: '#fff3a0', fd: '1.9s', fd2: '2.0s' },
+        { s: 4,  t: '68%', l: '22%', c: '#ffd700', fd: '1.6s', fd2: '1.0s' },
+        { s: 7,  t: '80%', r: '18%', c: '#ffe0a0', fd: '2.5s', fd2: '0.5s' },
+      ].map((f, i) => (
+        <div key={i} className={styles.lensFlare} style={{
+          width: f.s, height: f.s,
+          top: f.t, left: f.l, right: f.r,
+          background: f.c,
+          boxShadow: `0 0 ${f.s * 2}px ${f.c}, 0 0 ${f.s * 5}px ${f.c}99`,
+          '--fd': f.fd, '--fd2': f.fd2,
+        }} />
+      ))}
+    </>
+  );
+}
+
+/* ─── Silver FX: frost aura + ice star flashes + rotating ring ─── */
+function FxSilver() {
+  return (
+    <>
+      <div className={styles.silverBloom} />
+      <div className={styles.silverRingWrap}>
+        <svg className={styles.silverRingSvg} viewBox="0 0 240 240">
+          <circle cx="120" cy="120" r="108" fill="none" stroke="rgba(160,220,255,0.35)" strokeWidth="1.2" strokeDasharray="10 14" />
+          <circle cx="120" cy="120" r="95"  fill="none" stroke="rgba(200,240,255,0.20)" strokeWidth="0.8" strokeDasharray="5 18" />
+        </svg>
+      </div>
+      {[
+        { t: '8%',  l: '14%', is: '3.0s', id: '0.0s' },
+        { t: '12%', r: '16%', is: '3.6s', id: '0.9s' },
+        { t: '55%', l:  '7%', is: '2.4s', id: '1.6s' },
+        { t: '48%', r: '11%', is: '3.2s', id: '0.4s' },
+        { t: '72%', l: '28%', is: '2.8s', id: '1.2s' },
+        { t: '78%', r: '24%', is: '3.8s', id: '2.0s' },
+      ].map((s, i) => (
+        <div key={i} className={styles.iceStar} style={{
+          top: s.t, left: s.l, right: s.r,
+          '--is': s.is, '--id': s.id,
+        }} />
+      ))}
+    </>
+  );
+}
+
+/* ─── Bronze FX: fire bloom flicker + rising embers ─── */
+function FxBronze() {
+  const embers = [
+    { l: '18%', ed: '2.3s', edd: '0.0s', ex: -0.3 },
+    { l: '32%', ed: '1.9s', edd: '0.6s', ex:  0.2 },
+    { l: '48%', ed: '2.7s', edd: '1.2s', ex: -0.1 },
+    { l: '63%', ed: '2.1s', edd: '0.3s', ex:  0.4 },
+    { l: '78%', ed: '1.7s', edd: '0.9s', ex: -0.2 },
+    { l: '26%', ed: '3.1s', edd: '1.7s', ex:  0.1 },
+    { l: '55%', ed: '2.5s', edd: '0.5s', ex: -0.4 },
+    { l: '70%', ed: '1.5s', edd: '1.4s', ex:  0.3 },
+  ];
+  return (
+    <>
+      <div className={styles.bronzeBloom} />
+      <div className={styles.bronzeInnerGlow} />
+      {embers.map((e, i) => (
+        <div key={i} className={styles.ember} style={{
+          left: e.l, bottom: '30%',
+          '--ed': e.ed, '--edd': e.edd, '--ex': e.ex,
+        }} />
+      ))}
+    </>
+  );
+}
+
 function Sparkles({ count = 10 }) {
   return (
     <div className={styles.sparkles}>
@@ -235,6 +316,9 @@ export default function Overlay() {
           return (
             <div key={cfg.rank} className={`${styles.column} ${isFirst ? styles.colFirst : ''}`}>
               <div className={`${styles.card} ${styles[cfg.label + 'Card']}`}>
+                {cfg.rank === 1 && <FxGold />}
+                {cfg.rank === 2 && <FxSilver />}
+                {cfg.rank === 3 && <FxBronze />}
                 {isFirst && <Sparkles count={12} />}
                 {isFirst && <Particles count={18} areaSize={cfg.frameSize * 1.6} />}
 

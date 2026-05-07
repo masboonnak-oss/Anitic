@@ -351,14 +351,104 @@ function Avatar({ player, cfg }) {
   );
 }
 
+/* ─── Gold confetti rain ─── */
+function Confetti({ count = 40 }) {
+  return (
+    <div className={styles.confettiWrap} aria-hidden>
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className={styles.confettiPiece}
+          style={{
+            '--ci': i,
+            '--cn': count,
+            '--cx': `${Math.random() * 100}%`,
+            '--cd': `${1.2 + Math.random() * 3.5}s`,
+            '--cdd': `${Math.random() * 1.8}s`,
+            '--cw': `${4 + Math.random() * 8}px`,
+            '--cr': `${Math.random() * 360}deg`,
+            '--cc': ['#ffd700','#ffe566','#ff8800','#fff3a0','#ffffff','#ffcc44'][Math.floor(Math.random()*6)],
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ─── New King celebration overlay ─── */
+function NewKingOverlay({ king, onDone }) {
+  const [phase, setPhase] = useState('enter'); // enter → show → exit
+  const [imgErr, setImgErr] = useState(false);
+
+  useEffect(() => {
+    setImgErr(false);
+    setPhase('enter');
+    const t1 = setTimeout(() => setPhase('show'), 100);
+    const t2 = setTimeout(() => setPhase('exit'), 5800);
+    const t3 = setTimeout(() => onDone(), 6600);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, [king?.id]);
+
+  if (!king) return null;
+
+  return (
+    <div className={`${styles.newKingBackdrop} ${styles['nk_' + phase]}`}>
+      <Confetti count={50} />
+
+      {/* God rays behind everything */}
+      <div className={styles.nkRays} />
+
+      {/* Main card */}
+      <div className={`${styles.nkCard} ${styles['nkCard_' + phase]}`}>
+
+        {/* Crown */}
+        <img src="/crown-king.png" className={styles.nkCrown} alt="crown" draggable={false} />
+
+        {/* Title */}
+        <div className={styles.nkTitle}>
+          <span className={styles.nkTitleLine1}>✦ ราชาคนใหม่ ✦</span>
+          <span className={styles.nkTitleLine2}>NEW KING</span>
+        </div>
+
+        {/* Avatar ring */}
+        <div className={styles.nkAvatarRing}>
+          <div className={styles.nkAvatarGlow} />
+          <div className={styles.nkAvatarCircle}>
+            {!imgErr && king.profilePicUrl ? (
+              <img src={king.profilePicUrl} alt={king.displayName}
+                className={styles.nkAvatarImg} onError={() => setImgErr(true)} />
+            ) : (
+              <div className={styles.nkAvatarFallback}>
+                {(king.displayName || king.username || '?')[0].toUpperCase()}
+              </div>
+            )}
+          </div>
+          {/* Rotating lightning ring around avatar */}
+          <LightningOrbit label="gold" frameSize={160} isGold={true} />
+        </div>
+
+        {/* Name */}
+        <div className={styles.nkName}>{king.displayName || king.username}</div>
+
+        {/* Win count */}
+        <div className={styles.nkWins}>
+          <span className={styles.nkWinsNum}>{king.win}</span>
+          <span className={styles.nkWinsLabel}>WINS</span>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 export default function Overlay() {
   const [players, setPlayers] = useState([]);
+  const [newKing, setNewKing] = useState(null);
 
   useEffect(() => {
     document.body.style.background = 'transparent';
     document.documentElement.style.background = 'transparent';
     socket.on('players', setPlayers);
-    return () => socket.off('players');
+    socket.on('newKing', (king) => setNewKing(king));
+    return () => { socket.off('players'); socket.off('newKing'); };
   }, []);
 
   const top3 = players.slice(0, 3);
@@ -409,6 +499,10 @@ export default function Overlay() {
           );
         })}
       </div>
+
+      {newKing && (
+        <NewKingOverlay key={newKing.id + '_' + newKing.win} king={newKing} onDone={() => setNewKing(null)} />
+      )}
     </div>
   );
 }

@@ -152,7 +152,15 @@ function loadPlayers() {
 
 /* ── In-memory state ── */
 const players = new Map();
+let currentKingId = null;   // track who holds rank #1
+
 loadPlayers();
+
+// Silently init king from backup (no celebration on server start)
+(function initKing() {
+  const sorted = Array.from(players.values()).sort((a, b) => b.win - a.win);
+  if (sorted.length > 0) currentKingId = sorted[0].id;
+})();
 
 let liveConnection = null;
 let liveHost = null;
@@ -166,6 +174,17 @@ function broadcast() {
     .sort((a, b) => b.win - a.win)
     .map((p, i) => ({ ...p, rank: i + 1 }));
   io.emit('players', sorted);
+
+  // Detect new king
+  const top = sorted[0];
+  if (top && top.id !== currentKingId) {
+    if (currentKingId !== null) {
+      // A different player just took rank #1 — celebrate!
+      io.emit('newKing', top);
+      console.log(`[newKing] 👑 ${top.displayName || top.username} (${top.win} wins)`);
+    }
+    currentKingId = top.id;
+  }
 }
 
 function broadcastLiveStatus() {

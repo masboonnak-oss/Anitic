@@ -513,3 +513,191 @@
   70%  { opacity: 0.6; }
   100% { opacity: 0;   transform: translateY(-90px) translateX(calc(var(--ex, 0) * 28px)) scale(0.2); }
 }
+
+/* ═══════════════════════════════════════════════════
+   👑 NEW KING CELEBRATION OVERLAY
+   ═══════════════════════════════════════════════════ */
+
+/* Fullscreen backdrop */
+.newKingBackdrop {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 999;
+  background: radial-gradient(ellipse at 50% 40%,
+    rgba(40,20,0,0.92) 0%,
+    rgba(10,6,0,0.96) 60%,
+    rgba(0,0,0,0.98) 100%);
+  pointer-events: none;
+  transition: opacity 0.7s ease;
+}
+.nk_enter { opacity: 0; }
+.nk_show  { opacity: 1; }
+.nk_exit  { opacity: 0; }
+
+/* God rays rotating behind card */
+.nkRays {
+  position: absolute; inset: 0;
+  background: conic-gradient(from 0deg at 50% 40%,
+    transparent 0deg,   rgba(255,210,30,0.10) 8deg,  transparent 16deg,
+    transparent 50deg,  rgba(255,230,80,0.07) 56deg, transparent 62deg,
+    transparent 95deg,  rgba(255,200,20,0.09) 102deg,transparent 110deg,
+    transparent 148deg, rgba(255,220,60,0.06) 154deg,transparent 162deg,
+    transparent 200deg, rgba(255,210,40,0.08) 208deg,transparent 216deg,
+    transparent 260deg, rgba(255,240,80,0.07) 268deg,transparent 276deg,
+    transparent 310deg, rgba(255,200,30,0.06) 318deg,transparent 326deg
+  );
+  animation: nkRaysRot 28s linear infinite;
+  pointer-events: none;
+}
+@keyframes nkRaysRot {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Central card */
+.nkCard {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px;
+  transition: transform 0.6s cubic-bezier(0.34,1.56,0.64,1), opacity 0.6s ease;
+}
+.nkCard_enter { transform: scale(0.5) translateY(60px); opacity: 0; }
+.nkCard_show  { transform: scale(1)   translateY(0);    opacity: 1; }
+.nkCard_exit  { transform: scale(0.85) translateY(-30px); opacity: 0; }
+
+/* Crown */
+.nkCrown {
+  width: 120px; height: auto;
+  filter: drop-shadow(0 0 18px #ffd700) drop-shadow(0 0 40px #ff8800) drop-shadow(0 0 80px #ff4400cc);
+  animation: nkCrownFloat 2.0s ease-in-out infinite;
+  margin-bottom: -16px; z-index: 2; position: relative;
+}
+@keyframes nkCrownFloat {
+  0%,100% { transform: translateY(0)    rotate(-4deg) scale(1.00); }
+  50%     { transform: translateY(-14px) rotate(4deg)  scale(1.10); }
+}
+
+/* Title block */
+.nkTitle {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.nkTitleLine1 {
+  font-family: 'Kanit', sans-serif;
+  font-size: 22px; font-weight: 900;
+  background: linear-gradient(90deg, #ffcc00, #ffffff, #ffd700, #fff5a0, #ffcc00);
+  background-size: 300% 100%;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: nkTitleShimmer 2.2s linear infinite;
+  filter: drop-shadow(0 0 10px #ffd70088);
+  letter-spacing: 0.08em;
+}
+.nkTitleLine2 {
+  font-family: 'Kanit', sans-serif;
+  font-size: 13px; font-weight: 700;
+  color: rgba(255,210,80,0.70); letter-spacing: 0.35em;
+  text-transform: uppercase;
+}
+@keyframes nkTitleShimmer {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+
+/* Avatar ring wrapper */
+.nkAvatarRing {
+  position: relative;
+  width: 160px; height: 160px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Gold pulse glow behind avatar */
+.nkAvatarGlow {
+  position: absolute; inset: -24px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 50%,
+    rgba(255,220,50,0.55) 0%,
+    rgba(255,150,0,0.28)  40%,
+    transparent 70%);
+  animation: nkGlowPulse 1.6s ease-in-out infinite;
+  pointer-events: none; z-index: 0;
+}
+@keyframes nkGlowPulse {
+  0%,100% { opacity: 0.70; transform: scale(0.96); }
+  50%     { opacity: 1.00; transform: scale(1.12); }
+}
+
+/* Avatar circle */
+.nkAvatarCircle {
+  width: 120px; height: 120px;
+  border-radius: 50%; overflow: hidden;
+  border: 4px solid #ffd700;
+  box-shadow: 0 0 0 3px rgba(255,215,0,0.35), 0 0 28px #ffd700bb, 0 0 60px #ff880066;
+  position: absolute; z-index: 2;
+  animation: nkAvatarRing 2s ease-in-out infinite;
+}
+@keyframes nkAvatarRing {
+  0%,100% { box-shadow: 0 0 0 3px rgba(255,215,0,0.35), 0 0 24px #ffd700aa, 0 0 52px #ff880055; }
+  50%     { box-shadow: 0 0 0 5px rgba(255,235,0,0.55), 0 0 44px #ffd700ee, 0 0 88px #ff8800aa; }
+}
+.nkAvatarImg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.nkAvatarFallback {
+  width: 100%; height: 100%;
+  background: linear-gradient(135deg, #fe2c55, #25f4ee);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 42px; font-weight: 900; color: #fff;
+}
+
+/* Player name */
+.nkName {
+  font-family: 'Kanit', sans-serif;
+  font-size: 26px; font-weight: 900;
+  text-align: center; max-width: 340px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  background: linear-gradient(90deg, #ffe566, #ffffff, #ffd700, #ffffff, #ffe566);
+  background-size: 300% 100%;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: nkTitleShimmer 3s linear infinite;
+  filter: drop-shadow(0 0 12px #ffd700aa);
+}
+
+/* Win count */
+.nkWins {
+  display: flex; flex-direction: column; align-items: center;
+  background: rgba(255,215,0,0.18);
+  border: 2px solid rgba(255,215,0,0.75);
+  border-radius: 16px; padding: 6px 32px 8px;
+  box-shadow: 0 0 24px #ffd70077, inset 0 1px 0 rgba(255,255,180,0.35);
+  animation: winsGoldPulse 2s ease-in-out infinite;
+}
+.nkWinsNum {
+  font-family: 'Kanit', sans-serif;
+  font-size: 48px; font-weight: 900; line-height: 1;
+  color: #ffe44d; text-shadow: 0 0 20px #ffd700cc, 0 2px 0 #7a4000;
+}
+.nkWinsLabel {
+  font-family: 'Kanit', sans-serif;
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 0.18em; color: rgba(255,255,255,0.70); margin-top: 2px;
+}
+
+/* ─── Confetti rain ─── */
+.confettiWrap {
+  position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1;
+}
+.confettiPiece {
+  position: absolute;
+  top: -10px;
+  left: var(--cx, 50%);
+  width: var(--cw, 6px);
+  height: var(--cw, 6px);
+  background: var(--cc, #ffd700);
+  border-radius: 2px;
+  animation: confettiFall var(--cd, 2.5s) ease-in infinite;
+  animation-delay: var(--cdd, 0s);
+}
+@keyframes confettiFall {
+  0%   { transform: translateY(0)     rotate(var(--cr,0deg)) scaleX(1);    opacity: 1; }
+  60%  { opacity: 0.8; }
+  100% { transform: translateY(110vh) rotate(calc(var(--cr,0deg) + 720deg)) scaleX(0.4); opacity: 0; }
+}

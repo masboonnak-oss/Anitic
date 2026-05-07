@@ -267,11 +267,70 @@ function Sparkles({ count = 10 }) {
 
 function Avatar({ player, cfg }) {
   const [err, setErr] = useState(false);
-  const isGold = cfg.rank === 1;
-  // Reset error when player changes (key is locked to rank, so must reset manually)
+  const isGold   = cfg.rank === 1;
+  const isSilver = cfg.rank === 2;
+  const isBronze = cfg.rank === 3;
   useEffect(() => { setErr(false); }, [player.id, player.profilePicUrl]);
+
+  /* Silver bloom + frost ring sized to match avatarWrap */
+  function SilverFxInner() {
+    const sz = cfg.frameSize * 1.55;
+    return (
+      <>
+        <div className={styles.silverBloomInner}
+          style={{ width: sz, height: sz, marginLeft: -sz/2, marginTop: -sz/2 }} />
+        <div className={styles.silverRingWrap}
+          style={{ width: sz, height: sz, marginLeft: -sz/2, marginTop: -sz/2 }}>
+          <svg className={styles.silverRingSvg} viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(160,220,255,0.40)" strokeWidth="0.6" strokeDasharray="8 10" />
+            <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(200,240,255,0.25)" strokeWidth="0.4" strokeDasharray="4 14" />
+          </svg>
+        </div>
+        {[
+          { t: '-18%', l: '-14%', is: '3.0s', id: '0.0s' },
+          { t: '-10%', r: '-12%', is: '3.6s', id: '0.9s' },
+          { t:  '50%', l: '-20%', is: '2.4s', id: '1.6s' },
+          { t:  '45%', r: '-18%', is: '3.2s', id: '0.4s' },
+          { t: '105%', l:  '15%', is: '2.8s', id: '1.2s' },
+          { t: '110%', r:  '20%', is: '3.8s', id: '2.0s' },
+        ].map((s, i) => (
+          <div key={i} className={styles.iceStar} style={{ top: s.t, left: s.l, right: s.r, '--is': s.is, '--id': s.id }} />
+        ))}
+      </>
+    );
+  }
+
+  /* Bronze bloom sized to match avatarWrap */
+  function BronzeFxInner() {
+    const sz = cfg.frameSize * 1.50;
+    const szInner = cfg.frameSize * 1.25;
+    const embers = [
+      { l: '18%', ed: '2.3s', edd: '0.0s', ex: -0.3 },
+      { l: '32%', ed: '1.9s', edd: '0.6s', ex:  0.2 },
+      { l: '48%', ed: '2.7s', edd: '1.2s', ex: -0.1 },
+      { l: '63%', ed: '2.1s', edd: '0.3s', ex:  0.4 },
+      { l: '78%', ed: '1.7s', edd: '0.9s', ex: -0.2 },
+      { l: '26%', ed: '3.1s', edd: '1.7s', ex:  0.1 },
+      { l: '55%', ed: '2.5s', edd: '0.5s', ex: -0.4 },
+    ];
+    return (
+      <>
+        <div className={styles.bronzeBloomInner}
+          style={{ width: sz, height: sz, marginLeft: -sz/2, marginTop: -sz/2 }} />
+        <div className={styles.bronzeInnerGlowInner}
+          style={{ width: szInner, height: szInner, marginLeft: -szInner/2, marginTop: -szInner/2 }} />
+        {embers.map((e, i) => (
+          <div key={i} className={styles.ember}
+            style={{ left: e.l, bottom: '-10%', '--ed': e.ed, '--edd': e.edd, '--ex': e.ex }} />
+        ))}
+      </>
+    );
+  }
+
   return (
     <div className={styles.avatarWrap} style={{ width: cfg.frameSize, height: cfg.frameSize }}>
+      {isSilver && <SilverFxInner />}
+      {isBronze && <BronzeFxInner />}
       <LightningOrbit label={cfg.label} frameSize={cfg.frameSize} isGold={isGold} />
       {isGold && <GoldenRays size={cfg.frameSize * 1.3} />}
       <img src="/gold-frame2.png"
@@ -317,8 +376,6 @@ export default function Overlay() {
             <div key={cfg.rank} className={`${styles.column} ${isFirst ? styles.colFirst : ''}`}>
               <div className={`${styles.card} ${styles[cfg.label + 'Card']}`}>
                 {cfg.rank === 1 && <FxGold />}
-                {cfg.rank === 2 && <FxSilver />}
-                {cfg.rank === 3 && <FxBronze />}
                 {isFirst && <Sparkles count={12} />}
                 {isFirst && <Particles count={18} areaSize={cfg.frameSize * 1.6} />}
 
@@ -334,7 +391,11 @@ export default function Overlay() {
 
                 <Avatar player={p} cfg={cfg} />
 
-                <div className={`${styles.playerName} ${isFirst ? styles.nameFirst : ''}`}>
+                <div className={`${styles.playerName} ${
+                  cfg.rank === 1 ? styles.nameFirst :
+                  cfg.rank === 2 ? styles.nameSilver :
+                  styles.nameBronze
+                }`}>
                   {p.displayName || p.username}
                 </div>
 

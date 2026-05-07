@@ -4,7 +4,23 @@
     "username": "sitdown.333",
     "displayName": "𝘴𝘪𝘵 𝘥𝘰𝘸𝘯 👇🏻",
     "profilePicUrl": "/api/avatar/sitdown.333",
-    "win": 0,
+    "win": 3,
     "joinedAt": 1778181679024
+  },
+  {
+    "id": "pin917395",
+    "username": "pin917395",
+    "displayName": "🌵🐽🦾🧸ปิ่นFćเอ๋เอง🌸🏹",
+    "profilePicUrl": "/api/avatar/pin917395",
+    "win": 2,
+    "joinedAt": 1778181744358
+  },
+  {
+    "id": "nuchana555",
+    "username": "nuchana555",
+    "displayName": "นุช นุชาน่า ⭐VTS⭐",
+    "profilePicUrl": "/api/avatar/nuchana555",
+    "win": 1,
+    "joinedAt": 1778181759795
   }
 ]

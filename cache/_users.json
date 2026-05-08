@@ -7,5 +7,10 @@
   {
     "username": "noey",
     "passwordHash": "$2b$12$3zY6.hP/Zyiw434r4KCsE.BTftAbOBYKGUHfCSVUf4gn7RqBUC16i"
+  },
+  {
+    "username": "test102",
+    "passwordHash": "$2b$12$/23jJPwIrGvq2HPpwRXQ8uBjPzuxBl9XbXi8pNaJoqS9oZmboLwHu",
+    "email": "mas.anitic@gmail.com"
   }
 ]

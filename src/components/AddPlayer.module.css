@@ -113,14 +113,21 @@
   flex-shrink: 0;
 }
 
-.picUrlInput {
+.picUrlInputWrap {
   flex: 1;
   min-width: 200px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.picUrlInput {
+  width: 100%;
   background: #0f0f1c;
   border: 1px dashed #2a2a40;
   border-radius: 8px;
   color: #aaa;
-  padding: 7px 12px;
+  padding: 7px 32px 7px 12px;
   font-size: 12px;
   font-family: monospace;
   outline: none;
@@ -128,3 +135,24 @@
 }
 .picUrlInput:focus { border-color: #fe2c55; border-style: solid; color: #fff; }
 .picUrlInput::placeholder { color: #444; }
+
+.picSpinner {
+  position: absolute;
+  right: 8px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #333;
+  border-top-color: #25f4ee;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  pointer-events: none;
+}
+
+.picOk {
+  position: absolute;
+  right: 9px;
+  font-size: 13px;
+  color: #25f4ee;
+  font-weight: 700;
+  pointer-events: none;
+}

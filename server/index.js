@@ -561,6 +561,24 @@ app.get('/api/tiktok-info/:username', async (req, res) => {
   res.json({ username, displayName, profilePicUrl });
 });
 
+/* ── Cache avatar from external URL ── */
+app.post('/api/cache-avatar', async (req, res) => {
+  const { username, imageUrl } = req.body;
+  if (!username || !imageUrl) return res.status(400).json({ error: 'username and imageUrl required' });
+  const id = username.trim().replace('@', '');
+  const local = await downloadAvatar(id, imageUrl);
+  if (!local) return res.status(502).json({ error: 'ดาวน์โหลดรูปไม่ได้' });
+  // อัปเดต cache และ players ด้วย (ถ้ามี)
+  const cached = loadFromCache(id);
+  saveToCache(id, { ...(cached || {}), uniqueId: id, profilePicUrl: local });
+  if (players.has(id)) {
+    players.get(id).profilePicUrl = local;
+    savePlayers();
+    broadcast();
+  }
+  res.json({ ok: true, profilePicUrl: local });
+});
+
 /* ── Serve locally-cached avatar images ── */
 app.get('/api/avatar/:username', (req, res) => {
   const username = decodeURIComponent(req.params.username);

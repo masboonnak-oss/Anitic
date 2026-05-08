@@ -9,13 +9,15 @@ const uiAvatarUrl = (uname) => {
 const isRealPic = (url) => url && url.startsWith('/api/avatar/');
 
 export default function AddPlayer({ onAdd }) {
-  const [username, setUsername]         = useState('');
-  const [displayName, setDisplayName]   = useState('');
+  const [username, setUsername]           = useState('');
+  const [displayName, setDisplayName]     = useState('');
   const [profilePicUrl, setProfilePicUrl] = useState('');
-  const [manualPicUrl, setManualPicUrl] = useState('');
-  const [loading, setLoading]           = useState(false);
-  const [picFailed, setPicFailed]       = useState(false);
-  const debounceRef = useRef(null);
+  const [manualPicUrl, setManualPicUrl]   = useState('');
+  const [loading, setLoading]             = useState(false);
+  const [caching, setCaching]             = useState(false);
+  const [picFailed, setPicFailed]         = useState(false);
+  const debounceRef  = useRef(null);
+  const cacheRef     = useRef(null);
 
   function handleUsernameChange(e) {
     const val = e.target.value;
@@ -32,14 +34,12 @@ export default function AddPlayer({ onAdd }) {
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/tiktok-info/${encodeURIComponent(uname)}`);
+        const res  = await fetch(`/api/tiktok-info/${encodeURIComponent(uname)}`);
         const data = await res.json();
-        const pic = data.profilePicUrl || '';
+        const pic  = data.profilePicUrl || '';
         setProfilePicUrl(pic);
         setPicFailed(!isRealPic(pic));
-        if (data.displayName && data.displayName !== uname) {
-          setDisplayName(data.displayName);
-        }
+        if (data.displayName && data.displayName !== uname) setDisplayName(data.displayName);
       } catch (_) {
         setProfilePicUrl('');
         setPicFailed(true);
@@ -49,12 +49,42 @@ export default function AddPlayer({ onAdd }) {
     }, 600);
   }
 
+  function handleManualPicChange(e) {
+    const url = e.target.value;
+    setManualPicUrl(url);
+
+    const uname = username.trim().replace('@', '');
+    if (!uname || !url.trim().startsWith('http')) return;
+
+    clearTimeout(cacheRef.current);
+    cacheRef.current = setTimeout(async () => {
+      setCaching(true);
+      try {
+        const res  = await fetch('/api/cache-avatar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: uname, imageUrl: url.trim() }),
+        });
+        const data = await res.json();
+        if (data.profilePicUrl) {
+          setProfilePicUrl(data.profilePicUrl);
+          setManualPicUrl('');
+          setPicFailed(false);
+        }
+      } catch (_) {
+        /* ใช้ URL ต้นฉบับต่อไปถ้า download ไม่ได้ */
+      } finally {
+        setCaching(false);
+      }
+    }, 700);
+  }
+
   function submit(e) {
     e.preventDefault();
     const uname = username.trim().replace('@', '');
     if (!uname) return;
     const finalName = displayName.trim() || uname;
-    const finalPic  = manualPicUrl.trim() || profilePicUrl || uiAvatarUrl(uname);
+    const finalPic  = profilePicUrl || uiAvatarUrl(uname);
     onAdd({ username: uname, displayName: finalName, profilePicUrl: finalPic });
     setUsername('');
     setDisplayName('');
@@ -63,8 +93,8 @@ export default function AddPlayer({ onAdd }) {
     setPicFailed(false);
   }
 
-  const uname  = username.trim().replace('@', '');
-  const activePic = manualPicUrl.trim() || profilePicUrl || (uname.length >= 2 ? uiAvatarUrl(uname) : null);
+  const uname     = username.trim().replace('@', '');
+  const activePic = profilePicUrl || (manualPicUrl.trim().startsWith('http') ? manualPicUrl.trim() : null) || (uname.length >= 2 ? uiAvatarUrl(uname) : null);
 
   return (
     <div className={styles.wrapper}>
@@ -101,7 +131,7 @@ export default function AddPlayer({ onAdd }) {
           </div>
         )}
 
-        <button className={styles.btn} type="submit" disabled={!uname}>
+        <button className={styles.btn} type="submit" disabled={!uname || loading || caching}>
           + เพิ่ม
         </button>
       </form>
@@ -109,13 +139,19 @@ export default function AddPlayer({ onAdd }) {
       {uname.length >= 2 && picFailed && !loading && (
         <div className={styles.picUrlRow}>
           <span className={styles.picUrlLabel}>🖼️ วาง URL รูปโปรไฟล์</span>
-          <input
-            className={styles.picUrlInput}
-            placeholder="https://... (ถ้าดึงรูปอัตโนมัติไม่ได้)"
-            value={manualPicUrl}
-            onChange={e => setManualPicUrl(e.target.value)}
-            autoComplete="off"
-          />
+          <div className={styles.picUrlInputWrap}>
+            <input
+              className={styles.picUrlInput}
+              placeholder="https://... (เซิร์ฟเวอร์จะดาวน์โหลดรูปให้อัตโนมัติ)"
+              value={manualPicUrl}
+              onChange={handleManualPicChange}
+              autoComplete="off"
+            />
+            {caching && <span className={styles.picSpinner} />}
+            {isRealPic(profilePicUrl) && !caching && (
+              <span className={styles.picOk}>✓</span>
+            )}
+          </div>
         </div>
       )}
     </div>

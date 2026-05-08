@@ -95,29 +95,17 @@
   font-size: 56px; font-weight: 900; color: #fff;
 }
 
-/* ── ORNATE GOLD FRAME PNG — static position, glow only ── */
+/* ── ORNATE GOLD FRAME PNG — static, no pulse ── */
 .frameImg {
   position: absolute;
   width: 360px; height: 360px;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   pointer-events: none; z-index: 8;
-  will-change: filter;
-  animation: framePulse 2.4s ease-in-out infinite;
-}
-@keyframes framePulse {
-  0%,100% {
-    filter:
-      drop-shadow(0 0 16px rgba(255,210,0,0.85))
-      drop-shadow(0 0 40px rgba(255,100,0,0.55))
-      saturate(1.20) brightness(1.05);
-  }
-  50% {
-    filter:
-      drop-shadow(0 0 34px rgba(255,230,0,1.00))
-      drop-shadow(0 0 75px rgba(255,80,0,0.80))
-      saturate(1.45) brightness(1.18);
-  }
+  filter:
+    drop-shadow(0 0 18px rgba(255,210,0,0.75))
+    drop-shadow(0 0 42px rgba(255,100,0,0.45))
+    saturate(1.25) brightness(1.08);
 }
 
 /* ── RISING EMBERS — start from bottom edge, below avatar ── */
@@ -203,15 +191,9 @@
   -webkit-text-stroke: 5px #000;
   paint-order: stroke fill;
   filter:
-    drop-shadow(0 0 18px rgba(255,215,0,0.90))
-    drop-shadow(0 0 40px rgba(255,140,0,0.60));
+    drop-shadow(0 0 16px rgba(255,215,0,0.80))
+    drop-shadow(0 0 36px rgba(255,140,0,0.50));
   letter-spacing: -0.02em;
-  will-change: filter, transform;
-  animation: numPulse 1.8s ease-in-out infinite;
-}
-@keyframes numPulse {
-  0%,100% { transform: scale(1.00); filter: drop-shadow(0 0 16px rgba(255,215,0,0.80)) drop-shadow(0 0 36px rgba(255,140,0,0.50)); }
-  50%     { transform: scale(1.06); filter: drop-shadow(0 0 32px rgba(255,215,0,1.00)) drop-shadow(0 0 70px rgba(255,140,0,0.80)); }
 }
 
 /* ── POP on update ── */

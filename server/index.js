@@ -1084,6 +1084,16 @@ app.get('/vip-overlay', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'overlay.html'));
 });
 
+/* POST test — trigger a fake entrance card (no auth needed for testing) */
+app.post('/api/overlay/test', (req, res) => {
+  const { type = 'top' } = req.body || {};
+  const payload = type === 'vip'
+    ? { uniqueId: 'vip_test', nickname: 'VIP Member ✨', profilePicture: '', level: 25, isTopGifter: false, diamonds: 0 }
+    : { uniqueId: 'top_test', nickname: 'BABYNOEY 🏆',  profilePicture: '', level: 35, isTopGifter: true,  diamonds: 12500 };
+  io.emit('overlay:entrance', payload);
+  res.json({ ok: true, payload });
+});
+
 /* GET current gifter leaderboard (for debugging) */
 app.get('/api/overlay/gifters', (req, res) => {
   const gifters = loadGifters();

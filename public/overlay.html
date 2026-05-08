@@ -212,6 +212,26 @@
 </head>
 <body>
 
+<!-- ── Test panel (แสดงเฉพาะ ?test=1) ── -->
+<div id="test-panel" style="display:none; position:fixed; top:16px; left:16px; z-index:9999;
+  display:none; flex-direction:column; gap:8px;">
+  <div style="font-size:11px; color:rgba(255,255,255,0.4); font-family:monospace; margin-bottom:2px;">
+    🧪 TEST MODE
+  </div>
+  <button onclick="testTop()" style="
+    padding:8px 16px; border-radius:10px; border:1.5px solid rgba(255,200,50,0.60);
+    background:rgba(255,180,0,0.12); color:#ffd700; font-size:13px; font-weight:800;
+    cursor:pointer; font-family:monospace; letter-spacing:0.3px;">
+    🏆 Test — Top Gifter
+  </button>
+  <button onclick="testVip()" style="
+    padding:8px 16px; border-radius:10px; border:1.5px solid rgba(60,160,255,0.60);
+    background:rgba(40,140,255,0.12); color:#7dd4ff; font-size:13px; font-weight:800;
+    cursor:pointer; font-family:monospace; letter-spacing:0.3px;">
+    👑 Test — VIP Level 20+
+  </button>
+</div>
+
 <div id="card-wrap">
   <div class="vip-card" id="vip-card">
     <div class="particles" id="particles"></div>
@@ -246,6 +266,34 @@
   const DISPLAY_MS = 6000;  // time card stays visible
   let hideTimer    = null;
   let tl           = null;
+
+  // ── Test mode (เปิดด้วย ?test=1) ──────────────
+  const isTest = new URLSearchParams(location.search).get('test') === '1';
+  if (isTest) {
+    document.getElementById('test-panel').style.display = 'flex';
+    document.body.style.background = 'rgba(0,0,0,0.5)';
+  }
+
+  function testTop() {
+    showCard({
+      uniqueId: 'babynoey_test',
+      nickname: 'BABYNOEY 🏆',
+      profilePicture: '',
+      level: 35,
+      isTopGifter: true,
+      diamonds: 12500,
+    });
+  }
+  function testVip() {
+    showCard({
+      uniqueId: 'vip_user_test',
+      nickname: 'VIP Member ✨',
+      profilePicture: '',
+      level: 25,
+      isTopGifter: false,
+      diamonds: 0,
+    });
+  }
 
   // ── Connect to Socket.io ──────────────────────
   const socket = io({ transports: ['websocket'] });

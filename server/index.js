@@ -290,31 +290,6 @@ function sendInitialState(socket, username) {
   socket.emit('watchedGiftersUpdate', Object.fromEntries([...st.watchedGifters.entries()]));
 }
 
-/* ── Extract numeric level from TikTok user object ── */
-function extractLevel(user) {
-  if (!user) return 0;
-  // Direct field
-  if (typeof user.level === 'number' && user.level > 0) return user.level;
-  if (typeof user.level === 'string') { const n = parseInt(user.level); if (n > 0) return n; }
-  // userBadges array (fan/level badges)
-  const badges = user.userBadges || user.badges || [];
-  for (const badge of badges) {
-    // displayType is often the level number
-    if (badge.displayType) { const n = parseInt(badge.displayType); if (!isNaN(n) && n > 0 && n < 1000) return n; }
-    // textBadges
-    for (const t of (badge.textBadges || [])) {
-      const n = parseInt(t.displayType || t.text || '') || 0;
-      if (n > 0 && n < 1000) return n;
-    }
-    // imageBadges
-    for (const img of (badge.imageBadges || [])) {
-      const n = parseInt(img.displayType || '') || 0;
-      if (n > 0 && n < 1000) return n;
-    }
-  }
-  return 0;
-}
-
 /* ── TikTok Live (per-user) ── */
 const MAX_RETRIES = 6;
 
@@ -446,21 +421,6 @@ function connectLive(adminUser, tiktokUser, attempt) {
       io.to(`room:${adminUser}`).emit('watchedGiftAlert',     { ...wg, latestGift: entry });
       io.to(`room:${adminUser}`).emit('watchedGiftersUpdate', snapshot);
       console.log(`[watch:${adminUser}] @${uid} → ${giftName} ×${entry.count} (${diamonds}💎)`);
-    }
-  });
-
-  /* ── Member join → fire overlay if level > 20 ── */
-  const memberEvent = WebcastEvent?.MEMBER || 'member';
-  conn.on(memberEvent, (data) => {
-    const uid      = data?.user?.uniqueId || data?.uniqueId;
-    const nickname = data?.user?.nickname  || data?.nickname || uid;
-    const picRaw   = data?.user?.profilePictureUrl || data?.user?.avatarUrl || data?.profilePictureUrl;
-    if (!uid) return;
-    const level = extractLevel(data?.user || data);
-    if (level > 20) {
-      const payload = { uniqueId: uid, displayName: nickname, profilePicUrl: proxiedPic(picRaw, uid), level };
-      io.to(`room:${adminUser}`).emit('topGifterEnter', payload);
-      console.log(`[TikTok:${adminUser}] ⭐ Level ${level} user @${uid} joined`);
     }
   });
 
@@ -974,16 +934,6 @@ app.delete('/api/watch-gifter/:uid/log', authMiddleware, (req, res) => {
   if (wg) { wg.giftLog = []; wg.totalDiamonds = 0; }
   io.to(`room:${req.admin.username}`).emit('watchedGiftersUpdate', Object.fromEntries([...st.watchedGifters.entries()]));
   res.json({ ok: true });
-});
-
-app.post('/api/test-top-gifter', authMiddleware, (req, res) => {
-  const FAKE_NAMES   = ['SupporterKing', 'DiamondQueen', 'GiftMaster', 'TopFanZ', 'RoyalGifter'];
-  const FAKE_LEVELS  = [21, 25, 32, 45, 50];
-  const idx = Math.floor(Math.random() * FAKE_NAMES.length);
-  const payload = { uniqueId: `test_${idx}`, displayName: FAKE_NAMES[idx], profilePicUrl: null, level: FAKE_LEVELS[idx] };
-  io.to(`room:${req.admin.username}`).emit('topGifterEnter', payload);
-  console.log(`[test:${req.admin.username}] topGifterEnter fired (${payload.displayName}, Lv.${payload.level})`);
-  res.json({ ok: true, payload });
 });
 
 const PORT = 3001;

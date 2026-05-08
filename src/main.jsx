@@ -7,7 +7,6 @@ import NewKingPage from './NewKingPage.jsx';
 import Top1Page from './Top1Page.jsx';
 import AuthPage from './AuthPage.jsx';
 import ResetPasswordPage from './ResetPasswordPage.jsx';
-import TopGifterPage from './TopGifterPage.jsx';
 import GifterLogPage from './GifterLogPage.jsx';
 import { getToken, clearToken } from './auth.js';
 
@@ -21,8 +20,6 @@ if (path === '/overlay') {
   ReactDOM.createRoot(document.getElementById('root')).render(<Top1Page />);
 } else if (path === '/reset-password') {
   ReactDOM.createRoot(document.getElementById('root')).render(<ResetPasswordPage />);
-} else if (path === '/topgifter') {
-  ReactDOM.createRoot(document.getElementById('root')).render(<TopGifterPage />);
 } else if (path === '/gifterlog') {
   ReactDOM.createRoot(document.getElementById('root')).render(<GifterLogPage />);
 } else {

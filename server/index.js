@@ -8,51 +8,44 @@ const path   = require('path');
 const jwt    = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
-/* ── Resend email helper ── */
-async function getResendClient() {
-  try {
-    const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-    const xReplitToken = process.env.REPL_IDENTITY
-      ? 'repl ' + process.env.REPL_IDENTITY
-      : process.env.WEB_REPL_RENEWAL
-      ? 'depl ' + process.env.WEB_REPL_RENEWAL
-      : null;
-    if (!hostname || !xReplitToken) return null;
-    const data = await fetch(
-      `https://${hostname}/api/v2/connection?include_secrets=true&connector_names=resend`,
-      { headers: { 'Accept': 'application/json', 'X-Replit-Token': xReplitToken } }
-    ).then(r => r.json()).then(d => d.items?.[0]);
-    if (!data?.settings?.api_key) return null;
-    return { client: new Resend(data.settings.api_key), fromEmail: data.settings.from_email || 'noreply@resend.dev' };
-  } catch (e) { console.warn('[resend] getResendClient failed:', e.message); return null; }
+/* ── Gmail / Nodemailer email helper ── */
+function getMailTransporter() {
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_APP_PASSWORD;
+  if (!user || !pass) return null;
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user, pass },
+  });
 }
 
 async function sendPasswordResetEmail(toEmail, username, resetToken) {
-  const resend = await getResendClient();
-  if (!resend) { console.warn('[resend] not configured, skip email'); return false; }
-  const resetUrl = `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/reset-password?token=${resetToken}`;
+  const transporter = getMailTransporter();
+  if (!transporter) { console.warn('[mail] GMAIL_USER or GMAIL_APP_PASSWORD not set, skip email'); return false; }
+  const domain  = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000';
+  const resetUrl = `${domain}/reset-password?token=${resetToken}`;
   try {
-    await resend.client.emails.send({
-      from: resend.fromEmail,
+    await transporter.sendMail({
+      from: `"WIN Leaderboard" <${process.env.GMAIL_USER}>`,
       to: toEmail,
       subject: '🔑 WIN Leaderboard — รีเซ็ตรหัสผ่าน',
       html: `
-<div style="font-family:'Segoe UI',sans-serif;background:#060612;color:#fff;padding:40px 20px;text-align:center;max-width:480px;margin:0 auto;border-radius:16px;">
-  <div style="font-size:48px;margin-bottom:16px;">🏆</div>
-  <h2 style="color:#ffd700;margin-bottom:8px;">WIN Leaderboard</h2>
+<div style="font-family:'Segoe UI',Arial,sans-serif;background:#060612;color:#fff;padding:40px 20px;text-align:center;max-width:480px;margin:0 auto;border-radius:16px;">
+  <div style="font-size:48px;margin-bottom:12px;">🏆</div>
+  <h2 style="color:#ffd700;margin:0 0 8px;">WIN Leaderboard</h2>
   <p style="color:#aaa;margin-bottom:28px;">มีคนขอรีเซ็ตรหัสผ่านสำหรับบัญชี <strong style="color:#fff;">${username}</strong></p>
   <a href="${resetUrl}" style="display:inline-block;background:linear-gradient(135deg,#fe2c55,#c41e3a);color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:16px;font-weight:700;margin-bottom:24px;">
     🔑 ตั้งรหัสผ่านใหม่
   </a>
-  <p style="color:#555;font-size:13px;">ลิงก์นี้จะหมดอายุใน 1 ชั่วโมง</p>
-  <p style="color:#333;font-size:12px;margin-top:16px;">หากคุณไม่ได้ขอรีเซ็ต กรุณาเพิกเฉยต่ออีเมลนี้</p>
+  <p style="color:#555;font-size:13px;margin:0 0 8px;">ลิงก์นี้จะหมดอายุใน <strong style="color:#ffd700;">1 ชั่วโมง</strong></p>
+  <p style="color:#333;font-size:12px;margin:0;">หากคุณไม่ได้ขอรีเซ็ต กรุณาเพิกเฉยต่ออีเมลนี้</p>
 </div>`,
     });
-    console.log(`[resend] reset email sent to ${toEmail} for ${username}`);
+    console.log(`[mail] reset email sent to ${toEmail} for ${username}`);
     return true;
-  } catch (e) { console.error('[resend] send failed:', e.message); return false; }
+  } catch (e) { console.error('[mail] send failed:', e.message); return false; }
 }
 
 /* ── Dirs ── */
@@ -607,6 +600,39 @@ app.delete('/api/admin/reset-requests/:username', authMiddleware, superAdminMidd
   const reqs = loadResetRequests().filter(r => r.username !== req.params.username);
   saveResetRequests(reqs);
   res.json({ ok: true });
+});
+
+/* ── Super Admin: update user email ── */
+app.patch('/api/admin/users/:username/email', authMiddleware, superAdminMiddleware, (req, res) => {
+  const target = req.params.username;
+  const { email } = req.body;
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+    return res.status(400).json({ error: 'อีเมลไม่ถูกต้อง' });
+  const users = loadUsers();
+  const user  = users.find(u => u.username === target);
+  if (!user) return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
+  const dup = users.find(u => u.username !== target && u.email === email.trim().toLowerCase());
+  if (dup) return res.status(409).json({ error: 'อีเมลนี้ถูกใช้แล้ว' });
+  user.email = email.trim().toLowerCase();
+  saveUsers(users);
+  console.log(`[superadmin] set email for ${target}: ${user.email}`);
+  res.json({ ok: true, email: user.email });
+});
+
+/* ── User: update own email ── */
+app.patch('/api/auth/email', authMiddleware, (req, res) => {
+  const { email } = req.body;
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+    return res.status(400).json({ error: 'อีเมลไม่ถูกต้อง' });
+  const users = loadUsers();
+  const user  = users.find(u => u.username === req.admin.username);
+  if (!user) return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
+  const dup = users.find(u => u.username !== req.admin.username && u.email === email.trim().toLowerCase());
+  if (dup) return res.status(409).json({ error: 'อีเมลนี้ถูกใช้แล้ว' });
+  user.email = email.trim().toLowerCase();
+  saveUsers(users);
+  console.log(`[auth] ${req.admin.username} updated email: ${user.email}`);
+  res.json({ ok: true, email: user.email });
 });
 
 /* ── Super Admin: promote/demote ── */

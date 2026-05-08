@@ -79,7 +79,11 @@ export default function App({ username, role, onLogout }) {
       <header className={styles.header}>
 
         {/* Logo */}
-        <div className={styles.logo}>🏆 WIN Leaderboard</div>
+        <div className={styles.logo}>
+          <span className={styles.logoTrophy}>🏆</span>
+          <span className={styles.logoText}>WIN Leaderboard</span>
+          <span className={styles.logoSpark}>✨</span>
+        </div>
 
         <div className={styles.headerRight}>
 
@@ -139,26 +143,16 @@ export default function App({ username, role, onLogout }) {
         </div>
       </header>
 
-      {/* ══════════ OVERLAY URL PANEL ══════════ */}
-      <div className={styles.overlayPanel}>
-        <div className={styles.overlayPanelTitle}>
-          <span className={styles.overlayPanelIcon}>🎬</span> Overlay URLs
+      {/* ══════════ BRANDING BAR ══════════ */}
+      <div className={styles.brandBar}>
+        <span className={styles.brandDeco}>🎵</span>
+        <span className={styles.brandDeco}>✨</span>
+        <div className={styles.brandText}>
+          <span className={styles.brandBy}>By TikTok</span>
+          <span className={styles.brandHandle}>@Babynoryy</span>
         </div>
-        <div className={styles.overlayRows}>
-          {[
-            { label: '📺 Overlay',  url: overlayUrl, color: '#25f4ee', copied,           setter: setCopied   },
-            { label: '👑 New King', url: newkingUrl, color: '#ffd700', copied: copiedNK, setter: setCopiedNK },
-            { label: '🥇 Top 1',   url: top1Url,    color: '#ff9933', copied: copiedT1, setter: setCopiedT1 },
-          ].map(({ label, url, color, copied: c, setter }) => (
-            <div className={styles.overlayRow} key={label} style={{ '--oc': color }}>
-              <span className={styles.overlayLabel}>{label}</span>
-              <code className={styles.urlCode} onClick={() => copyUrl(url, setter)}>{url}</code>
-              <button className={styles.copyMiniBtn} onClick={() => copyUrl(url, setter)}>
-                {c ? '✓' : 'คัดลอก'}
-              </button>
-            </div>
-          ))}
-        </div>
+        <span className={styles.brandDeco}>💖</span>
+        <span className={styles.brandDeco}>🎀</span>
       </div>
 
       {/* ══════════ MAIN CONTENT ══════════ */}
@@ -167,7 +161,8 @@ export default function App({ username, role, onLogout }) {
         {players.length === 0 ? (
           <div className={styles.empty}>
             <div className={styles.emptyIcon}>🎮</div>
-            <p>พิมพ์ TikTok username เพื่อเพิ่มผู้เล่น</p>
+            <p>🌟 พิมพ์ TikTok username เพื่อเพิ่มผู้เล่น 🌟</p>
+            <p className={styles.emptyHint}>💫 กดปุ่ม + เพิ่ม เพื่อเริ่มต้น 💫</p>
           </div>
         ) : (
           <>

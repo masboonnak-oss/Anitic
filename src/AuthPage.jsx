@@ -146,7 +146,7 @@ export default function AuthPage({ onAuth }) {
             <p className={styles.brandSub}>ระบบจัดอันดับ TikTok Live สุดเอ็กซ์คลูซีฟ</p>
             <div className={styles.features}>
               <div className={styles.featureItem}><span className={styles.featureDot} />Real-time leaderboard</div>
-              <div className={styles.featureItem}><span className={styles.featureDot} />Village &amp; Win Rate tracking</div>
+              <div className={styles.featureItem}><span className={styles.featureDot} />Win Rate tracking</div>
               <div className={styles.featureItem}><span className={styles.featureDot} />Admin dashboard</div>
             </div>
           </div>

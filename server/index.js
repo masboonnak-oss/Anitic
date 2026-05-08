@@ -13,9 +13,14 @@ if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
 const AVATAR_DIR = path.join(__dirname, '../cache/avatars');
 if (!fs.existsSync(AVATAR_DIR)) fs.mkdirSync(AVATAR_DIR, { recursive: true });
 
+/* Sanitize username → safe filename (no dots, spaces, special chars) */
+function safeFilename(username) {
+  return username.replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
 /* Download avatar image and save to disk; returns stable local URL */
 async function downloadAvatar(username, remoteUrl) {
-  const filePath = path.join(AVATAR_DIR, `${username}.jpg`);
+  const filePath = path.join(AVATAR_DIR, `${safeFilename(username)}.jpg`);
   try {
     const response = await axios.get(remoteUrl, {
       responseType: 'arraybuffer',
@@ -495,10 +500,15 @@ app.get('/api/tiktok-info/:username', async (req, res) => {
 /* ── Serve locally-cached avatar images ── */
 app.get('/api/avatar/:username', (req, res) => {
   const username = decodeURIComponent(req.params.username);
-  const filePath = path.join(AVATAR_DIR, `${username}.jpg`);
-  if (!fs.existsSync(filePath)) return res.status(404).send('no avatar');
+  // ลองชื่อไฟล์ที่ sanitize แล้วก่อน ถ้าไม่มีลองชื่อเดิม (backward compat)
+  const safePath = path.join(AVATAR_DIR, `${safeFilename(username)}.jpg`);
+  const rawPath  = path.join(AVATAR_DIR, `${username}.jpg`);
+  const filePath = fs.existsSync(safePath) ? safePath : fs.existsSync(rawPath) ? rawPath : null;
+  if (!filePath) return res.status(404).send('no avatar');
   res.set('Cache-Control', 'public, max-age=86400');
-  res.sendFile(filePath);
+  // ใช้ pipe โดยตรงเพื่อหลีกเลี่ยง Express dotfiles restriction
+  res.set('Content-Type', 'image/jpeg');
+  fs.createReadStream(filePath).pipe(res);
 });
 
 /* ── Cache API ── */

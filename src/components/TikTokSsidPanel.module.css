@@ -1,278 +1,219 @@
 .wrap {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 4px 0;
+  gap: 14px;
+  padding: 2px 0;
 }
 
-/* ── Current SSID card ── */
-.ssidCard {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(37,244,238,0.15);
-  border-radius: 14px;
-  padding: 16px 18px;
+/* ── Status card ── */
+.statusCard {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  background: rgba(37,244,238,0.04);
+  border: 1px solid rgba(37,244,238,0.14);
+  border-radius: 14px;
+  padding: 16px 18px;
 }
-.ssidCardLeft {
+.statusLeft {
   display: flex;
   align-items: center;
   gap: 14px;
+  min-width: 0;
 }
-.ttLogo {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.ttIcon {
   flex-shrink: 0;
-  filter: drop-shadow(0 0 6px rgba(37,244,238,0.40));
+  filter: drop-shadow(0 0 6px rgba(37,244,238,0.45));
 }
-.ssidLabel {
+.statusLabel {
   font-size: 11px;
   font-weight: 700;
-  color: rgba(255,255,255,0.40);
+  color: rgba(255,255,255,0.38);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
-.ssidValue {
+.statusValue {
   font-family: 'Courier New', monospace;
   font-size: 13px;
   font-weight: 700;
   color: #25F4EE;
-  background: rgba(37,244,238,0.07);
+  background: rgba(37,244,238,0.08);
   border-radius: 6px;
   padding: 2px 8px;
   display: inline-block;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.ssidAge   { font-size: 11px; color: rgba(255,255,255,0.28); margin-top: 3px; }
-.ssidEmpty { font-size: 13px; color: rgba(255,80,80,0.70); }
-.ssidLoading { font-size: 13px; color: rgba(255,255,255,0.30); }
+.statusAge    { font-size: 11px; color: rgba(255,255,255,0.25); margin-top: 3px; }
+.statusEmpty  { font-size: 13px; color: rgba(255,120,80,0.75); }
+.statusLoading{ font-size: 13px; color: rgba(255,255,255,0.30); }
 
-.ssidBadge {
+.badge {
   font-size: 12px;
   font-weight: 700;
-  padding: 4px 12px;
+  padding: 5px 12px;
   border-radius: 20px;
   white-space: nowrap;
   flex-shrink: 0;
 }
-.ssidBadge[data-has="true"] {
+.badgeActive {
   background: rgba(0,200,100,0.12);
   color: #00e676;
   border: 1px solid rgba(0,200,100,0.25);
 }
-.ssidBadge[data-has="false"] {
-  background: rgba(255,60,60,0.10);
-  color: #ff6b6b;
-  border: 1px solid rgba(255,60,60,0.20);
+.badgeNone {
+  background: rgba(255,160,0,0.10);
+  color: #ffb74d;
+  border: 1px solid rgba(255,160,0,0.22);
 }
 
-/* ── Sections ── */
-.section {
+/* ── Guide card ── */
+.guideCard {
   background: rgba(255,255,255,0.02);
   border: 1px solid rgba(255,255,255,0.07);
   border-radius: 14px;
-  padding: 18px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  padding: 16px 20px;
 }
-.sectionTitle {
-  font-size: 14px;
+.guideTitle {
+  font-size: 13px;
   font-weight: 800;
   color: #fff;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  margin-bottom: 10px;
 }
-.sectionIcon { font-size: 16px; }
-.sectionDesc {
-  font-size: 12px;
-  color: rgba(255,255,255,0.38);
+.guideList {
   margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.guideList li {
+  font-size: 12px;
+  color: rgba(255,255,255,0.50);
   line-height: 1.6;
 }
-
-/* ── Status bar ── */
-.statusBar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.10);
+.guideList strong { color: rgba(255,255,255,0.80); }
+kbd {
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
   color: #fff;
 }
-.status_starting, .status_navigating, .status_waiting-qr, .status_scan-qr {
-  border-color: rgba(37,244,238,0.30);
-  background: rgba(37,244,238,0.06);
+code {
+  background: rgba(37,244,238,0.10);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
   color: #25F4EE;
 }
-.status_success {
-  border-color: rgba(0,220,100,0.35);
-  background: rgba(0,220,100,0.08);
-  color: #00e676;
-}
-.status_timeout, .status_error, .status_cancelled {
-  border-color: rgba(255,60,60,0.30);
-  background: rgba(255,60,60,0.06);
-  color: #ff6b6b;
-}
-.statusSpinner {
-  width: 14px; height: 14px;
-  border: 2px solid rgba(37,244,238,0.30);
-  border-top-color: #25F4EE;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  flex-shrink: 0;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-.statusErr { color: #ff9090; font-weight: 400; }
 
-/* ── QR Code ── */
-.qrWrap {
+/* ── Input card ── */
+.inputCard {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(254,44,85,0.18);
+  border-radius: 14px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 12px;
 }
-.qrFrame {
-  background: #fff;
-  border-radius: 16px;
-  padding: 12px;
-  width: fit-content;
-  box-shadow:
-    0 0 0 2px rgba(254,44,85,0.40),
-    0 0 20px rgba(254,44,85,0.20),
-    0 0 40px rgba(37,244,238,0.12);
-  animation: qrPulse 2s ease-in-out infinite;
-}
-@keyframes qrPulse {
-  0%, 100% { box-shadow: 0 0 0 2px rgba(254,44,85,0.40), 0 0 20px rgba(254,44,85,0.20), 0 0 40px rgba(37,244,238,0.12); }
-  50%       { box-shadow: 0 0 0 3px rgba(254,44,85,0.65), 0 0 30px rgba(254,44,85,0.35), 0 0 60px rgba(37,244,238,0.20); }
-}
-.qrImg {
-  display: block;
-  width: 200px;
-  height: 200px;
-  object-fit: contain;
-  border-radius: 8px;
-}
-.qrHint {
-  font-size: 12px;
-  color: rgba(255,255,255,0.45);
-  text-align: center;
-  margin: 0;
-  line-height: 1.6;
-}
-
-/* ── Buttons ── */
-.btnRow { display: flex; gap: 10px; }
-
-.startBtn {
-  flex: 1;
+.inputCardTitle {
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 20px;
-  background: linear-gradient(135deg, #FE2C55 0%, #ff6b35 100%);
+  gap: 6px;
+}
+
+.form { display: flex; flex-direction: column; gap: 8px; }
+
+.textarea {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1.5px solid rgba(255,255,255,0.10);
+  border-radius: 10px;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  padding: 12px 14px;
+  outline: none;
+  resize: vertical;
+  min-height: 72px;
+  box-sizing: border-box;
+  transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+  line-height: 1.5;
+}
+.textarea::placeholder { color: rgba(255,255,255,0.20); }
+.textarea:focus {
+  border-color: rgba(254,44,85,0.50);
+  background: rgba(254,44,85,0.04);
+  box-shadow: 0 0 0 3px rgba(254,44,85,0.08);
+}
+
+.formFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.charCount {
+  font-size: 11px;
+  color: rgba(255,255,255,0.28);
+}
+
+.saveBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #FE2C55 0%, #c700b0 100%);
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   color: #fff;
   font-family: 'Kanit', sans-serif;
   font-size: 14px;
   font-weight: 800;
   cursor: pointer;
-  transition: opacity 0.18s, transform 0.15s, box-shadow 0.18s;
-  box-shadow: 0 4px 20px rgba(254,44,85,0.35);
+  white-space: nowrap;
+  transition: opacity 0.18s, transform 0.14s, box-shadow 0.18s;
+  box-shadow: 0 4px 18px rgba(254,44,85,0.30);
 }
-.startBtn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(254,44,85,0.50);
+.saveBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(254,44,85,0.45);
 }
-.startBtn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.saveBtn:disabled { opacity: 0.40; cursor: not-allowed; transform: none; }
 
-.cancelBtn {
-  flex: 1;
-  padding: 12px 20px;
-  background: rgba(255,60,60,0.10);
-  border: 1px solid rgba(255,60,60,0.28);
-  border-radius: 12px;
-  color: #ff6b6b;
-  font-family: 'Kanit', sans-serif;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.18s;
-}
-.cancelBtn:hover { background: rgba(255,60,60,0.20); }
-
-.btnSpinner {
-  width: 14px; height: 14px;
+.spinner {
+  width: 13px; height: 13px;
   border: 2px solid rgba(255,255,255,0.30);
   border-top-color: #fff;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   flex-shrink: 0;
 }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Manual form ── */
-.manualForm {
+/* ── Info note ── */
+.infoNote {
   display: flex;
+  align-items: flex-start;
   gap: 8px;
-}
-.manualInput {
-  flex: 1;
-  background: rgba(255,255,255,0.05);
-  border: 1.5px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
   border-radius: 10px;
-  color: #fff;
-  font-family: 'Courier New', monospace;
-  font-size: 13px;
-  padding: 10px 14px;
-  outline: none;
-  transition: border-color 0.18s, background 0.18s;
-}
-.manualInput::placeholder { color: rgba(255,255,255,0.22); }
-.manualInput:focus {
-  border-color: rgba(254,44,85,0.55);
-  background: rgba(254,44,85,0.05);
-}
-.saveBtn {
-  padding: 10px 18px;
-  background: rgba(254,44,85,0.15);
-  border: 1px solid rgba(254,44,85,0.35);
-  border-radius: 10px;
-  color: #fe2c55;
-  font-family: 'Kanit', sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.18s;
-}
-.saveBtn:hover:not(:disabled) { background: rgba(254,44,85,0.25); }
-.saveBtn:disabled { opacity: 0.40; cursor: not-allowed; }
-
-.manualHint {
+  padding: 12px 14px;
   font-size: 11px;
-  color: rgba(255,255,255,0.28);
-  margin: 0;
+  color: rgba(255,255,255,0.30);
   line-height: 1.6;
 }
-.manualHint code {
-  background: rgba(255,255,255,0.08);
-  border-radius: 4px;
-  padding: 1px 5px;
-  font-family: 'Courier New', monospace;
-  color: #25F4EE;
-}
+.infoIcon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }

@@ -9,33 +9,6 @@ const jwt    = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
-const { execSync } = require('child_process');
-
-/* ── Puppeteer (lazy-loaded) ── */
-let _puppeteerExtra = null;
-function getPuppeteer() {
-  if (_puppeteerExtra) return _puppeteerExtra;
-  try {
-    const pe = require('puppeteer-extra');
-    const Stealth = require('puppeteer-extra-plugin-stealth');
-    pe.use(Stealth());
-    _puppeteerExtra = pe;
-    return pe;
-  } catch (e) {
-    throw new Error('puppeteer-extra not installed: ' + e.message);
-  }
-}
-
-function findChromiumPath() {
-  if (process.env.PUPPETEER_EXECUTABLE_PATH) return process.env.PUPPETEER_EXECUTABLE_PATH;
-  try { const p = execSync('which chromium 2>/dev/null').toString().trim(); if (p) return p; } catch (_) {}
-  try { const p = execSync('which chromium-browser 2>/dev/null').toString().trim(); if (p) return p; } catch (_) {}
-  try {
-    const p = execSync('find /nix/store -maxdepth 6 -name "chromium" -type f 2>/dev/null | head -1').toString().trim();
-    if (p) return p;
-  } catch (_) {}
-  return null;
-}
 
 /* ── Gmail / Nodemailer email helper ── */
 function getMailTransporter() {
@@ -862,8 +835,6 @@ if (_savedSsid.ssid && !process.env.TIKTOK_SESSION_ID) {
   console.log('[tiktok-ssid] loaded persisted sessionid from cache');
 }
 
-let ttSession = null; // { browser, status, qrDataUrl, ssid, error, startedAt }
-
 /* GET current saved SSID */
 app.get('/api/admin/tiktok-ssid', authMiddleware, superAdminMiddleware, (req, res) => {
   const d = loadSsidData();
@@ -878,126 +849,6 @@ app.post('/api/admin/tiktok-ssid', authMiddleware, superAdminMiddleware, (req, r
   if (!ssid || ssid.trim().length < 10) return res.status(400).json({ error: 'SSID ไม่ถูกต้อง' });
   saveSsidData(ssid.trim());
   console.log('[tiktok-ssid] manual update');
-  res.json({ ok: true });
-});
-
-/* POST start QR login session */
-app.post('/api/admin/tiktok-login/start', authMiddleware, superAdminMiddleware, async (req, res) => {
-  // Close any existing session
-  if (ttSession?.browser) {
-    try { await ttSession.browser.close(); } catch (_) {}
-  }
-  const execPath = findChromiumPath();
-  if (!execPath) return res.status(500).json({ error: 'ไม่พบ Chromium ในระบบ' });
-
-  ttSession = { status: 'starting', qrDataUrl: null, ssid: null, error: null, startedAt: Date.now() };
-  res.json({ ok: true });
-
-  // Run async (don't await in request handler)
-  (async () => {
-    try {
-      const puppeteer = getPuppeteer();
-      const browser = await puppeteer.launch({
-        executablePath: execPath,
-        headless: true,
-        args: [
-          '--no-sandbox', '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage', '--disable-gpu',
-          '--no-first-run', '--no-zygote',
-          '--disable-extensions', '--disable-background-networking',
-        ],
-      });
-      ttSession.browser = browser;
-      const page = await browser.newPage();
-      await page.setViewport({ width: 1280, height: 900 });
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-
-      ttSession.status = 'navigating';
-      console.log('[tiktok-login] navigating to QR login page...');
-      await page.goto('https://www.tiktok.com/login/qrcode', { waitUntil: 'networkidle2', timeout: 30000 });
-
-      ttSession.status = 'waiting-qr';
-
-      // Wait for QR code element
-      let qrEl = null;
-      const qrSelectors = [
-        'canvas[class*="qrcode"]',
-        'canvas[class*="QR"]',
-        'img[class*="qr"]',
-        'div[class*="qrcode"] canvas',
-        'div[class*="QRCode"] canvas',
-        'canvas',
-      ];
-      for (const sel of qrSelectors) {
-        try {
-          qrEl = await page.waitForSelector(sel, { timeout: 8000 });
-          if (qrEl) { console.log('[tiktok-login] found QR via:', sel); break; }
-        } catch (_) {}
-      }
-
-      // Screenshot QR area
-      const takeQrShot = async () => {
-        try {
-          if (qrEl) {
-            const buf = await qrEl.screenshot({ type: 'png' });
-            return `data:image/png;base64,${buf.toString('base64')}`;
-          }
-          // fallback: screenshot center of page
-          const buf = await page.screenshot({ type: 'png', clip: { x: 340, y: 80, width: 600, height: 680 } });
-          return `data:image/png;base64,${buf.toString('base64')}`;
-        } catch (_) { return null; }
-      };
-
-      ttSession.qrDataUrl = await takeQrShot();
-      ttSession.status = 'scan-qr';
-      console.log('[tiktok-login] QR ready, waiting for scan...');
-
-      // Poll for sessionid cookie (max 3 minutes)
-      for (let i = 0; i < 180; i++) {
-        await new Promise(r => setTimeout(r, 1000));
-        if (!ttSession || ttSession.status === 'cancelled') break;
-
-        const cookies = await page.cookies('https://www.tiktok.com');
-        const sid = cookies.find(c => c.name === 'sessionid');
-        if (sid?.value) {
-          ttSession.ssid    = sid.value;
-          ttSession.status  = 'success';
-          saveSsidData(sid.value);
-          console.log('[tiktok-login] ✅ sessionid extracted!');
-          break;
-        }
-        // Refresh QR screenshot every 10s
-        if (i % 10 === 9) {
-          const freshQr = await takeQrShot();
-          if (freshQr && ttSession) ttSession.qrDataUrl = freshQr;
-        }
-      }
-      if (ttSession && ttSession.status === 'scan-qr') {
-        ttSession.status = 'timeout';
-        ttSession.error  = 'หมดเวลา กรุณาลองใหม่';
-      }
-    } catch (err) {
-      console.error('[tiktok-login] error:', err.message);
-      if (ttSession) { ttSession.status = 'error'; ttSession.error = err.message; }
-    } finally {
-      try { if (ttSession?.browser) { await ttSession.browser.close(); ttSession.browser = null; } } catch (_) {}
-    }
-  })();
-});
-
-/* GET session status + QR */
-app.get('/api/admin/tiktok-login/status', authMiddleware, superAdminMiddleware, (req, res) => {
-  if (!ttSession) return res.json({ status: 'idle' });
-  const { status, qrDataUrl, ssid, error, startedAt } = ttSession;
-  res.json({ status, qrDataUrl, error, startedAt, ssidPreview: ssid ? ssid.slice(0, 10) + '…' : null });
-});
-
-/* POST cancel session */
-app.post('/api/admin/tiktok-login/cancel', authMiddleware, superAdminMiddleware, async (req, res) => {
-  if (ttSession?.browser) {
-    try { await ttSession.browser.close(); } catch (_) {}
-  }
-  ttSession = null;
   res.json({ ok: true });
 });
 

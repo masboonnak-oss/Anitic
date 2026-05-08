@@ -26,16 +26,32 @@ function ChromaKeyVideo({ src, className }) {
       const w = canvas.width;
       const h = canvas.height;
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.clearRect(0, 0, w, h);
       ctx.drawImage(video, 0, 0, w, h);
 
       const frame = ctx.getImageData(0, 0, w, h);
       const d = frame.data;
+      const cx = w / 2, cy = h / 2;
+      const outerR = w / 2;
+      const innerR = w * 0.44; // transparent center so avatar shows through
 
-      for (let i = 0; i < d.length; i += 4) {
-        const r = d[i], g = d[i + 1], b = d[i + 2];
-        // Remove pixels where green dominates
-        if (g > 80 && g > r * 1.2 && g > b * 1.1) {
-          d[i + 3] = 0; // fully transparent
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const idx = (y * w + x) * 4;
+          const dx = x - cx, dy = y - cy;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          // Outside circle or inside donut hole → transparent
+          if (dist > outerR || dist < innerR) {
+            d[idx + 3] = 0;
+            continue;
+          }
+
+          // Remove green screen pixels
+          const r = d[idx], g = d[idx + 1], b = d[idx + 2];
+          if (g > 80 && g > r * 1.2 && g > b * 1.1) {
+            d[idx + 3] = 0;
+          }
         }
       }
       ctx.putImageData(frame, 0, 0);

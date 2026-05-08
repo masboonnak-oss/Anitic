@@ -252,40 +252,36 @@
   margin-top: 2px;
 }
 
-/* ── WIN BADGE — big & clear ── */
+/* ── WIN — bare number + black stroke, no box ── */
 .wins {
   display: flex; flex-direction: column; align-items: center; gap: 0;
-  background: linear-gradient(160deg, rgba(30,12,0,0.88), rgba(10,4,0,0.92));
-  border: 2.5px solid #ffd700;
-  border-radius: 20px;
-  padding: 8px 44px 10px;
-  box-shadow:
-    0 0 0 1px rgba(255,120,0,0.30),
-    0 0 28px rgba(255,215,0,0.60),
-    0 0 60px rgba(255,120,0,0.30),
-    inset 0 1px 0 rgba(255,255,180,0.20);
-  will-change: transform, box-shadow;
+  margin-top: -18px; /* pull up close to the circle */
+  will-change: transform;
   animation: winsPulse 2s ease-in-out infinite;
-  margin-top: 2px;
 }
 @keyframes winsPulse {
-  0%,100% { transform: scale(1.00); box-shadow: 0 0 0 1px rgba(255,120,0,0.30), 0 0 24px rgba(255,215,0,0.55), 0 0 50px rgba(255,120,0,0.25), inset 0 1px 0 rgba(255,255,180,0.20); }
-  50%     { transform: scale(1.05); box-shadow: 0 0 0 2px rgba(255,120,0,0.50), 0 0 44px rgba(255,215,0,0.90), 0 0 80px rgba(255,120,0,0.50), inset 0 1px 0 rgba(255,255,180,0.35); }
+  0%,100% { transform: scale(1.00); }
+  50%     { transform: scale(1.08); }
 }
 .winsNum {
-  font-size: 58px; font-weight: 900; line-height: 1;
+  font-size: 72px; font-weight: 900; line-height: 1;
   color: #ffe44d;
   text-shadow:
-    0 0 20px #ffd700,
-    0 0 45px #ff8800aa,
-    0 3px 0 #5a2800;
+    -3px -3px 0 #000, 3px -3px 0 #000,
+    -3px  3px 0 #000, 3px  3px 0 #000,
+    -3px  0   0 #000, 3px  0   0 #000,
+     0   -3px 0 #000, 0    3px 0 #000,
+    0 0 24px #ffd700cc;
   letter-spacing: -0.02em;
 }
 .winsLabel {
-  font-size: 13px; font-weight: 700;
+  font-size: 14px; font-weight: 900;
   letter-spacing: 0.30em;
-  color: rgba(255,240,160,0.80);
-  margin-top: -2px;
+  color: #fff;
+  text-shadow:
+    -2px -2px 0 #000, 2px -2px 0 #000,
+    -2px  2px 0 #000, 2px  2px 0 #000;
+  margin-top: -4px;
 }
 
 /* ── POP on update ── */

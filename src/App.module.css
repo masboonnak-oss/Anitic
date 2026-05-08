@@ -7,6 +7,7 @@
 ═══════════════════════════════ */
 .app {
   min-height: 100vh;
+  padding-top: 68px;
   background:
     linear-gradient(
       180deg,
@@ -28,17 +29,81 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 24px;
-  min-height: 64px;
-  background: rgba(8,8,20,0.90);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-  position: sticky;
+  padding: 0 24px;
+  height: 68px;
+  /* ── Fixed: stays on screen when scrolling ── */
+  position: fixed;
   top: 0;
-  z-index: 100;
+  left: 0;
+  right: 0;
+  z-index: 500;
   gap: 14px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow: visible;
+  /* ── Gaming glass background ── */
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255,255,255,0.012) 2px,
+      rgba(255,255,255,0.012) 4px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(60,0,40,0.92) 0%,
+      rgba(12,0,28,0.96) 30%,
+      rgba(12,0,28,0.96) 70%,
+      rgba(60,0,40,0.92) 100%
+    );
+  backdrop-filter: blur(28px) saturate(1.4);
+  -webkit-backdrop-filter: blur(28px) saturate(1.4);
+  /* ── Neon bottom edge ── */
+  border-bottom: none;
+}
+
+/* animated neon bottom line */
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    #ff2d78 15%,
+    #c770ff 35%,
+    #ff2d78 50%,
+    #c770ff 70%,
+    #ff2d78 85%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: neonSweep 3s linear infinite;
+  box-shadow: 0 0 12px rgba(200,80,255,0.60), 0 0 24px rgba(255,45,120,0.30);
+}
+/* top accent thin line */
+.header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255,45,120,0.40) 30%,
+    rgba(200,80,255,0.55) 50%,
+    rgba(255,45,120,0.40) 70%,
+    transparent 100%
+  );
+}
+@keyframes neonSweep {
+  0%   { background-position: 0%   0; }
+  100% { background-position: 200% 0; }
 }
 
 /* ── Logo ── */

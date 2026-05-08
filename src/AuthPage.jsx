@@ -4,18 +4,19 @@ import styles from './AuthPage.module.css';
 
 export default function AuthPage({ onAuth }) {
   const [view, setView]         = useState('main'); // 'main' | 'forgot' | 'forgot-sent'
-  const [tab, setTab]           = useState('login'); // 'login' | 'register'
+  const [tab, setTab]           = useState('login');
   const [username, setUsername] = useState('');
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm]   = useState('');
-  const [forgotUser, setForgotUser] = useState('');
+  const [forgotEmail, setForgotEmail] = useState('');
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
   const [showPw, setShowPw]     = useState(false);
 
-  function switchTab(t) { setTab(t); setError(''); setUsername(''); setPassword(''); setConfirm(''); }
-  function goForgot() { setView('forgot'); setError(''); setForgotUser(''); }
-  function goMain()   { setView('main');   setError(''); }
+  function switchTab(t) { setTab(t); setError(''); setUsername(''); setEmail(''); setPassword(''); setConfirm(''); }
+  function goForgot()   { setView('forgot'); setError(''); setForgotEmail(''); }
+  function goMain()     { setView('main');   setError(''); }
 
   async function submit(e) {
     e.preventDefault();
@@ -23,10 +24,11 @@ export default function AuthPage({ onAuth }) {
     if (tab === 'register' && password !== confirm) { setError('รหัสผ่านทั้งสองไม่ตรงกัน'); return; }
     setLoading(true);
     try {
+      const body = tab === 'register'
+        ? { username: username.trim(), email: email.trim(), password }
+        : { username: username.trim(), password };
       const res  = await fetch(tab === 'register' ? '/api/auth/register' : '/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim(), password }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'เกิดข้อผิดพลาด'); return; }
@@ -45,9 +47,8 @@ export default function AuthPage({ onAuth }) {
     setLoading(true);
     try {
       const res  = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: forgotUser.trim() }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail.trim() }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'เกิดข้อผิดพลาด'); return; }
@@ -66,7 +67,6 @@ export default function AuthPage({ onAuth }) {
       <div className={styles.blob3} />
 
       <div className={styles.card}>
-        {/* Logo */}
         <div className={styles.logoWrap}>
           <div className={styles.logoGlow} />
           <span className={styles.logoEmoji}>
@@ -74,19 +74,20 @@ export default function AuthPage({ onAuth }) {
           </span>
         </div>
 
-        {/* ─── FORGOT PASSWORD SENT ─── */}
+        {/* ─── FORGOT SENT ─── */}
         {view === 'forgot-sent' && (
           <>
-            <h1 className={styles.title}>ส่งคำขอแล้ว!</h1>
-            <p className={styles.tagline}>รอ Admin รีเซ็ตรหัสผ่านให้คุณ</p>
+            <h1 className={styles.title}>เช็คอีเมลของคุณ!</h1>
+            <p className={styles.tagline}>ลิงก์รีเซ็ตรหัสผ่านถูกส่งแล้ว</p>
             <div className={styles.sentBox}>
-              <div className={styles.sentIcon}>✅</div>
-              <p className={styles.sentTitle}>คำขอถูกส่งไปหา Admin แล้ว</p>
+              <div className={styles.sentIcon}>📧</div>
+              <p className={styles.sentTitle}>อีเมลถูกส่งไปที่</p>
+              <p className={styles.sentEmail}>{forgotEmail}</p>
               <p className={styles.sentDesc}>
-                ชื่อผู้ใช้ <strong className={styles.sentUser}>{forgotUser}</strong> ถูกบันทึกไว้<br />
-                Admin จะเห็นคำขอและตั้งรหัสผ่านใหม่ให้คุณ<br />
-                จากนั้นกลับมาล็อคอินด้วยรหัสใหม่ได้เลย
+                คลิกลิงก์ในอีเมลเพื่อตั้งรหัสผ่านใหม่<br />
+                ลิงก์จะหมดอายุใน <strong style={{color:'#ffd700'}}>1 ชั่วโมง</strong>
               </p>
+              <p className={styles.sentNote}>ไม่เห็นอีเมล? ตรวจสอบในโฟลเดอร์ Spam</p>
             </div>
             <button className={styles.submitBtn} style={{ marginTop: 8 }} onClick={goMain}>
               ← กลับหน้าล็อคอิน
@@ -94,42 +95,39 @@ export default function AuthPage({ onAuth }) {
           </>
         )}
 
-        {/* ─── FORGOT PASSWORD FORM ─── */}
+        {/* ─── FORGOT FORM ─── */}
         {view === 'forgot' && (
           <>
             <h1 className={styles.title}>ลืมรหัสผ่าน</h1>
-            <p className={styles.tagline}>Admin จะรีเซ็ตรหัสผ่านให้คุณ</p>
+            <p className={styles.tagline}>รับลิงก์รีเซ็ตผ่านอีเมล</p>
 
             <div className={styles.forgotInfo}>
               <span className={styles.forgotInfoIcon}>ℹ️</span>
-              กรอกชื่อผู้ใช้ของคุณ แล้ว Admin จะได้รับคำขอเพื่อตั้งรหัสผ่านใหม่
+              กรอกอีเมลที่ลงทะเบียนไว้ ระบบจะส่งลิงก์รีเซ็ตรหัสผ่านให้คุณ
             </div>
 
             <form className={styles.form} onSubmit={submitForgot}>
               <div className={styles.field}>
-                <label className={styles.label}>👤 ชื่อผู้ใช้ของคุณ</label>
+                <label className={styles.label}>📧 อีเมลที่ลงทะเบียน</label>
                 <input
                   className={styles.input}
-                  type="text"
-                  placeholder="ชื่อผู้ใช้ที่ลงทะเบียนไว้"
-                  value={forgotUser}
-                  onChange={e => setForgotUser(e.target.value)}
-                  autoFocus
-                  required
+                  type="email"
+                  placeholder="your@email.com"
+                  value={forgotEmail}
+                  onChange={e => setForgotEmail(e.target.value)}
+                  autoFocus required
                 />
               </div>
 
               {error && (
                 <div className={styles.errorBox}>
-                  <span className={styles.errorIcon}>⚠️</span>
-                  {error}
+                  <span className={styles.errorIcon}>⚠️</span>{error}
                 </div>
               )}
 
               <button className={styles.submitBtn} type="submit" disabled={loading}>
-                {loading ? <span className={styles.btnSpinner} /> : '📨 ส่งคำขอรีเซ็ต'}
+                {loading ? <span className={styles.btnSpinner} /> : '📨 ส่งลิงก์รีเซ็ต'}
               </button>
-
               <button type="button" className={styles.backBtn} onClick={goMain}>
                 ← กลับหน้าล็อคอิน
               </button>
@@ -163,10 +161,24 @@ export default function AuthPage({ onAuth }) {
                   value={username}
                   onChange={e => setUsername(e.target.value)}
                   autoComplete="username"
-                  autoFocus
-                  required
+                  autoFocus required
                 />
               </div>
+
+              {tab === 'register' && (
+                <div className={styles.field}>
+                  <label className={styles.label}>📧 อีเมล</label>
+                  <input
+                    className={styles.input}
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    autoComplete="email"
+                    required
+                  />
+                </div>
+              )}
 
               <div className={styles.field}>
                 <div className={styles.labelRow}>
@@ -210,8 +222,7 @@ export default function AuthPage({ onAuth }) {
 
               {error && (
                 <div className={styles.errorBox}>
-                  <span className={styles.errorIcon}>⚠️</span>
-                  {error}
+                  <span className={styles.errorIcon}>⚠️</span>{error}
                 </div>
               )}
 

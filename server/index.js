@@ -8,6 +8,52 @@ const path   = require('path');
 const jwt    = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const { Resend } = require('resend');
+
+/* ── Resend email helper ── */
+async function getResendClient() {
+  try {
+    const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+    const xReplitToken = process.env.REPL_IDENTITY
+      ? 'repl ' + process.env.REPL_IDENTITY
+      : process.env.WEB_REPL_RENEWAL
+      ? 'depl ' + process.env.WEB_REPL_RENEWAL
+      : null;
+    if (!hostname || !xReplitToken) return null;
+    const data = await fetch(
+      `https://${hostname}/api/v2/connection?include_secrets=true&connector_names=resend`,
+      { headers: { 'Accept': 'application/json', 'X-Replit-Token': xReplitToken } }
+    ).then(r => r.json()).then(d => d.items?.[0]);
+    if (!data?.settings?.api_key) return null;
+    return { client: new Resend(data.settings.api_key), fromEmail: data.settings.from_email || 'noreply@resend.dev' };
+  } catch (e) { console.warn('[resend] getResendClient failed:', e.message); return null; }
+}
+
+async function sendPasswordResetEmail(toEmail, username, resetToken) {
+  const resend = await getResendClient();
+  if (!resend) { console.warn('[resend] not configured, skip email'); return false; }
+  const resetUrl = `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/reset-password?token=${resetToken}`;
+  try {
+    await resend.client.emails.send({
+      from: resend.fromEmail,
+      to: toEmail,
+      subject: '🔑 WIN Leaderboard — รีเซ็ตรหัสผ่าน',
+      html: `
+<div style="font-family:'Segoe UI',sans-serif;background:#060612;color:#fff;padding:40px 20px;text-align:center;max-width:480px;margin:0 auto;border-radius:16px;">
+  <div style="font-size:48px;margin-bottom:16px;">🏆</div>
+  <h2 style="color:#ffd700;margin-bottom:8px;">WIN Leaderboard</h2>
+  <p style="color:#aaa;margin-bottom:28px;">มีคนขอรีเซ็ตรหัสผ่านสำหรับบัญชี <strong style="color:#fff;">${username}</strong></p>
+  <a href="${resetUrl}" style="display:inline-block;background:linear-gradient(135deg,#fe2c55,#c41e3a);color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:16px;font-weight:700;margin-bottom:24px;">
+    🔑 ตั้งรหัสผ่านใหม่
+  </a>
+  <p style="color:#555;font-size:13px;">ลิงก์นี้จะหมดอายุใน 1 ชั่วโมง</p>
+  <p style="color:#333;font-size:12px;margin-top:16px;">หากคุณไม่ได้ขอรีเซ็ต กรุณาเพิกเฉยต่ออีเมลนี้</p>
+</div>`,
+    });
+    console.log(`[resend] reset email sent to ${toEmail} for ${username}`);
+    return true;
+  } catch (e) { console.error('[resend] send failed:', e.message); return false; }
+}
 
 /* ── Dirs ── */
 const CACHE_DIR  = path.join(__dirname, '../cache');
@@ -367,17 +413,20 @@ io.on('connection', (socket) => {
 
 /* ── Auth routes ── */
 app.post('/api/auth/register', async (req, res) => {
-  const u = (req.body.username || '').trim();
-  const p = (req.body.password || '');
+  const u     = (req.body.username || '').trim();
+  const p     = (req.body.password || '');
+  const email = (req.body.email || '').trim().toLowerCase();
   if (!u || u.length < 3) return res.status(400).json({ error: 'ชื่อผู้ใช้ต้องมีอย่างน้อย 3 ตัวอักษร' });
-  if (p.length < 6) return res.status(400).json({ error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' });
+  if (p.length < 6)       return res.status(400).json({ error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' });
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'กรุณาระบุอีเมลที่ถูกต้อง' });
   const users = loadUsers();
-  if (users.find(x => x.username === u)) return res.status(409).json({ error: 'ชื่อผู้ใช้นี้ถูกใช้แล้ว' });
+  if (users.find(x => x.username === u))                  return res.status(409).json({ error: 'ชื่อผู้ใช้นี้ถูกใช้แล้ว' });
+  if (users.find(x => x.email === email))                  return res.status(409).json({ error: 'อีเมลนี้ถูกใช้แล้ว' });
   const hash = await bcrypt.hash(p, 12);
-  users.push({ username: u, passwordHash: hash });
+  users.push({ username: u, passwordHash: hash, email });
   saveUsers(users);
   const token = jwt.sign({ username: u }, JWT_SECRET, { expiresIn: '30d' });
-  console.log(`[auth] registered: ${u}`);
+  console.log(`[auth] registered: ${u} (${email})`);
   res.json({ ok: true, token, username: u, role: 'user' });
 });
 
@@ -465,22 +514,88 @@ app.post('/api/admin/users/:username/reset-password', authMiddleware, superAdmin
   res.json({ ok: true });
 });
 
-/* ── Forgot password requests ── */
-const RESET_FILE = path.join(CACHE_DIR, '_reset_requests.json');
+/* ── Forgot password / Email reset tokens ── */
+const RESET_FILE   = path.join(CACHE_DIR, '_reset_requests.json');
+const TOKENS_FILE  = path.join(CACHE_DIR, '_reset_tokens.json');
+
 function loadResetRequests() {
   try { if (fs.existsSync(RESET_FILE)) return JSON.parse(fs.readFileSync(RESET_FILE, 'utf8')); } catch (_) {}
   return [];
 }
 function saveResetRequests(r) { fs.writeFileSync(RESET_FILE, JSON.stringify(r, null, 2)); }
 
-app.post('/api/auth/forgot-password', (req, res) => {
-  const u = (req.body.username || '').trim();
-  if (!u) return res.status(400).json({ error: 'กรุณาระบุชื่อผู้ใช้' });
-  if (!findUser(u)) return res.status(404).json({ error: 'ไม่พบชื่อผู้ใช้นี้ในระบบ' });
-  const reqs = loadResetRequests().filter(r => r.username !== u);
-  reqs.push({ username: u, requestedAt: Date.now() });
+function loadResetTokens() {
+  try { if (fs.existsSync(TOKENS_FILE)) return JSON.parse(fs.readFileSync(TOKENS_FILE, 'utf8')); } catch (_) {}
+  return [];
+}
+function saveResetTokens(t) { fs.writeFileSync(TOKENS_FILE, JSON.stringify(t, null, 2)); }
+
+/* POST /api/auth/forgot-password  — accepts email or username */
+app.post('/api/auth/forgot-password', async (req, res) => {
+  const raw = (req.body.email || req.body.username || '').trim().toLowerCase();
+  if (!raw) return res.status(400).json({ error: 'กรุณาระบุอีเมลหรือชื่อผู้ใช้' });
+
+  const users = loadUsers();
+  const user  = users.find(u => u.email === raw || u.username.toLowerCase() === raw);
+
+  /* Always respond OK to avoid user enumeration */
+  if (!user || !user.email) {
+    console.log(`[auth] forgot-password: not found or no email for "${raw}"`);
+    return res.json({ ok: true });
+  }
+
+  /* Generate token */
+  const token    = crypto.randomBytes(32).toString('hex');
+  const expiry   = Date.now() + 60 * 60 * 1000; // 1 hour
+  const tokens   = loadResetTokens().filter(t => t.username !== user.username && t.expiry > Date.now());
+  tokens.push({ token, username: user.username, email: user.email, expiry });
+  saveResetTokens(tokens);
+
+  /* Also log a reset request for admin panel visibility */
+  const reqs = loadResetRequests().filter(r => r.username !== user.username);
+  reqs.push({ username: user.username, email: user.email, requestedAt: Date.now() });
   saveResetRequests(reqs);
-  console.log(`[auth] reset request from: ${u}`);
+
+  const sent = await sendPasswordResetEmail(user.email, user.username, token);
+  console.log(`[auth] forgot-password: ${user.username} → ${user.email} (sent=${sent})`);
+  res.json({ ok: true, sent });
+});
+
+/* GET /api/auth/reset-password?token=xxx  — validate token */
+app.get('/api/auth/reset-password', (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.status(400).json({ error: 'token required' });
+  const tokens = loadResetTokens();
+  const entry  = tokens.find(t => t.token === token && t.expiry > Date.now());
+  if (!entry) return res.status(400).json({ error: 'ลิงก์หมดอายุหรือไม่ถูกต้อง' });
+  res.json({ ok: true, username: entry.username });
+});
+
+/* POST /api/auth/reset-password  — set new password via token */
+app.post('/api/auth/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body;
+  if (!token || !newPassword || newPassword.length < 6)
+    return res.status(400).json({ error: 'ข้อมูลไม่ครบหรือรหัสผ่านสั้นเกินไป' });
+
+  const tokens = loadResetTokens();
+  const idx    = tokens.findIndex(t => t.token === token && t.expiry > Date.now());
+  if (idx === -1) return res.status(400).json({ error: 'ลิงก์หมดอายุหรือไม่ถูกต้อง' });
+
+  const { username } = tokens[idx];
+  const users = loadUsers();
+  const user  = users.find(u => u.username === username);
+  if (!user) return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
+
+  user.passwordHash = await bcrypt.hash(newPassword, 12);
+  saveUsers(users);
+
+  /* Invalidate token + clear reset request */
+  tokens.splice(idx, 1);
+  saveResetTokens(tokens);
+  const reqs = loadResetRequests().filter(r => r.username !== username);
+  saveResetRequests(reqs);
+
+  console.log(`[auth] password reset OK for: ${username}`);
   res.json({ ok: true });
 });
 

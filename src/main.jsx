@@ -6,19 +6,20 @@ import Overlay from './Overlay.jsx';
 import NewKingPage from './NewKingPage.jsx';
 import Top1Page from './Top1Page.jsx';
 import AuthPage from './AuthPage.jsx';
+import ResetPasswordPage from './ResetPasswordPage.jsx';
 import { getToken, clearToken } from './auth.js';
 
 const path = window.location.pathname;
 
-/* Overlay routes — always public, no auth needed for OBS */
 if (path === '/overlay') {
   ReactDOM.createRoot(document.getElementById('root')).render(<Overlay />);
 } else if (path === '/newking') {
   ReactDOM.createRoot(document.getElementById('root')).render(<NewKingPage />);
 } else if (path === '/top1') {
   ReactDOM.createRoot(document.getElementById('root')).render(<Top1Page />);
+} else if (path === '/reset-password') {
+  ReactDOM.createRoot(document.getElementById('root')).render(<ResetPasswordPage />);
 } else {
-  /* Admin panel — requires auth */
   function Root() {
     const [authed,   setAuthed]   = useState(false);
     const [username, setUsername] = useState('');

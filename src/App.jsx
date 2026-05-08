@@ -180,7 +180,17 @@ export default function App({ username, role, onLogout }) {
 
           {/* Error */}
           {liveStatus.status === 'error' && liveStatus.error && (
-            <span className={styles.levelError}>⚠️ {liveStatus.error}</span>
+            <div className={styles.levelErrorBox}>
+              <div className={styles.levelErrorMsg}>⚠️ {liveStatus.error}</div>
+              {(liveStatus.error.includes('IP') || liveStatus.error.includes('Sign API') || liveStatus.error.includes('Euler')) && (
+                <div className={styles.levelErrorHint}>
+                  TikTok บล็อค cloud server IP — ต้องใช้ <strong>Euler Stream Sign API Key</strong>
+                  <br/>① สมัครที่ <a href="https://www.eulerstream.com/" target="_blank" rel="noreferrer" className={styles.levelErrorLink}>eulerstream.com</a> → คัดลอก API Key
+                  <br/>② ตั้ง secret <code>TIKTOK_SIGN_API_KEY</code> ใน Replit → Secrets
+                  <br/>หรือรันแอปบนเครื่องตัวเอง (localhost) ก็ไม่ต้องใช้ key
+                </div>
+              )}
+            </div>
           )}
 
           {/* Test button */}

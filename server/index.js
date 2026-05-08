@@ -319,12 +319,13 @@ function extractLevel(user) {
 const MAX_RETRIES = 6;
 
 function classifyError(msg) {
-  if (msg.includes('UserOffline') || msg.includes('not live') || msg.includes('OFFLINE')) return { code: 'OFFLINE', th: 'ผู้ใช้ไม่ได้ไลฟ์อยู่' };
-  if (msg.includes('Room ID') || msg.includes('sources')) return { code: 'ROOM_NOT_FOUND', th: 'หา Room ID ไม่เจอ — อาจไม่ได้ไลฟ์' };
-  if (msg.includes('Access Denied') || msg.includes('403') || msg.includes('Forbidden')) return { code: 'IP_BANNED', th: 'IP ถูกบล็อค (Access Denied 403)' };
+  if (msg.includes('UserOffline') || msg.includes('not live') || msg.includes('OFFLINE') || msg.includes('UserOfflineError')) return { code: 'OFFLINE', th: 'ผู้ใช้ไม่ได้ไลฟ์อยู่' };
+  if (msg.includes('Room ID') || msg.includes('all sources') || msg.includes('InvalidResponse')) return { code: 'IP_BLOCKED', th: 'Cloud IP ถูกบล็อค — ต้องใช้ Euler Stream Sign API Key' };
+  if (msg.includes('Access Denied') || msg.includes('403') || msg.includes('Forbidden')) return { code: 'IP_BLOCKED', th: 'IP ถูกบล็อค (403 Forbidden)' };
   if (msg.includes('Session') || msg.includes('Unauthorized') || msg.includes('401') || msg.includes('sessionid')) return { code: 'SESSION_EXPIRED', th: 'Session หมดอายุ' };
-  if (msg.includes('timeout') || msg.includes('ETIMEDOUT') || msg.includes('ECONNREFUSED')) return { code: 'NETWORK', th: 'Network timeout' };
-  if (msg.includes('Sign') || msg.includes('signature') || msg.includes('eulerstream')) return { code: 'SIGN_FAIL', th: 'Sign server ตอบสนองไม่ได้' };
+  if (msg.includes('timeout') || msg.includes('ETIMEDOUT') || msg.includes('ECONNREFUSED')) return { code: 'NETWORK', th: 'Network timeout / connection refused' };
+  if (msg.includes('Sign') || msg.includes('signature') || msg.includes('eulerstream') || msg.includes('signApiKey')) return { code: 'SIGN_FAIL', th: 'Sign server ตอบสนองไม่ได้' };
+  if (msg.includes('uniqueId') || msg.includes('InvalidUniqueId') || msg.includes('username')) return { code: 'INVALID_USER', th: 'username ไม่ถูกต้อง' };
   return { code: 'UNKNOWN', th: msg.slice(0, 120) };
 }
 
@@ -351,12 +352,19 @@ function connectLive(adminUser, tiktokUser, attempt) {
   st.liveError  = attempt > 0 ? `กำลัง retry ครั้งที่ ${attempt}/${MAX_RETRIES}...` : null;
   broadcastLiveStatus(adminUser);
 
-  const sessionId = process.env.TIKTOK_SESSION_ID;
+  const sessionId  = process.env.TIKTOK_SESSION_ID;
+  const signApiKey = process.env.TIKTOK_SIGN_API_KEY;
   const connOptions = {
-    processInitialData: true, fetchRoomInfoOnConnect: true, enableExtendedGiftInfo: false,
-    ...(sessionId ? { session: { cookie: { sessionId } }, authenticateWs: true } : {}),
+    processInitialData: true,
+    fetchRoomInfoOnConnect: true,
+    enableExtendedGiftInfo: false,
+    ...(signApiKey ? { signApiKey } : {}),
+    ...(sessionId ? {
+      session: { cookie: { value: { sessionId, ttTargetIdc: process.env.TIKTOK_TARGET_IDC || 'useast5' } } },
+      authenticateWs: !!signApiKey,
+    } : {}),
   };
-  console.log(`[TikTok:${adminUser}] Connecting to @${tiktokUser}` + (attempt > 0 ? ` (retry ${attempt}/${MAX_RETRIES})` : ''));
+  console.log(`[TikTok:${adminUser}] Connecting to @${tiktokUser}` + (attempt > 0 ? ` (retry ${attempt}/${MAX_RETRIES})` : '') + (signApiKey ? ' [signed]' : ' [no sign key]'));
 
   let conn;
   try { conn = new TikTokLiveConnection(tiktokUser, connOptions); }
@@ -375,7 +383,7 @@ function connectLive(adminUser, tiktokUser, attempt) {
       const { code, th } = classifyError(msg);
       console.error(`[TikTok:${adminUser}] ❌ [${code}]: ${msg}`);
       st.liveConnection = null;
-      const noRetry  = code === 'OFFLINE' || code === 'SESSION_EXPIRED';
+      const noRetry  = code === 'OFFLINE' || code === 'SESSION_EXPIRED' || code === 'IP_BLOCKED' || code === 'INVALID_USER';
       const canRetry = !noRetry && st.retryAttempt < MAX_RETRIES;
       if (canRetry) {
         st.retryAttempt++;

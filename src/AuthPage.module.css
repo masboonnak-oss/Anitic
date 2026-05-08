@@ -378,7 +378,118 @@
 .sentNote { font-size: 12px; color: #444; margin: 0; }
 .sentUser { color: #fff; }
 
+/* ═══════════════════════════════
+   EMAIL VERIFICATION (OTP)
+═══════════════════════════════ */
+.verifyInfoBox {
+  width: 100%;
+  background: rgba(37,244,238,0.05);
+  border: 1px solid rgba(37,244,238,0.18);
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  text-align: center;
+}
+.verifyInfoRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #888;
+}
+.verifyInfoIcon { font-size: 18px; }
+.verifyEmail {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffd700;
+  background: rgba(255,215,0,0.08);
+  border: 1px solid rgba(255,215,0,0.20);
+  border-radius: 8px;
+  padding: 5px 14px;
+  word-break: break-all;
+}
+.verifyHint {
+  font-size: 11px;
+  color: #444;
+}
+
+/* OTP input grid */
+.otpLabel {
+  font-size: 12px;
+  color: #888;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-align: center;
+}
+
+.otpRow {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.otpBox {
+  width: 46px;
+  height: 56px;
+  background: rgba(255,255,255,0.04);
+  border: 2px solid rgba(255,255,255,0.10);
+  border-radius: 12px;
+  color: #fff;
+  font-size: 24px;
+  font-weight: 900;
+  font-family: 'Kanit', 'Courier New', monospace;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  caret-color: transparent;
+}
+.otpBox:focus {
+  border-color: #fe2c55;
+  background: rgba(254,44,85,0.06);
+  box-shadow: 0 0 0 3px rgba(254,44,85,0.15), 0 0 16px rgba(254,44,85,0.20);
+}
+.otpBoxFilled {
+  border-color: rgba(199,112,255,0.55);
+  background: rgba(199,112,255,0.07);
+  color: #fff;
+  box-shadow: 0 0 10px rgba(199,112,255,0.20);
+}
+
+/* Resend row */
+.resendRow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: -4px;
+}
+.resendCountdown {
+  font-size: 12px;
+  color: #444;
+  font-weight: 600;
+}
+.resendBtn {
+  background: none;
+  border: none;
+  color: #fe2c55;
+  font-family: 'Kanit', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.2s;
+}
+.resendBtn:hover:not(:disabled) { color: #ff6b87; }
+.resendBtn:disabled { color: #444; cursor: not-allowed; text-decoration: none; }
+
 @media (max-width: 480px) {
   .card { padding: 36px 24px 28px; margin: 16px; max-width: none; border-radius: 20px; }
   .title { font-size: 20px; }
+  .otpBox { width: 40px; height: 50px; font-size: 20px; border-radius: 10px; }
+  .otpRow { gap: 6px; }
 }

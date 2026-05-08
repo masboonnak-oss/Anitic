@@ -21,6 +21,34 @@ function getMailTransporter() {
   });
 }
 
+async function sendVerificationEmail(toEmail, username, otp) {
+  const transporter = getMailTransporter();
+  if (!transporter) { console.warn('[mail] GMAIL_USER or GMAIL_APP_PASSWORD not set, skip verification email'); return false; }
+  try {
+    await transporter.sendMail({
+      from: `"WIN Leaderboard" <${process.env.GMAIL_USER}>`,
+      to: toEmail,
+      subject: '✅ WIN Leaderboard — ยืนยันอีเมลของคุณ',
+      html: `
+<div style="font-family:'Segoe UI',Arial,sans-serif;background:#060612;color:#fff;padding:40px 20px;text-align:center;max-width:480px;margin:0 auto;border-radius:16px;">
+  <div style="font-size:48px;margin-bottom:12px;">🏆</div>
+  <h2 style="color:#ffd700;margin:0 0 6px;">WIN Leaderboard</h2>
+  <p style="color:#aaa;margin:0 0 28px;">ยืนยันอีเมลสำหรับบัญชี <strong style="color:#fff;">${username}</strong></p>
+  <div style="background:#0d0d1f;border:2px solid rgba(254,44,85,0.4);border-radius:16px;padding:28px 20px;margin-bottom:24px;">
+    <p style="color:#888;font-size:14px;margin:0 0 16px;">รหัสยืนยัน OTP ของคุณ</p>
+    <div style="font-size:42px;font-weight:900;letter-spacing:16px;color:#fff;font-family:'Courier New',monospace;text-shadow:0 0 20px rgba(254,44,85,0.6);">
+      ${otp}
+    </div>
+    <p style="color:#555;font-size:13px;margin:16px 0 0;">รหัสนี้จะหมดอายุใน <strong style="color:#ffd700;">10 นาที</strong></p>
+  </div>
+  <p style="color:#333;font-size:12px;margin:0;">หากคุณไม่ได้สมัคร กรุณาเพิกเฉยต่ออีเมลนี้</p>
+</div>`,
+    });
+    console.log(`[mail] verification OTP sent to ${toEmail} for ${username}`);
+    return true;
+  } catch (e) { console.error('[mail] send failed:', e.message); return false; }
+}
+
 async function sendPasswordResetEmail(toEmail, username, resetToken) {
   const transporter = getMailTransporter();
   if (!transporter) { console.warn('[mail] GMAIL_USER or GMAIL_APP_PASSWORD not set, skip email'); return false; }
@@ -455,17 +483,98 @@ app.post('/api/auth/register', async (req, res) => {
   const p     = (req.body.password || '');
   const email = (req.body.email || '').trim().toLowerCase();
   if (!u || u.length < 3) return res.status(400).json({ error: 'ชื่อผู้ใช้ต้องมีอย่างน้อย 3 ตัวอักษร' });
+  if (!/^[a-zA-Z0-9_.-]+$/.test(u)) return res.status(400).json({ error: 'ชื่อผู้ใช้ใช้ได้เฉพาะ a-z, 0-9, _ . -' });
   if (p.length < 6)       return res.status(400).json({ error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' });
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'กรุณาระบุอีเมลที่ถูกต้อง' });
+
+  const users   = loadUsers();
+  if (users.find(x => x.username.toLowerCase() === u.toLowerCase())) return res.status(409).json({ error: 'ชื่อผู้ใช้นี้ถูกใช้แล้ว' });
+  if (users.find(x => x.email === email))                             return res.status(409).json({ error: 'อีเมลนี้ถูกใช้แล้ว' });
+
+  /* Clean up expired pending and check duplicates */
+  const pending = cleanPending();
+  const dupPending = pending.find(x => x.email === email || x.username.toLowerCase() === u.toLowerCase());
+  if (dupPending) {
+    /* Allow re-register to get a new OTP if pending exists */
+    const filtered = pending.filter(x => x.email !== email && x.username.toLowerCase() !== u.toLowerCase());
+    savePending(filtered);
+  }
+
+  /* Generate OTP */
+  const otp    = String(Math.floor(100000 + Math.random() * 900000));
+  const hash   = await bcrypt.hash(p, 12);
+  const expiry = Date.now() + 10 * 60 * 1000; // 10 min
+  const newPending = loadPending();
+  newPending.push({ username: u, passwordHash: hash, email, otp, expiry });
+  savePending(newPending);
+
+  /* Send OTP email */
+  const sent = await sendVerificationEmail(email, u, otp);
+  console.log(`[auth] register pending: ${u} (${email}) otp=${otp} sent=${sent}`);
+
+  /* If mail not configured, skip verification for dev convenience */
+  if (!sent) {
+    const users2 = loadUsers();
+    users2.push({ username: u, passwordHash: hash, email });
+    saveUsers(users2);
+    const token = jwt.sign({ username: u }, JWT_SECRET, { expiresIn: '30d' });
+    console.log(`[auth] (no mail) registered directly: ${u}`);
+    return res.json({ ok: true, token, username: u, role: 'user', verified: true });
+  }
+
+  res.json({ ok: true, pending: true, email, username: u });
+});
+
+/* POST /api/auth/verify-email — confirm OTP */
+app.post('/api/auth/verify-email', async (req, res) => {
+  const email = (req.body.email || '').trim().toLowerCase();
+  const otp   = (req.body.otp || '').trim();
+  if (!email || !otp) return res.status(400).json({ error: 'ข้อมูลไม่ครบ' });
+
+  const pending = cleanPending();
+  const idx     = pending.findIndex(p => p.email === email);
+  if (idx === -1) return res.status(400).json({ error: 'ไม่พบการสมัคร หรือหมดเวลาแล้ว กรุณาสมัครใหม่' });
+
+  const entry = pending[idx];
+  if (entry.otp !== otp) return res.status(400).json({ error: 'รหัส OTP ไม่ถูกต้อง' });
+
+  /* Create account */
   const users = loadUsers();
-  if (users.find(x => x.username === u))                  return res.status(409).json({ error: 'ชื่อผู้ใช้นี้ถูกใช้แล้ว' });
-  if (users.find(x => x.email === email))                  return res.status(409).json({ error: 'อีเมลนี้ถูกใช้แล้ว' });
-  const hash = await bcrypt.hash(p, 12);
-  users.push({ username: u, passwordHash: hash, email });
+  if (users.find(x => x.username.toLowerCase() === entry.username.toLowerCase()))
+    return res.status(409).json({ error: 'ชื่อผู้ใช้นี้ถูกใช้แล้ว กรุณาสมัครใหม่' });
+  if (users.find(x => x.email === email))
+    return res.status(409).json({ error: 'อีเมลนี้ถูกใช้แล้ว กรุณาสมัครใหม่' });
+
+  users.push({ username: entry.username, passwordHash: entry.passwordHash, email });
   saveUsers(users);
-  const token = jwt.sign({ username: u }, JWT_SECRET, { expiresIn: '30d' });
-  console.log(`[auth] registered: ${u} (${email})`);
-  res.json({ ok: true, token, username: u, role: 'user' });
+
+  /* Remove from pending */
+  pending.splice(idx, 1);
+  savePending(pending);
+
+  const token = jwt.sign({ username: entry.username }, JWT_SECRET, { expiresIn: '30d' });
+  console.log(`[auth] verified & registered: ${entry.username} (${email})`);
+  res.json({ ok: true, token, username: entry.username, role: 'user' });
+});
+
+/* POST /api/auth/resend-verify — resend OTP */
+app.post('/api/auth/resend-verify', async (req, res) => {
+  const email = (req.body.email || '').trim().toLowerCase();
+  if (!email) return res.status(400).json({ error: 'ต้องระบุอีเมล' });
+
+  const pending = cleanPending();
+  const idx     = pending.findIndex(p => p.email === email);
+  if (idx === -1) return res.status(400).json({ error: 'ไม่พบการสมัคร หรือหมดเวลาแล้ว กรุณาสมัครใหม่' });
+
+  /* Generate fresh OTP & extend expiry */
+  const otp = String(Math.floor(100000 + Math.random() * 900000));
+  pending[idx].otp    = otp;
+  pending[idx].expiry = Date.now() + 10 * 60 * 1000;
+  savePending(pending);
+
+  const sent = await sendVerificationEmail(email, pending[idx].username, otp);
+  console.log(`[auth] resend OTP to ${email} sent=${sent}`);
+  res.json({ ok: true, sent });
 });
 
 app.post('/api/auth/login', async (req, res) => {
@@ -551,6 +660,19 @@ app.post('/api/admin/users/:username/reset-password', authMiddleware, superAdmin
   console.log(`[superadmin] reset password for: ${target}`);
   res.json({ ok: true });
 });
+
+/* ── Pending registrations (email verification) ── */
+const PENDING_FILE = path.join(CACHE_DIR, '_pending_reg.json');
+function loadPending() {
+  try { if (fs.existsSync(PENDING_FILE)) return JSON.parse(fs.readFileSync(PENDING_FILE, 'utf8')); } catch (_) {}
+  return [];
+}
+function savePending(p) { fs.writeFileSync(PENDING_FILE, JSON.stringify(p, null, 2)); }
+function cleanPending() {
+  const alive = loadPending().filter(p => p.expiry > Date.now());
+  savePending(alive);
+  return alive;
+}
 
 /* ── Forgot password / Email reset tokens ── */
 const RESET_FILE   = path.join(CACHE_DIR, '_reset_requests.json');

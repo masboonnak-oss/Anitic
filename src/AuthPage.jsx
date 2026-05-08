@@ -1,23 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { setToken } from './auth.js';
 import styles from './AuthPage.module.css';
 
 export default function AuthPage({ onAuth }) {
-  const [view, setView]         = useState('main'); // 'main' | 'forgot' | 'forgot-sent'
-  const [tab, setTab]           = useState('login');
-  const [username, setUsername] = useState('');
-  const [email, setEmail]       = useState('');
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm]   = useState('');
+  const [view, setView]               = useState('main'); // 'main' | 'forgot' | 'forgot-sent' | 'verify-email'
+  const [tab, setTab]                 = useState('login');
+  const [username, setUsername]       = useState('');
+  const [email, setEmail]             = useState('');
+  const [password, setPassword]       = useState('');
+  const [confirm, setConfirm]         = useState('');
   const [forgotEmail, setForgotEmail] = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState('');
-  const [showPw, setShowPw]     = useState(false);
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState('');
+  const [showPw, setShowPw]           = useState(false);
+
+  /* ── OTP verify state ── */
+  const [verifyEmail,    setVerifyEmail]    = useState('');
+  const [verifyUsername, setVerifyUsername] = useState('');
+  const [otp,    setOtp]    = useState(['', '', '', '', '', '']);
+  const [countdown, setCountdown]   = useState(0);
+  const [resending, setResending]   = useState(false);
+  const otpRefs = useRef([]);
+
+  /* countdown timer */
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const t = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [countdown]);
 
   function switchTab(t) { setTab(t); setError(''); setUsername(''); setEmail(''); setPassword(''); setConfirm(''); }
   function goForgot()   { setView('forgot'); setError(''); setForgotEmail(''); }
   function goMain()     { setView('main');   setError(''); }
 
+  /* ─── REGISTER / LOGIN submit ─── */
   async function submit(e) {
     e.preventDefault();
     setError('');
@@ -32,6 +48,18 @@ export default function AuthPage({ onAuth }) {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'เกิดข้อผิดพลาด'); return; }
+
+      /* Registration with email verification pending */
+      if (data.pending) {
+        setVerifyEmail(data.email);
+        setVerifyUsername(data.username);
+        setOtp(['', '', '', '', '', '']);
+        setCountdown(60);
+        setView('verify-email');
+        return;
+      }
+
+      /* Direct login or no-email-configured register */
       setToken(data.token);
       onAuth(data.username, data.role || 'user');
     } catch (_) {
@@ -41,10 +69,86 @@ export default function AuthPage({ onAuth }) {
     }
   }
 
+  /* ─── OTP input handlers ─── */
+  function handleOtpChange(idx, val) {
+    const digit = val.replace(/\D/, '').slice(-1);
+    const next  = [...otp];
+    next[idx]   = digit;
+    setOtp(next);
+    if (digit && idx < 5) otpRefs.current[idx + 1]?.focus();
+  }
+
+  function handleOtpKeyDown(idx, e) {
+    if (e.key === 'Backspace') {
+      if (otp[idx]) {
+        const next = [...otp]; next[idx] = ''; setOtp(next);
+      } else if (idx > 0) {
+        otpRefs.current[idx - 1]?.focus();
+      }
+    } else if (e.key === 'ArrowLeft' && idx > 0) {
+      otpRefs.current[idx - 1]?.focus();
+    } else if (e.key === 'ArrowRight' && idx < 5) {
+      otpRefs.current[idx + 1]?.focus();
+    }
+  }
+
+  function handleOtpPaste(e) {
+    e.preventDefault();
+    const text = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    const next  = [...otp];
+    for (let i = 0; i < 6; i++) next[i] = text[i] || '';
+    setOtp(next);
+    const focusIdx = Math.min(text.length, 5);
+    otpRefs.current[focusIdx]?.focus();
+  }
+
+  /* ─── OTP verify submit ─── */
+  async function submitVerify(e) {
+    e.preventDefault();
+    const code = otp.join('');
+    if (code.length < 6) { setError('กรุณากรอก OTP ให้ครบ 6 หลัก'); return; }
+    setError(''); setLoading(true);
+    try {
+      const res  = await fetch('/api/auth/verify-email', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: verifyEmail, otp: code }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'เกิดข้อผิดพลาด'); return; }
+      setToken(data.token);
+      onAuth(data.username, data.role || 'user');
+    } catch (_) {
+      setError('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /* ─── Resend OTP ─── */
+  async function resendOtp() {
+    if (countdown > 0 || resending) return;
+    setResending(true); setError('');
+    try {
+      const res  = await fetch('/api/auth/resend-verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: verifyEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'ส่งไม่ได้'); return; }
+      setOtp(['', '', '', '', '', '']);
+      setCountdown(60);
+      otpRefs.current[0]?.focus();
+    } catch (_) {
+      setError('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
+    } finally {
+      setResending(false);
+    }
+  }
+
+  /* ─── Forgot password ─── */
   async function submitForgot(e) {
     e.preventDefault();
-    setError('');
-    setLoading(true);
+    setError(''); setLoading(true);
     try {
       const res  = await fetch('/api/auth/forgot-password', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -70,9 +174,75 @@ export default function AuthPage({ onAuth }) {
         <div className={styles.logoWrap}>
           <div className={styles.logoGlow} />
           <span className={styles.logoEmoji}>
-            {view === 'forgot' || view === 'forgot-sent' ? '🔑' : '🏆'}
+            {view === 'forgot' || view === 'forgot-sent' ? '🔑' : view === 'verify-email' ? '📧' : '🏆'}
           </span>
         </div>
+
+        {/* ─── VERIFY EMAIL (OTP) ─── */}
+        {view === 'verify-email' && (
+          <>
+            <h1 className={styles.title}>ยืนยันอีเมล</h1>
+            <p className={styles.tagline}>ส่ง OTP ไปที่อีเมลของคุณแล้ว</p>
+
+            <div className={styles.verifyInfoBox}>
+              <div className={styles.verifyInfoRow}>
+                <span className={styles.verifyInfoIcon}>📨</span>
+                <span>ส่งรหัส 6 หลักไปที่</span>
+              </div>
+              <div className={styles.verifyEmail}>{verifyEmail}</div>
+              <div className={styles.verifyHint}>ตรวจสอบกล่องจดหมาย (รวมถึงโฟลเดอร์ Spam)</div>
+            </div>
+
+            <form className={styles.form} onSubmit={submitVerify}>
+              <div className={styles.otpLabel}>กรอกรหัส OTP 6 หลัก</div>
+              <div className={styles.otpRow} onPaste={handleOtpPaste}>
+                {otp.map((digit, i) => (
+                  <input
+                    key={i}
+                    ref={el => otpRefs.current[i] = el}
+                    className={`${styles.otpBox} ${digit ? styles.otpBoxFilled : ''}`}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={e => handleOtpChange(i, e.target.value)}
+                    onKeyDown={e => handleOtpKeyDown(i, e)}
+                    autoFocus={i === 0}
+                  />
+                ))}
+              </div>
+
+              {error && (
+                <div className={styles.errorBox}>
+                  <span className={styles.errorIcon}>⚠️</span>{error}
+                </div>
+              )}
+
+              <button className={styles.submitBtn} type="submit" disabled={loading || otp.join('').length < 6}>
+                {loading ? <span className={styles.btnSpinner} /> : '✅ ยืนยันรหัส OTP'}
+              </button>
+
+              <div className={styles.resendRow}>
+                {countdown > 0 ? (
+                  <span className={styles.resendCountdown}>ส่งอีกครั้งได้ใน {countdown} วินาที</span>
+                ) : (
+                  <button
+                    type="button"
+                    className={styles.resendBtn}
+                    onClick={resendOtp}
+                    disabled={resending}
+                  >
+                    {resending ? '⏳ กำลังส่ง...' : '📤 ส่ง OTP อีกครั้ง'}
+                  </button>
+                )}
+              </div>
+
+              <button type="button" className={styles.backBtn} onClick={goMain}>
+                ← กลับหน้าสมัคร
+              </button>
+            </form>
+          </>
+        )}
 
         {/* ─── FORGOT SENT ─── */}
         {view === 'forgot-sent' && (
@@ -100,12 +270,10 @@ export default function AuthPage({ onAuth }) {
           <>
             <h1 className={styles.title}>ลืมรหัสผ่าน</h1>
             <p className={styles.tagline}>รับลิงก์รีเซ็ตผ่านอีเมล</p>
-
             <div className={styles.forgotInfo}>
               <span className={styles.forgotInfoIcon}>ℹ️</span>
               กรอกอีเมลที่ลงทะเบียนไว้ ระบบจะส่งลิงก์รีเซ็ตรหัสผ่านให้คุณ
             </div>
-
             <form className={styles.form} onSubmit={submitForgot}>
               <div className={styles.field}>
                 <label className={styles.label}>📧 อีเมลที่ลงทะเบียน</label>
@@ -118,13 +286,11 @@ export default function AuthPage({ onAuth }) {
                   autoFocus required
                 />
               </div>
-
               {error && (
                 <div className={styles.errorBox}>
                   <span className={styles.errorIcon}>⚠️</span>{error}
                 </div>
               )}
-
               <button className={styles.submitBtn} type="submit" disabled={loading}>
                 {loading ? <span className={styles.btnSpinner} /> : '📨 ส่งลิงก์รีเซ็ต'}
               </button>
@@ -157,7 +323,7 @@ export default function AuthPage({ onAuth }) {
                 <input
                   className={styles.input}
                   type="text"
-                  placeholder={tab === 'register' ? 'เลือกชื่อผู้ใช้ของคุณ' : 'ชื่อผู้ใช้'}
+                  placeholder={tab === 'register' ? 'เลือกชื่อผู้ใช้ (a-z, 0-9, _)' : 'ชื่อผู้ใช้'}
                   value={username}
                   onChange={e => setUsername(e.target.value)}
                   autoComplete="username"
@@ -245,7 +411,7 @@ export default function AuthPage({ onAuth }) {
 
             {tab === 'register' && (
               <div className={styles.infoBox}>
-                🎮 แต่ละบัญชีมีลีดเดอร์บอร์ดแยกอิสระ
+                📧 จะส่งรหัสยืนยัน OTP ไปยังอีเมลของคุณ
               </div>
             )}
           </>

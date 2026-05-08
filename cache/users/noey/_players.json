@@ -6,29 +6,5 @@
     "profilePicUrl": "/api/avatar/babynoryy",
     "win": 0,
     "joinedAt": 1778213909714
-  },
-  {
-    "id": "tik",
-    "username": "tik",
-    "displayName": "310N.",
-    "profilePicUrl": "/api/avatar/tik",
-    "win": 0,
-    "joinedAt": 1778246452982
-  },
-  {
-    "id": "tiktok",
-    "username": "tiktok",
-    "displayName": "TikTok",
-    "profilePicUrl": "/api/avatar/tiktok",
-    "win": 0,
-    "joinedAt": 1778246458550
-  },
-  {
-    "id": "gmth",
-    "username": "gmth",
-    "displayName": "Guy",
-    "profilePicUrl": "/api/avatar/gm",
-    "win": 0,
-    "joinedAt": 1778246466580
   }
 ]

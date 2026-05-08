@@ -126,18 +126,20 @@ export default function App({ username, role, onLogout }) {
           <div className={styles.groupDivider} />
 
           {/* ── User badge ── */}
-          <div className={styles.userBadge}>
-            {isSuperAdmin && (
-              <button className={styles.adminPanelBtn}
-                onClick={() => setShowAdmin(true)} title="Super Admin Panel">
-                👑
-              </button>
-            )}
-            <span className={styles.userIcon}>{isSuperAdmin ? '⭐' : '👤'}</span>
-            <span className={styles.userName} style={isSuperAdmin ? { color: '#ffd700' } : {}}>
-              {username}
-            </span>
-            <button className={styles.logoutBtn} onClick={onLogout}>ออก</button>
+          <div className={styles.btnGroup}>
+            <span className={styles.btnGroupLabel}>👤 บัญชี</span>
+            <div className={styles.btnGroupRow}>
+              {isSuperAdmin && (
+                <button className={styles.adminPanelBtn}
+                  onClick={() => setShowAdmin(true)} title="Super Admin Panel">
+                  👑
+                </button>
+              )}
+              <span className={styles.userNameBadge} style={isSuperAdmin ? { color: '#ffd700' } : {}}>
+                {isSuperAdmin ? '⭐' : '👤'} {username}
+              </span>
+              <button className={`${styles.hBtn} ${styles.hBtnLogout}`} onClick={onLogout}>ออก</button>
+            </div>
           </div>
 
         </div>

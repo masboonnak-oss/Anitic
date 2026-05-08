@@ -213,14 +213,14 @@ function NewKingDisplay({ king, phase }) {
     <div className={`${s.page} ${s['page_' + phase]}`}>
       <style>{FW_STYLE}</style>
 
-      {/* Video background — wrapper animates so video decode stays stable */}
-      <div className={s.videoWrap}>
-        <video
-          className={s.videoBg}
-          src="/newking-bg.mp4"
-          autoPlay loop muted playsInline
-        />
-      </div>
+      {/* Video background — no transform/filter on video itself */}
+      <video
+        className={s.videoBg}
+        src="/newking-bg.mp4"
+        autoPlay loop muted playsInline
+      />
+      {/* Color correction as a cheap div overlay, not CSS filter on video */}
+      <div className={s.videoTint} />
 
       {/* Screen flash */}
       {phase === 'show' && <div className={s.flash} />}

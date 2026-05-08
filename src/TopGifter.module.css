@@ -10,19 +10,13 @@
 
 /* ── Phase animations ── */
 .page_enter { opacity: 0; transform: scale(1.08); }
-.page_show  {
-  opacity: 1; transform: scale(1);
-  transition: opacity 0.35s ease, transform 0.35s ease;
-}
-.page_exit  {
-  opacity: 0; transform: scale(0.92);
-  transition: opacity 0.6s ease 0.1s, transform 0.6s ease 0.1s;
-}
+.page_show  { opacity: 1; transform: scale(1); transition: opacity 0.35s ease, transform 0.35s ease; }
+.page_exit  { opacity: 0; transform: scale(0.92); transition: opacity 0.6s ease 0.1s, transform 0.6s ease 0.1s; }
 
 /* ── Flash ── */
 .flash {
   position: absolute; inset: 0; z-index: 100;
-  background: rgba(180, 80, 255, 0.35);
+  background: rgba(255, 200, 0, 0.3);
   animation: flashOut 0.6s ease forwards;
   pointer-events: none;
 }
@@ -31,22 +25,22 @@
 /* ── Dark backdrop ── */
 .backdrop {
   position: absolute; inset: 0;
-  background: radial-gradient(ellipse 80% 70% at 50% 50%, rgba(120,0,200,0.55) 0%, rgba(0,0,0,0.88) 70%);
+  background: radial-gradient(ellipse 80% 70% at 50% 50%, rgba(100,60,0,0.6) 0%, rgba(0,0,0,0.88) 70%);
   pointer-events: none;
 }
 
-/* ── Rotating rays ── */
+/* ── Rotating rays (gold/amber) ── */
 .rays {
   position: absolute; inset: -50%;
   background: conic-gradient(
     from 0deg,
-    transparent 0deg, rgba(180,0,255,0.06) 10deg, transparent 20deg,
-    transparent 40deg, rgba(100,0,255,0.05) 50deg, transparent 60deg,
-    transparent 80deg, rgba(200,0,200,0.07) 90deg, transparent 100deg,
-    transparent 120deg, rgba(180,0,255,0.04) 130deg, transparent 145deg,
-    transparent 180deg, rgba(100,0,255,0.06) 190deg, transparent 210deg,
-    transparent 240deg, rgba(200,0,200,0.05) 250deg, transparent 270deg,
-    transparent 300deg, rgba(180,0,255,0.06) 315deg, transparent 330deg,
+    transparent 0deg, rgba(255,200,0,0.07) 10deg, transparent 20deg,
+    transparent 40deg, rgba(255,150,0,0.05) 50deg, transparent 60deg,
+    transparent 80deg, rgba(255,220,0,0.08) 90deg, transparent 100deg,
+    transparent 120deg, rgba(255,180,0,0.04) 130deg, transparent 145deg,
+    transparent 180deg, rgba(255,200,0,0.07) 190deg, transparent 210deg,
+    transparent 240deg, rgba(255,150,0,0.05) 250deg, transparent 270deg,
+    transparent 300deg, rgba(255,220,0,0.06) 315deg, transparent 330deg,
     transparent 360deg
   );
   animation: spinRays 14s linear infinite;
@@ -55,11 +49,10 @@
 }
 @keyframes spinRays { to { transform: rotate(360deg); } }
 
-/* ── Center bloom ── */
+/* ── Center bloom (gold) ── */
 .bloom {
-  position: absolute; width: 360px; height: 360px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(180,0,255,0.25) 0%, rgba(100,0,255,0.12) 40%, transparent 70%);
+  position: absolute; width: 360px; height: 360px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,200,0,0.22) 0%, rgba(255,150,0,0.10) 40%, transparent 70%);
   animation: bloomPulse 2.4s ease-in-out infinite;
   pointer-events: none;
 }
@@ -72,29 +65,27 @@
 .shockwaves { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
 .wave {
   position: absolute; width: 200px; height: 200px; border-radius: 50%;
-  border: 2px solid rgba(180,0,255,0.6);
+  border: 2px solid rgba(255,200,0,0.6);
   animation: shockwave 2.4s var(--wdel, 0s) ease-out infinite;
 }
 @keyframes shockwave {
-  0%   { transform: scale(0.5); opacity: 0.9; border-color: rgba(180,0,255,0.7); }
-  60%  { opacity: 0.3; border-color: rgba(100,0,255,0.3); }
+  0%   { transform: scale(0.5); opacity: 0.9; border-color: rgba(255,200,0,0.7); }
+  60%  { opacity: 0.3; border-color: rgba(255,150,0,0.3); }
   100% { transform: scale(4);   opacity: 0; }
 }
 
-/* ── Diamond rain ── */
-.diamondRain {
-  position: absolute; inset: 0; pointer-events: none; overflow: hidden;
-}
-.gem {
+/* ── Star rain ── */
+.starRain { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.starPt {
   position: absolute; top: -30px;
-  animation: fallGem var(--dur) var(--del) linear infinite;
+  animation: fallStar var(--dur) var(--del) linear infinite;
   opacity: var(--opacity);
 }
-.gem svg { transform: rotate(var(--rotate)); }
-@keyframes fallGem {
+.starPt svg { transform: rotate(0deg); }
+@keyframes fallStar {
   0%   { top: -30px; opacity: var(--opacity); transform: rotate(0deg) scale(1); }
   80%  { opacity: var(--opacity); }
-  100% { top: 110vh;  opacity: 0; transform: rotate(180deg) scale(0.7); }
+  100% { top: 110vh;  opacity: 0; transform: rotate(360deg) scale(0.7); }
 }
 
 /* ── Card ── */
@@ -112,27 +103,27 @@
 /* ── Badge ── */
 .badge {
   display: flex; align-items: center; gap: 10px;
-  background: linear-gradient(135deg, rgba(180,0,255,0.3), rgba(100,0,255,0.3));
-  border: 2px solid rgba(180,0,255,0.6);
+  background: linear-gradient(135deg, rgba(255,180,0,0.25), rgba(200,100,0,0.25));
+  border: 2px solid rgba(255,200,0,0.7);
   border-radius: 999px; padding: 7px 22px;
-  box-shadow: 0 0 24px rgba(180,0,255,0.5), inset 0 0 12px rgba(180,0,255,0.2);
+  box-shadow: 0 0 24px rgba(255,200,0,0.5), inset 0 0 12px rgba(255,200,0,0.1);
   animation: badgeGlow 2s ease-in-out infinite;
 }
 @keyframes badgeGlow {
-  0%,100% { box-shadow: 0 0 20px rgba(180,0,255,0.5); }
-  50%      { box-shadow: 0 0 40px rgba(180,0,255,0.9), 0 0 80px rgba(100,0,255,0.4); }
+  0%,100% { box-shadow: 0 0 20px rgba(255,200,0,0.5); }
+  50%      { box-shadow: 0 0 40px rgba(255,200,0,0.9), 0 0 80px rgba(255,150,0,0.4); }
 }
-.badgeGem  { font-size: 20px; animation: gemSpin 3s linear infinite; }
-@keyframes gemSpin { to { transform: rotate(360deg); } }
+.badgeStar { font-size: 18px; animation: starSpin 3s linear infinite; }
+@keyframes starSpin { to { transform: rotate(360deg); } }
 .badgeText {
   font-size: 18px; font-weight: 900; letter-spacing: 4px; color: #fff;
-  text-shadow: 0 0 12px rgba(180,0,255,0.9), 0 0 24px rgba(180,0,255,0.5);
+  text-shadow: 0 0 12px rgba(255,200,0,0.9), 0 0 24px rgba(255,150,0,0.5);
 }
 
 /* ── Subtitle ── */
 .subtitle {
-  font-size: 22px; font-weight: 700; color: #e0b0ff;
-  text-shadow: 0 0 16px rgba(180,0,255,0.7);
+  font-size: 22px; font-weight: 700; color: #ffe566;
+  text-shadow: 0 0 16px rgba(255,200,0,0.7);
   letter-spacing: 2px; margin-top: -4px;
 }
 
@@ -143,21 +134,19 @@
   margin: 4px 0;
 }
 
-/* Rings */
 .ringOuter {
   position: absolute; inset: -16px; border-radius: 50%;
-  border: 3px solid rgba(180,0,255,0.5);
+  border: 3px solid rgba(255,200,0,0.5);
   animation: rotateCW 5s linear infinite;
-  background: linear-gradient(135deg, rgba(180,0,255,0.05), transparent) border-box;
 }
 .ringMid {
   position: absolute; inset: -8px; border-radius: 50%;
-  border: 2px solid rgba(255,215,0,0.4);
+  border: 2px solid rgba(255,150,0,0.4);
   animation: rotateCCW 3.5s linear infinite;
 }
 .ringInner {
   position: absolute; inset: -2px; border-radius: 50%;
-  border: 1.5px solid rgba(200,100,255,0.5);
+  border: 1.5px solid rgba(255,220,0,0.5);
   animation: rotateCW 2s linear infinite;
 }
 @keyframes rotateCW  { to { transform: rotate(360deg);  } }
@@ -165,42 +154,40 @@
 
 .avatarGlow {
   position: absolute; inset: -20px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(180,0,255,0.35) 0%, rgba(100,0,255,0.15) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(255,200,0,0.3) 0%, rgba(255,150,0,0.12) 50%, transparent 70%);
   animation: glowPulse 2s ease-in-out infinite;
 }
 @keyframes glowPulse {
-  0%,100% { transform: scale(1);   opacity: 0.8; }
-  50%      { transform: scale(1.15); opacity: 1; }
+  0%,100% { transform: scale(1);    opacity: 0.8; }
+  50%      { transform: scale(1.15); opacity: 1;   }
 }
 
 .avatarFrame {
   position: absolute; inset: 0; border-radius: 50%;
   border: 4px solid transparent;
-  background: linear-gradient(135deg,#e040fb,#ffd700,#b9f2ff,#e040fb) border-box;
+  background: linear-gradient(135deg,#ffd700,#ff8800,#fff7a0,#ffd700) border-box;
   -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: destination-out;
-  mask-composite: exclude;
+  -webkit-mask-composite: destination-out; mask-composite: exclude;
   animation: frameRotate 4s linear infinite;
 }
 @keyframes frameRotate { to { transform: rotate(360deg); } }
 
 .avatarCircle {
   position: relative; width: 180px; height: 180px; border-radius: 50%; overflow: hidden;
-  background: linear-gradient(135deg,#2a0040,#1a0030);
-  box-shadow: 0 0 30px rgba(180,0,255,0.5), 0 0 60px rgba(100,0,255,0.2);
+  background: linear-gradient(135deg,#2a1800,#1a1000);
+  box-shadow: 0 0 30px rgba(255,200,0,0.5), 0 0 60px rgba(255,150,0,0.2);
   z-index: 2;
 }
-.avatarImg     { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.avatarImg      { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .avatarFallback {
   width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-  font-size: 72px; font-weight: 900; color: #e040fb;
+  font-size: 72px; font-weight: 900; color: #ffd700;
 }
 
 /* ── Sparkle ring ── */
 .sparkleRing { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); pointer-events: none; }
 .sparkle {
-  position: absolute; border-radius: 50%;
-  transform: translate(-50%,-50%);
+  position: absolute; border-radius: 50%; transform: translate(-50%,-50%);
   animation: sparklePop var(--sdur) var(--sdel) ease-in-out infinite;
   box-shadow: 0 0 6px currentColor;
 }
@@ -212,7 +199,7 @@
 /* ── Name ── */
 .name {
   font-size: 34px; font-weight: 900; color: #fff;
-  text-shadow: 0 0 20px rgba(180,0,255,0.9), 0 0 40px rgba(100,0,255,0.5);
+  text-shadow: 0 0 20px rgba(255,200,0,0.9), 0 0 40px rgba(255,150,0,0.5);
   letter-spacing: 1px; text-align: center; max-width: 380px;
   animation: namePop 0.5s 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
 }
@@ -221,22 +208,30 @@
   100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* ── Diamond count ── */
-.diamondRow {
-  display: flex; align-items: center; gap: 10px;
-  background: rgba(0,0,0,0.4); border: 1.5px solid rgba(180,0,255,0.4);
-  border-radius: 999px; padding: 8px 24px;
-  box-shadow: 0 0 20px rgba(180,0,255,0.3);
-  animation: countSlide 0.5s 0.5s both;
+/* ── Level badge ── */
+.levelRow {
+  display: flex; align-items: baseline; gap: 6px;
+  background: linear-gradient(135deg, rgba(0,0,0,0.5), rgba(40,20,0,0.5));
+  border: 2px solid rgba(255,200,0,0.6);
+  border-radius: 999px; padding: 8px 28px;
+  box-shadow: 0 0 24px rgba(255,200,0,0.4), inset 0 0 10px rgba(255,200,0,0.08);
+  animation: levelSlide 0.5s 0.5s both, levelPulse 2.5s 1s ease-in-out infinite;
 }
-@keyframes countSlide {
-  0%   { opacity: 0; transform: translateY(16px); }
-  100% { opacity: 1; transform: translateY(0); }
+@keyframes levelSlide {
+  0%   { opacity: 0; transform: translateY(16px) scale(0.9); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
-.diamondIcon  { font-size: 22px; animation: gemSpin 2s linear infinite; }
-.diamondNum   {
-  font-size: 30px; font-weight: 900; color: #ffd700;
-  text-shadow: 0 0 14px rgba(255,215,0,0.8);
-  min-width: 80px; text-align: center;
+@keyframes levelPulse {
+  0%,100% { box-shadow: 0 0 20px rgba(255,200,0,0.4); }
+  50%      { box-shadow: 0 0 40px rgba(255,200,0,0.8), 0 0 80px rgba(255,150,0,0.3); }
 }
-.diamondLabel { font-size: 15px; font-weight: 700; color: #c084fc; letter-spacing: 1px; }
+.levelLabel {
+  font-size: 20px; font-weight: 900; color: #ffa040;
+  text-shadow: 0 0 10px rgba(255,150,0,0.7);
+  letter-spacing: 2px;
+}
+.levelNum {
+  font-size: 52px; font-weight: 900; color: #ffd700; line-height: 1;
+  text-shadow: 0 0 20px rgba(255,200,0,0.9), 0 0 40px rgba(255,150,0,0.6);
+  min-width: 60px; text-align: center;
+}

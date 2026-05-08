@@ -8,29 +8,26 @@ function joinRoom() { if (ROOM_USER) socket.emit('joinRoom', { username: ROOM_US
 socket.on('connect', joinRoom);
 joinRoom();
 
-/* ── Diamond particles ── */
-function DiamondRain({ count = 40 }) {
-  const gems = useMemo(() => Array.from({ length: count }, (_, i) => ({
-    left:  `${Math.random() * 100}%`,
-    size:  `${10 + Math.random() * 18}px`,
-    dur:   `${2 + Math.random() * 4}s`,
-    del:   `${Math.random() * 3}s`,
+/* ── Star / sparkle particles ── */
+function StarRain({ count = 40 }) {
+  const stars = useMemo(() => Array.from({ length: count }, () => ({
+    left:    `${Math.random() * 100}%`,
+    size:    `${8 + Math.random() * 16}px`,
+    dur:     `${2 + Math.random() * 4}s`,
+    del:     `${Math.random() * 3}s`,
     opacity: 0.4 + Math.random() * 0.6,
-    rotate: `${Math.random() * 360}deg`,
-    color: ['#b9f2ff','#e040fb','#ffd700','#fff','#a78bfa','#38bdf8'][Math.floor(Math.random()*6)],
+    color:   ['#ffd700','#ffe566','#fff','#a78bfa','#38bdf8','#e040fb'][Math.floor(Math.random()*6)],
   })), []);
 
   return (
-    <div className={s.diamondRain}>
-      {gems.map((g, i) => (
-        <div key={i} className={s.gem} style={{
+    <div className={s.starRain}>
+      {stars.map((g, i) => (
+        <div key={i} className={s.starPt} style={{
           left: g.left, width: g.size, height: g.size,
-          '--dur': g.dur, '--del': g.del,
-          '--opacity': g.opacity, '--rotate': g.rotate, '--color': g.color,
+          '--dur': g.dur, '--del': g.del, '--opacity': g.opacity, '--color': g.color,
         }}>
           <svg viewBox="0 0 24 24" fill={g.color}>
-            <polygon points="12,2 22,9 18,22 6,22 2,9" opacity="0.9"/>
-            <polygon points="12,2 22,9 12,14" opacity="0.5" fill="white"/>
+            <polygon points="12,2 15,9 22,9 16,14 18,21 12,17 6,21 8,14 2,9 9,9"/>
           </svg>
         </div>
       ))}
@@ -51,19 +48,19 @@ function ShockWaves() {
 function SparkleRing({ size = 220 }) {
   const sparks = useMemo(() => Array.from({ length: 16 }, (_, i) => ({
     angle: (i / 16) * 360,
-    dist: 90 + Math.random() * 30,
-    dur: `${0.8 + Math.random() * 1}s`,
-    del: `${i * 0.1}s`,
-    sz: `${4 + Math.random() * 6}px`,
-    color: ['#ffd700','#e040fb','#b9f2ff','#fff','#a78bfa'][i % 5],
+    dist:  90 + Math.random() * 30,
+    dur:   `${0.8 + Math.random() * 1}s`,
+    del:   `${i * 0.1}s`,
+    sz:    `${4 + Math.random() * 6}px`,
+    color: ['#ffd700','#e040fb','#fff','#a78bfa','#38bdf8'][i % 5],
   })), []);
 
   return (
     <div className={s.sparkleRing} style={{ width: size, height: size }}>
       {sparks.map((sp, i) => {
         const rad = (sp.angle * Math.PI) / 180;
-        const x = 50 + (sp.dist / size * 100) * Math.cos(rad);
-        const y = 50 + (sp.dist / size * 100) * Math.sin(rad);
+        const x   = 50 + (sp.dist / size * 100) * Math.cos(rad);
+        const y   = 50 + (sp.dist / size * 100) * Math.sin(rad);
         return (
           <div key={i} className={s.sparkle} style={{
             left: `${x}%`, top: `${y}%`,
@@ -77,20 +74,20 @@ function SparkleRing({ size = 220 }) {
   );
 }
 
-/* ── Number ticker (diamonds) ── */
-function DiamondCount({ value }) {
+/* ── Level ticker (counts up) ── */
+function LevelCount({ value }) {
   const [display, setDisplay] = useState(0);
   useEffect(() => {
-    let start = 0;
-    const step = Math.ceil(value / 30);
+    let cur = 0;
+    const step = Math.max(1, Math.ceil(value / 20));
     const t = setInterval(() => {
-      start = Math.min(start + step, value);
-      setDisplay(start);
-      if (start >= value) clearInterval(t);
-    }, 40);
+      cur = Math.min(cur + step, value);
+      setDisplay(cur);
+      if (cur >= value) clearInterval(t);
+    }, 50);
     return () => clearInterval(t);
   }, [value]);
-  return <span>{display.toLocaleString()}</span>;
+  return <span>{display}</span>;
 }
 
 /* ── Main display ── */
@@ -100,48 +97,33 @@ function TopGifterDisplay({ gifter, phase }) {
 
   return (
     <div className={`${s.page} ${s['page_' + phase]}`}>
-      {/* Screen flash */}
       {phase === 'show' && <div className={s.flash} />}
-
-      {/* Dark vignette */}
       <div className={s.backdrop} />
-
-      {/* Rotating god rays (purple/pink) */}
       <div className={s.rays} />
-
-      {/* Center bloom */}
       <div className={s.bloom} />
-
-      {/* Shockwave rings */}
       <ShockWaves />
+      <StarRain count={35} />
 
-      {/* Diamond rain */}
-      <DiamondRain count={35} />
-
-      {/* Card */}
       <div className={s.card}>
 
         {/* Top badge */}
         <div className={s.badge}>
-          <span className={s.badgeGem}>💎</span>
-          <span className={s.badgeText}>TOP GIFTER</span>
-          <span className={s.badgeGem}>💎</span>
+          <span className={s.badgeStar}>⭐</span>
+          <span className={s.badgeText}>HIGH LEVEL</span>
+          <span className={s.badgeStar}>⭐</span>
         </div>
 
         {/* Subtitle */}
         <div className={s.subtitle}>เข้าร่วมไลฟ์แล้ว!</div>
 
-        {/* Avatar section */}
+        {/* Avatar */}
         <div className={s.avatarSection}>
           <SparkleRing size={230} />
-
-          {/* Glow rings */}
           <div className={s.ringOuter} />
           <div className={s.ringMid}   />
           <div className={s.ringInner} />
           <div className={s.avatarGlow} />
 
-          {/* Avatar */}
           <div className={s.avatarCircle}>
             {!imgErr && gifter.profilePicUrl ? (
               <img src={gifter.profilePicUrl} alt={gifter.displayName}
@@ -152,19 +134,16 @@ function TopGifterDisplay({ gifter, phase }) {
               </div>
             )}
           </div>
-
-          {/* Diamond frame border */}
           <div className={s.avatarFrame} />
         </div>
 
         {/* Name */}
         <div className={s.name}>{gifter.displayName || gifter.uniqueId}</div>
 
-        {/* Diamond count */}
-        <div className={s.diamondRow}>
-          <span className={s.diamondIcon}>💎</span>
-          <span className={s.diamondNum}><DiamondCount value={gifter.diamonds} /></span>
-          <span className={s.diamondLabel}>diamonds</span>
+        {/* Level badge */}
+        <div className={s.levelRow}>
+          <span className={s.levelLabel}>LV.</span>
+          <span className={s.levelNum}><LevelCount value={gifter.level || 0} /></span>
         </div>
 
       </div>
@@ -173,7 +152,7 @@ function TopGifterDisplay({ gifter, phase }) {
 }
 
 const PREVIEW_GIFTER = {
-  uniqueId: 'preview', displayName: 'TOP GIFTER', profilePicUrl: null, diamonds: 12345,
+  uniqueId: 'preview', displayName: 'Moon 🌙', profilePicUrl: null, level: 25,
 };
 
 export default function TopGifterPage() {

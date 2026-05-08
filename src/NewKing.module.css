@@ -24,21 +24,32 @@
   100% { opacity: 0; }
 }
 
-/* ── VIDEO BACKGROUND ── */
+/* ── VIDEO WRAPPER — animates separately from the video decode ── */
+.videoWrap {
+  position: absolute; inset: -6%; z-index: 0;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  animation: videoPan 22s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+}
+@keyframes videoPan {
+  0%   { transform: translate3d(0%,    0%,    0) scale3d(1.00, 1.00, 1); }
+  25%  { transform: translate3d(-1.2%, 0.8%,  0) scale3d(1.02, 1.02, 1); }
+  50%  { transform: translate3d(0.8%,  -0.6%, 0) scale3d(1.04, 1.04, 1); }
+  75%  { transform: translate3d(-0.5%, -1.0%, 0) scale3d(1.02, 1.02, 1); }
+  100% { transform: translate3d(0.6%,  0.4%,  0) scale3d(1.00, 1.00, 1); }
+}
+
+/* ── VIDEO ELEMENT — never animated, stays on its own GPU layer ── */
 .videoBg {
-  position: absolute; inset: 0; z-index: 0;
+  position: absolute; inset: 0;
   width: 100%; height: 100%;
   object-fit: cover;
   pointer-events: none;
   filter: brightness(0.88) saturate(1.55) contrast(1.08);
-  animation: videoPan 18s ease-in-out infinite alternate;
-  will-change: transform, filter;
-}
-@keyframes videoPan {
-  0%   { transform: scale(1.08) translate(0%, 0%); }
-  33%  { transform: scale(1.12) translate(-1.5%, 1%); }
-  66%  { transform: scale(1.10) translate(1.2%, -0.8%); }
-  100% { transform: scale(1.08) translate(0.5%, 0.5%); }
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  will-change: contents;
 }
 
 /* ── DARK BACKDROP — vignette only, let video breathe ── */

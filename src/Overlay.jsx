@@ -182,11 +182,31 @@ function Particles({ count = 16, areaSize }) {
   );
 }
 
-/* ─── Gold FX: divine bloom + god rays + lens flares ─── */
+/* ─── Gold FX: massive bloom + star sparkles + lens flares (most spectacular) ─── */
 function FxGold() {
+  const stars = [
+    { t:  '3%', l:  '8%', dur: '2.0s', del: '0.0s' },
+    { t:  '6%', r: '10%', dur: '2.8s', del: '0.6s' },
+    { t: '14%', l:  '2%', dur: '1.8s', del: '1.2s' },
+    { t: '22%', r:  '3%', dur: '3.2s', del: '1.8s' },
+    { t: '44%', l:  '1%', dur: '2.4s', del: '0.4s' },
+    { t: '52%', r:  '2%', dur: '1.6s', del: '2.2s' },
+    { t: '65%', l:  '4%', dur: '2.6s', del: '0.8s' },
+    { t: '74%', r:  '6%', dur: '3.0s', del: '1.4s' },
+    { t: '86%', l: '20%', dur: '2.2s', del: '2.0s' },
+    { t: '88%', r: '20%', dur: '2.8s', del: '0.2s' },
+    { t:  '9%', l: '44%', dur: '3.4s', del: '1.6s' },
+    { t: '80%', l: '46%', dur: '1.9s', del: '0.9s' },
+    { t: '30%', l:  '2%', dur: '2.3s', del: '0.3s' },
+    { t: '35%', r:  '3%', dur: '3.1s', del: '1.1s' },
+  ];
   return (
     <>
       <div className={styles.goldBloom} />
+      {stars.map((s, i) => (
+        <div key={i} className={styles.goldStar}
+          style={{ top: s.t, left: s.l, right: s.r, '--gsd': s.dur, '--gsd2': s.del }} />
+      ))}
       {[
         { s: 9,  t: '10%', l: '12%', c: '#fff9c0', fd: '2.1s', fd2: '0.0s' },
         { s: 5,  t:  '7%', r: '16%', c: '#ffe566', fd: '2.8s', fd2: '0.7s' },
@@ -194,12 +214,14 @@ function FxGold() {
         { s: 6,  t: '28%', r:  '9%', c: '#fff3a0', fd: '1.9s', fd2: '2.0s' },
         { s: 4,  t: '68%', l: '22%', c: '#ffd700', fd: '1.6s', fd2: '1.0s' },
         { s: 7,  t: '80%', r: '18%', c: '#ffe0a0', fd: '2.5s', fd2: '0.5s' },
+        { s: 10, t: '20%', l: '44%', c: '#ffffff', fd: '1.4s', fd2: '1.3s' },
+        { s: 6,  t: '75%', l: '44%', c: '#fff566', fd: '2.0s', fd2: '2.1s' },
       ].map((f, i) => (
-        <div key={i} className={styles.lensFlare} style={{
+        <div key={`f${i}`} className={styles.lensFlare} style={{
           width: f.s, height: f.s,
           top: f.t, left: f.l, right: f.r,
           background: f.c,
-          boxShadow: `0 0 ${f.s * 2}px ${f.c}, 0 0 ${f.s * 5}px ${f.c}99`,
+          boxShadow: `0 0 ${f.s * 2}px ${f.c}, 0 0 ${f.s * 6}px ${f.c}bb`,
           '--fd': f.fd, '--fd2': f.fd2,
         }} />
       ))}
@@ -207,36 +229,49 @@ function FxGold() {
   );
 }
 
-/* ─── Silver FX: frost aura + ice star flashes + rotating ring ─── */
+/* ─── Silver FX: blue frost bloom + ice star sparkles + rotating frost rings ─── */
 function FxSilver() {
+  const stars = [
+    { t:  '5%', l: '14%', dur: '2.8s', del: '0.0s' },
+    { t:  '8%', r: '16%', dur: '3.4s', del: '0.8s' },
+    { t: '28%', l:  '3%', dur: '2.2s', del: '1.5s' },
+    { t: '36%', r:  '4%', dur: '3.0s', del: '0.4s' },
+    { t: '60%', l:  '7%', dur: '2.6s', del: '1.9s' },
+    { t: '68%', r:  '9%', dur: '1.9s', del: '1.1s' },
+    { t: '84%', l: '26%', dur: '3.2s', del: '0.6s' },
+    { t: '82%', r: '24%', dur: '2.5s', del: '1.7s' },
+    { t: '18%', l: '44%', dur: '3.6s', del: '1.0s' },
+    { t: '76%', l: '44%', dur: '2.0s', del: '2.3s' },
+  ];
   return (
     <>
       <div className={styles.silverBloom} />
       <div className={styles.silverRingWrap}>
         <svg className={styles.silverRingSvg} viewBox="0 0 240 240">
-          <circle cx="120" cy="120" r="108" fill="none" stroke="rgba(160,220,255,0.35)" strokeWidth="1.2" strokeDasharray="10 14" />
-          <circle cx="120" cy="120" r="95"  fill="none" stroke="rgba(200,240,255,0.20)" strokeWidth="0.8" strokeDasharray="5 18" />
+          <circle cx="120" cy="120" r="108" fill="none" stroke="rgba(140,210,255,0.50)" strokeWidth="1.5" strokeDasharray="10 14" />
+          <circle cx="120" cy="120" r="95"  fill="none" stroke="rgba(180,235,255,0.30)" strokeWidth="1.0" strokeDasharray="5 18" />
         </svg>
       </div>
-      {[
-        { t: '8%',  l: '14%', is: '3.0s', id: '0.0s' },
-        { t: '12%', r: '16%', is: '3.6s', id: '0.9s' },
-        { t: '55%', l:  '7%', is: '2.4s', id: '1.6s' },
-        { t: '48%', r: '11%', is: '3.2s', id: '0.4s' },
-        { t: '72%', l: '28%', is: '2.8s', id: '1.2s' },
-        { t: '78%', r: '24%', is: '3.8s', id: '2.0s' },
-      ].map((s, i) => (
-        <div key={i} className={styles.iceStar} style={{
-          top: s.t, left: s.l, right: s.r,
-          '--is': s.is, '--id': s.id,
-        }} />
+      {stars.map((s, i) => (
+        <div key={i} className={styles.iceStar}
+          style={{ top: s.t, left: s.l, right: s.r, '--is': s.dur, '--id': s.del }} />
       ))}
     </>
   );
 }
 
-/* ─── Bronze FX: fire bloom flicker + rising embers ─── */
+/* ─── Bronze FX: pink bloom + pink star sparkles + rising embers ─── */
 function FxBronze() {
+  const stars = [
+    { t:  '5%', l: '15%', dur: '2.6s', del: '0.0s' },
+    { t:  '8%', r: '17%', dur: '3.2s', del: '0.7s' },
+    { t: '30%', l:  '3%', dur: '2.0s', del: '1.4s' },
+    { t: '40%', r:  '4%', dur: '2.8s', del: '0.3s' },
+    { t: '62%', l:  '7%', dur: '3.4s', del: '1.8s' },
+    { t: '70%', r:  '9%', dur: '2.3s', del: '1.0s' },
+    { t: '85%', l: '28%', dur: '1.8s', del: '0.5s' },
+    { t: '83%', r: '26%', dur: '3.0s', del: '1.6s' },
+  ];
   const embers = [
     { l: '18%', ed: '2.3s', edd: '0.0s', ex: -0.3 },
     { l: '32%', ed: '1.9s', edd: '0.6s', ex:  0.2 },
@@ -251,8 +286,12 @@ function FxBronze() {
     <>
       <div className={styles.bronzeBloom} />
       <div className={styles.bronzeInnerGlow} />
+      {stars.map((s, i) => (
+        <div key={i} className={styles.pinkStar}
+          style={{ top: s.t, left: s.l, right: s.r, '--psd': s.dur, '--psd2': s.del }} />
+      ))}
       {embers.map((e, i) => (
-        <div key={i} className={styles.ember} style={{
+        <div key={`e${i}`} className={styles.ember} style={{
           left: e.l, bottom: '30%',
           '--ed': e.ed, '--edd': e.edd, '--ex': e.ex,
         }} />

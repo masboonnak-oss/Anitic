@@ -142,17 +142,25 @@
   100% { transform: translateY(-130px) translateX(var(--ex)) scale(0.1); opacity: 0; }
 }
 
-/* ── NAME — bigger than WIN ── */
+/* ── NAME — pro style, no black stroke ── */
 .name {
   font-size: 34px; font-weight: 900;
   text-align: center; max-width: 360px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  color: #fff;
-  -webkit-text-stroke: 2.5px #000;
-  paint-order: stroke fill;
+  background: linear-gradient(180deg,
+    #ffffff  0%,
+    #fff5cc 25%,
+    #ffd700 60%,
+    #ff8c00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   filter:
-    drop-shadow(0 0 14px rgba(255,215,0,0.90))
-    drop-shadow(0 0 30px rgba(255,120,0,0.50));
+    drop-shadow(0 2px 0 rgba(80,30,0,0.90))
+    drop-shadow(0 0 18px rgba(255,215,0,0.95))
+    drop-shadow(0 0 40px rgba(255,120,0,0.55));
+  animation: shimmer 3s linear infinite;
+  background-size: 100% 100%;
   margin-top: 4px;
 }
 
@@ -163,12 +171,22 @@
 }
 
 .winsLabel {
-  font-size: 22px; font-weight: 900;
-  letter-spacing: 0.20em;
-  color: #ffd700;
-  -webkit-text-stroke: 2px #000;
+  font-size: 56px; font-weight: 900; line-height: 1;
+  letter-spacing: 0.05em;
+  background: linear-gradient(180deg,
+    #ffffff  0%,
+    #ffe566 20%,
+    #ffd700 50%,
+    #ff8c00 85%,
+    #c05000 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  -webkit-text-stroke: 5px #000;
   paint-order: stroke fill;
-  filter: drop-shadow(0 0 8px rgba(255,200,0,0.60));
+  filter:
+    drop-shadow(0 0 18px rgba(255,215,0,0.90))
+    drop-shadow(0 0 40px rgba(255,140,0,0.60));
 }
 
 .winsNum {

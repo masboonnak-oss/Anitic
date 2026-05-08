@@ -207,13 +207,12 @@
   font-size: 56px; font-weight: 900; color: #fff;
 }
 
-/* ── ORNATE FRAME — video, screen blend removes dark bg ── */
+/* ── ORNATE FRAME — chroma-key canvas ── */
 .frameImg {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   object-fit: contain;
   pointer-events: none; z-index: 7;
-  mix-blend-mode: screen;
   filter: drop-shadow(0 0 18px rgba(255,180,0,0.70)) drop-shadow(0 0 40px rgba(255,80,0,0.45));
 }
 

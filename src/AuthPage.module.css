@@ -293,6 +293,78 @@
   margin-top: 4px;
 }
 
+/* Forgot password */
+.labelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.forgotLink {
+  background: none;
+  border: none;
+  color: #555;
+  font-family: 'Kanit', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.forgotLink:hover { color: #fe2c55; }
+
+.forgotInfo {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid #222235;
+  border-radius: 10px;
+  color: #888;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 12px 14px;
+  width: 100%;
+  text-align: left;
+  margin-bottom: 4px;
+}
+.forgotInfoIcon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+.backBtn {
+  background: transparent;
+  border: 1px solid #222235;
+  color: #555;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 14px;
+  font-family: 'Kanit', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  transition: border-color 0.2s, color 0.2s;
+}
+.backBtn:hover { border-color: #444; color: #aaa; }
+
+/* Forgot sent */
+.sentBox {
+  background: rgba(22,163,74,0.07);
+  border: 1px solid rgba(22,163,74,0.2);
+  border-radius: 14px;
+  padding: 20px 18px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 8px;
+}
+.sentIcon { font-size: 32px; }
+.sentTitle { font-size: 15px; font-weight: 700; color: #4ade80; margin: 0; }
+.sentDesc { font-size: 13px; color: #777; line-height: 1.6; margin: 0; }
+.sentUser { color: #fff; }
+
 @media (max-width: 480px) {
   .card { padding: 36px 24px 28px; margin: 16px; max-width: none; border-radius: 20px; }
   .title { font-size: 20px; }

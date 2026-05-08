@@ -448,6 +448,52 @@ app.delete('/api/admin/users/:username', authMiddleware, superAdminMiddleware, (
   res.json({ ok: true });
 });
 
+/* ── Super Admin: reset password ── */
+app.post('/api/admin/users/:username/reset-password', authMiddleware, superAdminMiddleware, async (req, res) => {
+  const target   = req.params.username;
+  const { newPassword } = req.body;
+  if (!newPassword || newPassword.length < 6) return res.status(400).json({ error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' });
+  const users = loadUsers();
+  const user  = users.find(u => u.username === target);
+  if (!user) return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
+  user.passwordHash = await bcrypt.hash(newPassword, 12);
+  saveUsers(users);
+  /* Clear their reset request if any */
+  const reqs = loadResetRequests().filter(r => r.username !== target);
+  saveResetRequests(reqs);
+  console.log(`[superadmin] reset password for: ${target}`);
+  res.json({ ok: true });
+});
+
+/* ── Forgot password requests ── */
+const RESET_FILE = path.join(CACHE_DIR, '_reset_requests.json');
+function loadResetRequests() {
+  try { if (fs.existsSync(RESET_FILE)) return JSON.parse(fs.readFileSync(RESET_FILE, 'utf8')); } catch (_) {}
+  return [];
+}
+function saveResetRequests(r) { fs.writeFileSync(RESET_FILE, JSON.stringify(r, null, 2)); }
+
+app.post('/api/auth/forgot-password', (req, res) => {
+  const u = (req.body.username || '').trim();
+  if (!u) return res.status(400).json({ error: 'กรุณาระบุชื่อผู้ใช้' });
+  if (!findUser(u)) return res.status(404).json({ error: 'ไม่พบชื่อผู้ใช้นี้ในระบบ' });
+  const reqs = loadResetRequests().filter(r => r.username !== u);
+  reqs.push({ username: u, requestedAt: Date.now() });
+  saveResetRequests(reqs);
+  console.log(`[auth] reset request from: ${u}`);
+  res.json({ ok: true });
+});
+
+app.get('/api/admin/reset-requests', authMiddleware, superAdminMiddleware, (req, res) => {
+  res.json(loadResetRequests());
+});
+
+app.delete('/api/admin/reset-requests/:username', authMiddleware, superAdminMiddleware, (req, res) => {
+  const reqs = loadResetRequests().filter(r => r.username !== req.params.username);
+  saveResetRequests(reqs);
+  res.json({ ok: true });
+});
+
 /* ── Super Admin: promote/demote ── */
 app.patch('/api/admin/users/:username/role', authMiddleware, superAdminMiddleware, (req, res) => {
   const target = req.params.username;

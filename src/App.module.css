@@ -105,6 +105,43 @@
 }
 .resetBtn:hover { background: rgba(255,68,68,0.1); }
 
+.userBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #1a1a2e;
+  border: 1px solid #2a2a45;
+  border-radius: 8px;
+  padding: 5px 10px 5px 8px;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.userIcon { font-size: 14px; }
+
+.userName {
+  font-size: 13px;
+  color: #aaa;
+  font-weight: 600;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logoutBtn {
+  background: transparent;
+  border: 1px solid #333;
+  color: #666;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-family: 'Kanit', sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.logoutBtn:hover { border-color: #ff4444; color: #ff4444; }
+
 .overlayPanel {
   background: #0f0f1c;
   border-bottom: 1px solid #1e1e32;

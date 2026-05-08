@@ -5,6 +5,9 @@ const cors = require('cors');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 /* ── Cache folder ── */
 const CACHE_DIR = path.join(__dirname, '../cache');
@@ -12,6 +15,37 @@ if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
 
 const AVATAR_DIR = path.join(__dirname, '../cache/avatars');
 if (!fs.existsSync(AVATAR_DIR)) fs.mkdirSync(AVATAR_DIR, { recursive: true });
+
+/* ── Auth ── */
+const AUTH_FILE = path.join(CACHE_DIR, '_auth.json');
+
+function loadAuth() {
+  try {
+    if (fs.existsSync(AUTH_FILE)) return JSON.parse(fs.readFileSync(AUTH_FILE, 'utf8'));
+  } catch (_) {}
+  return null;
+}
+function saveAuth(data) { fs.writeFileSync(AUTH_FILE, JSON.stringify(data, null, 2)); }
+
+// Generate JWT secret once and store it persistently
+let _auth = loadAuth();
+if (!_auth?.secret) {
+  _auth = { ...(_auth || {}), secret: crypto.randomBytes(32).toString('hex') };
+  saveAuth(_auth);
+}
+const JWT_SECRET = _auth.secret;
+
+function authMiddleware(req, res, next) {
+  const header = req.headers['authorization'] || '';
+  const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'กรุณาล็อคอินก่อน' });
+  try {
+    req.admin = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch (_) {
+    res.status(401).json({ error: 'Token หมดอายุหรือไม่ถูกต้อง กรุณาล็อคอินใหม่' });
+  }
+}
 
 /* Sanitize username → safe filename (no dots, spaces, special chars) */
 function safeFilename(username) {
@@ -171,6 +205,44 @@ app.use(express.json());
 
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
+
+/* ── Auth routes ── */
+app.get('/api/auth/status', (req, res) => {
+  const auth = loadAuth();
+  res.json({ registered: !!(auth?.passwordHash) });
+});
+
+app.post('/api/auth/register', async (req, res) => {
+  const { username, password } = req.body;
+  const auth = loadAuth();
+  if (auth?.passwordHash) return res.status(400).json({ error: 'มีบัญชีอยู่แล้ว ไม่สามารถสมัครเพิ่มได้' });
+  const u = (username || '').trim();
+  const p = (password || '');
+  if (!u || u.length < 3) return res.status(400).json({ error: 'ชื่อผู้ใช้ต้องมีอย่างน้อย 3 ตัวอักษร' });
+  if (p.length < 6) return res.status(400).json({ error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' });
+  const hash = await bcrypt.hash(p, 12);
+  const updated = { ...auth, username: u, passwordHash: hash };
+  saveAuth(updated);
+  const token = jwt.sign({ username: u }, JWT_SECRET, { expiresIn: '30d' });
+  console.log(`[auth] registered admin: ${u}`);
+  res.json({ ok: true, token, username: u });
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  const { username, password } = req.body;
+  const auth = loadAuth();
+  if (!auth?.passwordHash) return res.status(400).json({ error: 'ยังไม่มีบัญชี กรุณาสมัครก่อน' });
+  const u = (username || '').trim();
+  const ok = await bcrypt.compare(password || '', auth.passwordHash);
+  if (!ok || u !== auth.username) return res.status(401).json({ error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
+  const token = jwt.sign({ username: auth.username }, JWT_SECRET, { expiresIn: '30d' });
+  console.log(`[auth] login: ${u}`);
+  res.json({ ok: true, token, username: auth.username });
+});
+
+app.get('/api/auth/me', authMiddleware, (req, res) => {
+  res.json({ ok: true, username: req.admin.username });
+});
 
 /* ── Image proxy (avoids CORS + TikTok CDN blocks in browser) ── */
 app.get('/api/img', async (req, res) => {
@@ -496,14 +568,14 @@ app.get('/bookmarklet.js', (req, res) => {
 });
 
 /* ── Live API ── */
-app.post('/api/live/connect', (req, res) => {
+app.post('/api/live/connect', authMiddleware, (req, res) => {
   const { username } = req.body;
   if (!username) return res.status(400).json({ error: 'ต้องระบุ username' });
   connectLive(username.replace('@', '').trim());
   res.json({ ok: true });
 });
 
-app.post('/api/live/disconnect', (req, res) => {
+app.post('/api/live/disconnect', authMiddleware, (req, res) => {
   disconnectLive();
   commenters.clear();
   broadcastCommenters();
@@ -562,7 +634,7 @@ app.get('/api/tiktok-info/:username', async (req, res) => {
 });
 
 /* ── Cache avatar from external URL ── */
-app.post('/api/cache-avatar', async (req, res) => {
+app.post('/api/cache-avatar', authMiddleware, async (req, res) => {
   const { username, imageUrl } = req.body;
   if (!username || !imageUrl) return res.status(400).json({ error: 'username and imageUrl required' });
   const id = username.trim().replace('@', '');
@@ -611,7 +683,7 @@ app.get('/api/players', (req, res) => {
   res.json(sorted);
 });
 
-app.post('/api/player', async (req, res) => {
+app.post('/api/player', authMiddleware, async (req, res) => {
   const { username, displayName, profilePicUrl } = req.body;
   if (!username) return res.status(400).json({ error: 'username required' });
   const id = username.trim().replace('@', '');
@@ -648,7 +720,7 @@ app.post('/api/player', async (req, res) => {
   res.json(players.get(id));
 });
 
-app.delete('/api/player/:id', (req, res) => {
+app.delete('/api/player/:id', authMiddleware, (req, res) => {
   const { id } = req.params;
   if (!players.has(id)) return res.status(404).json({ error: 'ไม่พบผู้เล่น' });
   players.delete(id);
@@ -657,7 +729,7 @@ app.delete('/api/player/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-app.patch('/api/player/:id/win', (req, res) => {
+app.patch('/api/player/:id/win', authMiddleware, (req, res) => {
   const { id } = req.params;
   const { delta } = req.body;
   if (!players.has(id)) return res.status(404).json({ error: 'ไม่พบผู้เล่น' });
@@ -668,7 +740,7 @@ app.patch('/api/player/:id/win', (req, res) => {
   res.json(p);
 });
 
-app.post('/api/reset', (req, res) => {
+app.post('/api/reset', authMiddleware, (req, res) => {
   players.clear();
   savePlayers();
   broadcast();
@@ -678,7 +750,7 @@ app.post('/api/reset', (req, res) => {
 // threshold ของ Top1 — { id, win } หรือ null — เก็บไว้ server side ให้ OBS reload ก็รอด
 let top1Threshold = null;
 
-app.post('/api/reset-top1', (req, res) => {
+app.post('/api/reset-top1', authMiddleware, (req, res) => {
   const sorted = Array.from(players.values()).sort((a, b) => b.win - a.win);
   const top = sorted[0];
   top1Threshold = top ? { id: top.id, win: top.win } : null;

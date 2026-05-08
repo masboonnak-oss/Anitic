@@ -4,10 +4,11 @@ import Podium from './components/Podium.jsx';
 import PlayerList from './components/PlayerList.jsx';
 import AddPlayer from './components/AddPlayer.jsx';
 import styles from './App.module.css';
+import { apiFetch } from './auth.js';
 
 const socket = io('/', { transports: ['websocket', 'polling'] });
 
-export default function App() {
+export default function App({ username, onLogout }) {
   const [players, setPlayers] = useState([]);
   const [toast, setToast] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -48,39 +49,37 @@ export default function App() {
     });
   }
 
-  async function handleAdd({ username, displayName, profilePicUrl }) {
-    const res = await fetch('/api/player', {
+  async function handleAdd({ username: uname, displayName, profilePicUrl }) {
+    const res = await apiFetch('/api/player', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, displayName, profilePicUrl })
+      body: JSON.stringify({ username: uname, displayName, profilePicUrl }),
     });
     const data = await res.json();
-    if (res.ok) notify(`เพิ่ม ${displayName || username} แล้ว`);
+    if (res.ok) notify(`เพิ่ม ${displayName || uname} แล้ว`);
     else notify(data.error || 'เพิ่มไม่ได้', 'error');
   }
 
   async function handleWin(id, delta) {
-    await fetch(`/api/player/${encodeURIComponent(id)}/win`, {
+    await apiFetch(`/api/player/${encodeURIComponent(id)}/win`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ delta })
+      body: JSON.stringify({ delta }),
     });
   }
 
   async function handleDelete(id) {
-    await fetch(`/api/player/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    await apiFetch(`/api/player/${encodeURIComponent(id)}`, { method: 'DELETE' });
     notify('ลบผู้เล่นแล้ว', 'info');
   }
 
   async function handleResetTop1() {
     if (!confirm('ล้าง Top 1 overlay?')) return;
-    await fetch('/api/reset-top1', { method: 'POST' });
+    await apiFetch('/api/reset-top1', { method: 'POST' });
     notify('ล้าง Top 1 แล้ว', 'info');
   }
 
   async function handleReset() {
     if (!confirm('ล้างข้อมูลทั้งหมด?')) return;
-    await fetch('/api/reset', { method: 'POST' });
+    await apiFetch('/api/reset', { method: 'POST' });
     notify('ล้างข้อมูลแล้ว', 'info');
   }
 
@@ -103,6 +102,13 @@ export default function App() {
           </button>
           <button className={styles.resetTop1Btn} onClick={handleResetTop1}>ล้าง Top 1</button>
           <button className={styles.resetBtn} onClick={handleReset}>ล้างข้อมูล</button>
+          <div className={styles.userBadge}>
+            <span className={styles.userIcon}>👤</span>
+            <span className={styles.userName}>{username}</span>
+            <button className={styles.logoutBtn} onClick={onLogout} title="ออกจากระบบ">
+              ออก
+            </button>
+          </div>
         </div>
       </header>
 

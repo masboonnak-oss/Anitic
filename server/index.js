@@ -40,9 +40,49 @@ async function downloadAvatar(username, remoteUrl) {
   }
 }
 
+/* Fallback: scrape TikTok profile page for og:image + og:title */
+async function fetchFromTikTokPage(username) {
+  try {
+    const sessionId = process.env.TIKTOK_SESSION_ID || '';
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Accept-Language': 'th-TH,th;q=0.9,en-US;q=0.8',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    };
+    if (sessionId) headers['Cookie'] = `sessionid=${sessionId}`;
+
+    const resp = await axios.get(`https://www.tiktok.com/@${encodeURIComponent(username)}`, {
+      timeout: 12000, headers, maxRedirects: 5,
+    });
+    const html = resp.data;
+    const imgMatch = html.match(/<meta[^>]+property="og:image"\s+content="([^"]+)"/i)
+                  || html.match(/<meta[^>]+content="([^"]+)"\s+property="og:image"/i);
+    const titleMatch = html.match(/<meta[^>]+property="og:title"\s+content="([^"]+)"/i)
+                    || html.match(/<meta[^>]+content="([^"]+)"\s+property="og:title"/i);
+
+    if (!imgMatch) return null;
+
+    const avatarUrl = imgMatch[1].replace(/&amp;/g, '&');
+    let displayName = null;
+    if (titleMatch) {
+      // og:title format: "Name (@handle) TikTok" or "Name | TikTok"
+      displayName = titleMatch[1]
+        .replace(/\s*[\|–-]\s*TikTok.*$/i, '')
+        .replace(/\s*\(@[^)]+\).*$/, '')
+        .replace(/&amp;/g, '&')
+        .trim() || null;
+    }
+    console.log(`[tiktok-page] @${username} → "${displayName}" avatar found`);
+    return { avatarUrl, displayName };
+  } catch (e) {
+    console.warn(`[tiktok-page] failed for @${username}:`, e.message);
+    return null;
+  }
+}
+
 /* Fetch real TikTok user info from tikwm.com, download avatar, return {displayName, profilePicUrl} */
 async function fetchTikwmUser(username) {
-  // ถ้าเป็นตัวเลขล้วน → TikTok auto-username คือ "user" + ตัวเลข
+  // ถ้าเป็นตัวเลขล้วน → ลอง user{number} ก่อน (TikTok auto-username)
   const queryId = /^\d+$/.test(username) ? `user${username}` : username;
   try {
     const tikwm = await axios.get(
@@ -50,20 +90,42 @@ async function fetchTikwmUser(username) {
       { timeout: 8000, headers: { 'User-Agent': 'Mozilla/5.0' } }
     );
     const user = tikwm.data?.data?.user;
-    if (!user) return null;
-    const displayName = user.nickname || username;
-    const avatarUrl = user.avatarLarger || user.avatarMedium || user.avatarThumb;
-    let profilePicUrl = uiAvatar(username);
-    if (avatarUrl) {
-      const local = await downloadAvatar(username, avatarUrl);
-      if (local) profilePicUrl = local;
+    if (user) {
+      const displayName = user.nickname || username;
+      const avatarUrl = user.avatarLarger || user.avatarMedium || user.avatarThumb;
+      let profilePicUrl = uiAvatar(username);
+      if (avatarUrl) {
+        const local = await downloadAvatar(username, avatarUrl);
+        if (local) profilePicUrl = local;
+      }
+      console.log(`[tikwm] @${username} → "${displayName}" pic=${profilePicUrl}`);
+      return { displayName, profilePicUrl };
     }
-    console.log(`[tikwm] @${username} → "${displayName}" pic=${profilePicUrl}`);
-    return { displayName, profilePicUrl };
   } catch (e) {
     console.warn(`[tikwm] failed for @${username}:`, e.message);
-    return null;
   }
+
+  // tikwm ล้มเหลว → ลอง scrape TikTok page โดยตรง (รองรับ numeric ID และชื่อพิเศษ)
+  const pageData = await fetchFromTikTokPage(username);
+  if (pageData?.avatarUrl) {
+    const local = await downloadAvatar(username, pageData.avatarUrl);
+    const profilePicUrl = local || uiAvatar(username);
+    const displayName = pageData.displayName || username;
+    return { displayName, profilePicUrl };
+  }
+
+  // ถ้า numeric → ลอง scrape ด้วย user{number} ด้วย
+  if (/^\d+$/.test(username)) {
+    const pageData2 = await fetchFromTikTokPage(`user${username}`);
+    if (pageData2?.avatarUrl) {
+      const local = await downloadAvatar(username, pageData2.avatarUrl);
+      const profilePicUrl = local || uiAvatar(username);
+      const displayName = pageData2.displayName || username;
+      return { displayName, profilePicUrl };
+    }
+  }
+
+  return null;
 }
 
 function saveToCache(uniqueId, data) {

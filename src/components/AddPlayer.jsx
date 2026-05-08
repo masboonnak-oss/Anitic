@@ -1,16 +1,20 @@
 import React, { useState, useRef } from 'react';
 import styles from './AddPlayer.module.css';
 
-const proxyPic = (uname) => {
+const uiAvatarUrl = (uname) => {
   const initials = encodeURIComponent((uname || '?').slice(0, 2).toUpperCase());
   return `https://ui-avatars.com/api/?name=${initials}&background=1a1a2e&color=ffd700&bold=true&size=128`;
 };
 
+const isRealPic = (url) => url && url.startsWith('/api/avatar/');
+
 export default function AddPlayer({ onAdd }) {
-  const [username, setUsername] = useState('');
-  const [displayName, setDisplayName] = useState('');
+  const [username, setUsername]         = useState('');
+  const [displayName, setDisplayName]   = useState('');
   const [profilePicUrl, setProfilePicUrl] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [manualPicUrl, setManualPicUrl] = useState('');
+  const [loading, setLoading]           = useState(false);
+  const [picFailed, setPicFailed]       = useState(false);
   const debounceRef = useRef(null);
 
   function handleUsernameChange(e) {
@@ -18,6 +22,8 @@ export default function AddPlayer({ onAdd }) {
     setUsername(val);
     setDisplayName('');
     setProfilePicUrl('');
+    setManualPicUrl('');
+    setPicFailed(false);
 
     const uname = val.trim().replace('@', '');
     if (!uname || uname.length < 2) return;
@@ -28,12 +34,15 @@ export default function AddPlayer({ onAdd }) {
       try {
         const res = await fetch(`/api/tiktok-info/${encodeURIComponent(uname)}`);
         const data = await res.json();
-        setProfilePicUrl(data.profilePicUrl || proxyPic(uname));
+        const pic = data.profilePicUrl || '';
+        setProfilePicUrl(pic);
+        setPicFailed(!isRealPic(pic));
         if (data.displayName && data.displayName !== uname) {
           setDisplayName(data.displayName);
         }
       } catch (_) {
-        setProfilePicUrl(proxyPic(uname));
+        setProfilePicUrl('');
+        setPicFailed(true);
       } finally {
         setLoading(false);
       }
@@ -45,15 +54,17 @@ export default function AddPlayer({ onAdd }) {
     const uname = username.trim().replace('@', '');
     if (!uname) return;
     const finalName = displayName.trim() || uname;
-    const finalPic = profilePicUrl || proxyPic(uname);
+    const finalPic  = manualPicUrl.trim() || profilePicUrl || uiAvatarUrl(uname);
     onAdd({ username: uname, displayName: finalName, profilePicUrl: finalPic });
     setUsername('');
     setDisplayName('');
     setProfilePicUrl('');
+    setManualPicUrl('');
+    setPicFailed(false);
   }
 
-  const uname = username.trim().replace('@', '');
-  const picSrc = profilePicUrl || (uname.length >= 2 ? proxyPic(uname) : null);
+  const uname  = username.trim().replace('@', '');
+  const activePic = manualPicUrl.trim() || profilePicUrl || (uname.length >= 2 ? uiAvatarUrl(uname) : null);
 
   return (
     <div className={styles.wrapper}>
@@ -72,10 +83,10 @@ export default function AddPlayer({ onAdd }) {
 
         {uname.length >= 2 && (
           <div className={styles.nameWrap}>
-            {picSrc && (
+            {activePic && (
               <img
                 className={styles.nameAvatar}
-                src={picSrc}
+                src={activePic}
                 alt=""
                 onError={e => { e.target.style.display = 'none'; }}
               />
@@ -94,6 +105,19 @@ export default function AddPlayer({ onAdd }) {
           + เพิ่ม
         </button>
       </form>
+
+      {uname.length >= 2 && picFailed && !loading && (
+        <div className={styles.picUrlRow}>
+          <span className={styles.picUrlLabel}>🖼️ วาง URL รูปโปรไฟล์</span>
+          <input
+            className={styles.picUrlInput}
+            placeholder="https://... (ถ้าดึงรูปอัตโนมัติไม่ได้)"
+            value={manualPicUrl}
+            onChange={e => setManualPicUrl(e.target.value)}
+            autoComplete="off"
+          />
+        </div>
+      )}
     </div>
   );
 }

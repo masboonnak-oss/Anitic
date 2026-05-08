@@ -98,3 +98,33 @@
 }
 .btn:hover:not(:disabled) { opacity: 0.85; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.picUrlRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.picUrlLabel {
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.picUrlInput {
+  flex: 1;
+  min-width: 200px;
+  background: #0f0f1c;
+  border: 1px dashed #2a2a40;
+  border-radius: 8px;
+  color: #aaa;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-family: monospace;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.picUrlInput:focus { border-color: #fe2c55; border-style: solid; color: #fff; }
+.picUrlInput::placeholder { color: #444; }

@@ -66,9 +66,10 @@ export default function App({ username, role, onLogout }) {
 
   async function handleLiveConnect(e) {
     e.preventDefault();
-    const uname = liveInput.trim().replace('@', '');
+    const uname = liveInput.trim();
     if (!uname) return;
-    await apiFetch('/api/live/connect', { method: 'POST', body: JSON.stringify({ username: uname }) });
+    const res = await apiFetch('/api/live/connect', { method: 'POST', body: JSON.stringify({ username: uname }) });
+    if (!res.ok) { const d = await res.json(); notify(d.error || 'เชื่อมต่อไม่ได้', 'error'); }
   }
 
   async function handleLiveDisconnect() {
@@ -157,10 +158,11 @@ export default function App({ username, role, onLogout }) {
               <span className={styles.levelAt}>@</span>
               <input
                 className={styles.levelInput}
-                placeholder="username คนที่กำลังไลฟ์สดอยู่"
+                placeholder="username หรือ vt.tiktok.com/... หรือ URL ไลฟ์"
                 value={liveInput}
                 onChange={e => setLiveInput(e.target.value)}
                 autoComplete="off"
+                style={{ width: liveInput.startsWith('http') ? 320 : 220 }}
               />
               <button className={styles.levelConnectBtn} type="submit" disabled={!liveInput.trim()}>
                 เชื่อมต่อ

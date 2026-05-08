@@ -790,11 +790,46 @@ app.get('/api/avatar/:username', (req, res) => {
 });
 
 /* ── Live API ── */
-app.post('/api/live/connect', authMiddleware, (req, res) => {
-  const { username } = req.body;
-  if (!username) return res.status(400).json({ error: 'ต้องระบุ username' });
-  connectLive(req.admin.username, username.replace('@', '').trim());
-  res.json({ ok: true });
+/* ── Resolve short/full TikTok URL → username ── */
+async function resolveUsername(input) {
+  const raw = (input || '').trim();
+  if (!raw.startsWith('http')) return raw.replace('@', '');
+
+  // Follow redirects and extract final URL
+  let finalUrl = raw;
+  try {
+    const resp = await axios.get(raw, {
+      maxRedirects: 10,
+      timeout: 10000,
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36' },
+      validateStatus: () => true,
+    });
+    finalUrl = resp.request?.res?.responseUrl || resp.config?.url || raw;
+  } catch (e) {
+    finalUrl = raw; // fall through and try parsing as-is
+  }
+
+  // https://www.tiktok.com/@username/live  OR  /@username  patterns
+  const m = finalUrl.match(/tiktok\.com\/@([^/?#]+)/i) || finalUrl.match(/@([^/?#\s]+)/);
+  if (m) return m[1];
+
+  // If no @ found but it was a URL, return as-is and let the library handle it
+  if (finalUrl.startsWith('http')) return finalUrl;
+
+  throw new Error('ไม่พบ username ในลิงค์นี้ กรุณาตรวจสอบ URL');
+}
+
+app.post('/api/live/connect', authMiddleware, async (req, res) => {
+  const { username: raw } = req.body;
+  if (!raw) return res.status(400).json({ error: 'ต้องระบุ username หรือ URL' });
+  try {
+    const resolved = await resolveUsername(raw);
+    console.log(`[connect] raw="${raw}" → resolved="${resolved}"`);
+    connectLive(req.admin.username, resolved);
+    res.json({ ok: true, resolved });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
 });
 app.post('/api/live/disconnect', authMiddleware, (req, res) => {
   disconnectLive(req.admin.username);

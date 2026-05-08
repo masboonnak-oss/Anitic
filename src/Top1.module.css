@@ -207,13 +207,22 @@
   font-size: 56px; font-weight: 900; color: #fff;
 }
 
-/* ── ORNATE FRAME — chroma-key canvas ── */
+/* ── ORNATE FRAME — chroma-key canvas, in front of avatar ── */
 .frameImg {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: contain;
-  pointer-events: none; z-index: 7;
-  filter: drop-shadow(0 0 18px rgba(255,180,0,0.70)) drop-shadow(0 0 40px rgba(255,80,0,0.45));
+  position: absolute;
+  width: 360px; height: 360px;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none; z-index: 8;
+  filter:
+    drop-shadow(0 0 14px rgba(255,200,0,0.80))
+    drop-shadow(0 0 38px rgba(255,100,0,0.50));
+  will-change: filter;
+  animation: framePulse 2.4s ease-in-out infinite;
+}
+@keyframes framePulse {
+  0%,100% { filter: drop-shadow(0 0 14px rgba(255,200,0,0.70)) drop-shadow(0 0 36px rgba(255,80,0,0.40)); }
+  50%     { filter: drop-shadow(0 0 28px rgba(255,220,0,1.00)) drop-shadow(0 0 65px rgba(255,80,0,0.70)); }
 }
 
 /* ── RISING EMBERS ── */
@@ -252,36 +261,81 @@
   margin-top: 2px;
 }
 
-/* ── WIN — bare number + black stroke, no box ── */
+/* ── WIN — pro designer number effect ── */
 .wins {
   display: flex; flex-direction: column; align-items: center; gap: 0;
-  margin-top: -18px; /* pull up close to the circle */
-  will-change: transform;
-  animation: winsPulse 2s ease-in-out infinite;
+  margin-top: -22px;
+  position: relative;
+  z-index: 10;
 }
-@keyframes winsPulse {
-  0%,100% { transform: scale(1.00); }
-  50%     { transform: scale(1.08); }
+
+/* Outer glow halo behind the number */
+.wins::before {
+  content: '';
+  position: absolute;
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(255,215,0,0.45) 0%,
+    rgba(255,140,0,0.20) 50%,
+    transparent 75%);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -60%);
+  animation: haloBreath 1.8s ease-in-out infinite;
+  pointer-events: none;
 }
+@keyframes haloBreath {
+  0%,100% { transform: translate(-50%,-60%) scale(0.90); opacity: 0.80; }
+  50%     { transform: translate(-50%,-60%) scale(1.20); opacity: 1.00; }
+}
+
 .winsNum {
-  font-size: 72px; font-weight: 900; line-height: 1;
-  color: #ffe44d;
-  text-shadow:
-    -3px -3px 0 #000, 3px -3px 0 #000,
-    -3px  3px 0 #000, 3px  3px 0 #000,
-    -3px  0   0 #000, 3px  0   0 #000,
-     0   -3px 0 #000, 0    3px 0 #000,
-    0 0 24px #ffd700cc;
-  letter-spacing: -0.02em;
+  font-size: 86px; font-weight: 900; line-height: 1;
+  /* Gold gradient via background-clip trick */
+  background: linear-gradient(180deg,
+    #ffffff  0%,
+    #ffe566 20%,
+    #ffd700 50%,
+    #ff8c00 85%,
+    #c05000 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  /* Black outline using paint-order */
+  -webkit-text-stroke: 5px #000;
+  paint-order: stroke fill;
+  filter:
+    drop-shadow(0 0 18px rgba(255,215,0,0.90))
+    drop-shadow(0 0 40px rgba(255,140,0,0.60))
+    drop-shadow(0  4px 0 rgba(0,0,0,0.80));
+  letter-spacing: -0.03em;
+  will-change: filter, transform;
+  animation: numPulse 1.8s ease-in-out infinite;
 }
+@keyframes numPulse {
+  0%,100% {
+    transform: scale(1.00);
+    filter: drop-shadow(0 0 16px rgba(255,215,0,0.80)) drop-shadow(0 0 36px rgba(255,140,0,0.50)) drop-shadow(0 4px 0 rgba(0,0,0,0.80));
+  }
+  50% {
+    transform: scale(1.07);
+    filter: drop-shadow(0 0 32px rgba(255,215,0,1.00)) drop-shadow(0 0 70px rgba(255,140,0,0.80)) drop-shadow(0 4px 0 rgba(0,0,0,0.80));
+  }
+}
+
 .winsLabel {
-  font-size: 14px; font-weight: 900;
-  letter-spacing: 0.30em;
-  color: #fff;
-  text-shadow:
-    -2px -2px 0 #000, 2px -2px 0 #000,
-    -2px  2px 0 #000, 2px  2px 0 #000;
-  margin-top: -4px;
+  font-size: 15px; font-weight: 900;
+  letter-spacing: 0.40em;
+  background: linear-gradient(90deg, #ff8800, #ffd700, #ffffff, #ffd700, #ff8800);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  -webkit-text-stroke: 2.5px #000;
+  paint-order: stroke fill;
+  animation: shimmer 2.5s linear infinite;
+  margin-top: -6px;
+  filter: drop-shadow(0 0 8px rgba(255,180,0,0.70));
 }
 
 /* ── POP on update ── */

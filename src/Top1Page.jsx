@@ -8,56 +8,6 @@ function joinRoom() { if (ROOM_USER) socket.emit('joinRoom', { username: ROOM_US
 socket.on('connect', joinRoom);
 joinRoom();
 
-/* ─── Chroma-key canvas — removes green-screen background from video ─── */
-function ChromaKeyVideo({ src, className }) {
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const rafRef   = useRef(null);
-
-  useEffect(() => {
-    const video  = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas) return;
-
-    const draw = () => {
-      rafRef.current = requestAnimationFrame(draw);
-      if (video.readyState < 2) return;
-
-      const w = canvas.width;
-      const h = canvas.height;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      ctx.clearRect(0, 0, w, h);
-      ctx.drawImage(video, 0, 0, w, h);
-
-      const frame = ctx.getImageData(0, 0, w, h);
-      const d = frame.data;
-      for (let i = 0; i < d.length; i += 4) {
-        const r = d[i], g = d[i + 1], b = d[i + 2];
-        // Chroma key: remove green-screen pixels
-        if (g > 60 && g > r * 1.15 && g > b * 1.10) {
-          d[i + 3] = 0;
-        }
-      }
-      ctx.putImageData(frame, 0, 0);
-    };
-
-    video.addEventListener('play', () => { rafRef.current = requestAnimationFrame(draw); });
-    video.play().catch(() => {});
-
-    return () => {
-      cancelAnimationFrame(rafRef.current);
-    };
-  }, [src]);
-
-  return (
-    <>
-      <video ref={videoRef} src={src} loop muted playsInline
-        style={{ display: 'none' }} crossOrigin="anonymous" />
-      <canvas ref={canvasRef} className={className} width={512} height={512} />
-    </>
-  );
-}
-
 /* ─── Lightning ring (same engine as NewKing) ─── */
 function makeBolt(cx, cy, r, startDeg, arcDeg, jitter, color, opacity, thick) {
   const steps = Math.max(4, Math.floor(arcDeg / 5));
@@ -106,7 +56,7 @@ function LightningRing({ radius, pad = 28 }) {
 
   return (
     <svg className={s.lightning}
-      style={{ width: sz, height: sz, top: -pad, left: -pad }}
+      style={{ width: sz, height: sz, marginLeft: -sz/2, marginTop: -sz/2 }}
       viewBox={`0 0 ${sz} ${sz}`}>
       <defs>
         <filter id="t1g" x="-80%" y="-80%" width="260%" height="260%">
@@ -239,8 +189,8 @@ function Top1Card({ player }) {
           )}
         </div>
 
-        {/* Ornate frame — chroma-key canvas removes green bg */}
-        <ChromaKeyVideo src="/top1-frame.mp4" className={s.frameImg} />
+        {/* Ornate gold frame PNG */}
+        <img src="/frame-top1-gold.png" className={s.frameImg} alt="" draggable={false} />
 
         {/* Rising embers */}
         <Embers count={18} />

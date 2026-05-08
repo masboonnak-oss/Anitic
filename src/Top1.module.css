@@ -169,9 +169,11 @@
   to   { transform: rotate(calc(var(--ostart) + 360deg)) translateX(var(--or)) scale(0.8); }
 }
 
-/* ── LIGHTNING SVG ── */
+/* ── LIGHTNING SVG — centered via margin trick ── */
 .lightning {
-  position: absolute; pointer-events: none; z-index: 5; overflow: visible;
+  position: absolute;
+  top: 50%; left: 50%;
+  pointer-events: none; z-index: 5; overflow: visible;
   will-change: contents;
 }
 
@@ -207,22 +209,34 @@
   font-size: 56px; font-weight: 900; color: #fff;
 }
 
-/* ── ORNATE FRAME — chroma-key canvas, in front of avatar ── */
+/* ── ORNATE GOLD FRAME PNG — in front, animated ── */
 .frameImg {
   position: absolute;
   width: 360px; height: 360px;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   pointer-events: none; z-index: 8;
-  filter:
-    drop-shadow(0 0 14px rgba(255,200,0,0.80))
-    drop-shadow(0 0 38px rgba(255,100,0,0.50));
-  will-change: filter;
-  animation: framePulse 2.4s ease-in-out infinite;
+  will-change: transform, filter;
+  animation: frameFloat 3s ease-in-out infinite, framePulse 2.4s ease-in-out infinite;
+}
+@keyframes frameFloat {
+  0%,100% { transform: translate(-50%, calc(-50% + 0px))  rotate(-1.5deg) scale(1.00); }
+  33%     { transform: translate(-50%, calc(-50% - 8px))  rotate( 0.5deg) scale(1.02); }
+  66%     { transform: translate(-50%, calc(-50% + 5px))  rotate( 1.5deg) scale(0.99); }
 }
 @keyframes framePulse {
-  0%,100% { filter: drop-shadow(0 0 14px rgba(255,200,0,0.70)) drop-shadow(0 0 36px rgba(255,80,0,0.40)); }
-  50%     { filter: drop-shadow(0 0 28px rgba(255,220,0,1.00)) drop-shadow(0 0 65px rgba(255,80,0,0.70)); }
+  0%,100% {
+    filter:
+      drop-shadow(0 0 16px rgba(255,210,0,0.85))
+      drop-shadow(0 0 40px rgba(255,100,0,0.55))
+      saturate(1.20) brightness(1.05);
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 34px rgba(255,230,0,1.00))
+      drop-shadow(0 0 75px rgba(255,80,0,0.80))
+      saturate(1.45) brightness(1.18);
+  }
 }
 
 /* ── RISING EMBERS ── */

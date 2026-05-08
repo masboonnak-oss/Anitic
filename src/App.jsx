@@ -74,17 +74,58 @@ export default function App({ username, role, onLogout }) {
 
   return (
     <div className={styles.app}>
+
+      {/* ══════════ HEADER ══════════ */}
       <header className={styles.header}>
+
+        {/* Logo */}
         <div className={styles.logo}>🏆 WIN Leaderboard</div>
-        <div className={styles.headerActions}>
-          <button className={styles.copyBtn}   onClick={() => copyUrl(overlayUrl, setCopied)}>  {copied   ? '✓' : '📺 Overlay'}</button>
-          <button className={styles.copyBtnNK} onClick={() => copyUrl(newkingUrl, setCopiedNK)}>{copiedNK ? '✓' : '👑 New King'}</button>
-          <button className={styles.copyBtnT1} onClick={() => copyUrl(top1Url,   setCopiedT1)}>{copiedT1 ? '✓' : '🥇 Top 1'}</button>
-          <button className={styles.resetTop1Btn} onClick={handleResetTop1}>ล้าง Top 1</button>
-          <button className={styles.resetBtn}     onClick={handleReset}>ล้างข้อมูล</button>
+
+        <div className={styles.headerRight}>
+
+          {/* ── Group 1: URL copy buttons ── */}
+          <div className={styles.btnGroup}>
+            <span className={styles.btnGroupLabel}>🔗 Copy URL</span>
+            <div className={styles.btnGroupRow}>
+              <button className={`${styles.hBtn} ${styles.hBtnCyan}`}
+                onClick={() => copyUrl(overlayUrl, setCopied)}>
+                {copied   ? '✓ คัดลอก' : '📺 Overlay'}
+              </button>
+              <button className={`${styles.hBtn} ${styles.hBtnGold}`}
+                onClick={() => copyUrl(newkingUrl, setCopiedNK)}>
+                {copiedNK ? '✓ คัดลอก' : '👑 New King'}
+              </button>
+              <button className={`${styles.hBtn} ${styles.hBtnOrange}`}
+                onClick={() => copyUrl(top1Url, setCopiedT1)}>
+                {copiedT1 ? '✓ คัดลอก' : '🥇 Top 1'}
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.groupDivider} />
+
+          {/* ── Group 2: Action / reset buttons ── */}
+          <div className={styles.btnGroup}>
+            <span className={styles.btnGroupLabel}>⚙️ จัดการ</span>
+            <div className={styles.btnGroupRow}>
+              <button className={`${styles.hBtn} ${styles.hBtnAmber}`}
+                onClick={handleResetTop1}>
+                🗑 ล้าง Top 1
+              </button>
+              <button className={`${styles.hBtn} ${styles.hBtnRed}`}
+                onClick={handleReset}>
+                ⚠️ ล้างข้อมูล
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.groupDivider} />
+
+          {/* ── User badge ── */}
           <div className={styles.userBadge}>
             {isSuperAdmin && (
-              <button className={styles.adminPanelBtn} onClick={() => setShowAdmin(true)} title="Super Admin Panel">
+              <button className={styles.adminPanelBtn}
+                onClick={() => setShowAdmin(true)} title="Super Admin Panel">
                 👑
               </button>
             )}
@@ -94,12 +135,15 @@ export default function App({ username, role, onLogout }) {
             </span>
             <button className={styles.logoutBtn} onClick={onLogout}>ออก</button>
           </div>
+
         </div>
       </header>
 
-      {/* ── Overlay URL panel ── */}
+      {/* ══════════ OVERLAY URL PANEL ══════════ */}
       <div className={styles.overlayPanel}>
-        <div className={styles.overlayPanelTitle}><span className={styles.overlayPanelIcon}>🎬</span> Overlay URLs</div>
+        <div className={styles.overlayPanelTitle}>
+          <span className={styles.overlayPanelIcon}>🎬</span> Overlay URLs
+        </div>
         <div className={styles.overlayRows}>
           {[
             { label: '📺 Overlay',  url: overlayUrl, color: '#25f4ee', copied,           setter: setCopied   },
@@ -109,12 +153,15 @@ export default function App({ username, role, onLogout }) {
             <div className={styles.overlayRow} key={label} style={{ '--oc': color }}>
               <span className={styles.overlayLabel}>{label}</span>
               <code className={styles.urlCode} onClick={() => copyUrl(url, setter)}>{url}</code>
-              <button className={styles.copyMiniBtn} onClick={() => copyUrl(url, setter)}>{c ? '✓' : 'คัดลอก'}</button>
+              <button className={styles.copyMiniBtn} onClick={() => copyUrl(url, setter)}>
+                {c ? '✓' : 'คัดลอก'}
+              </button>
             </div>
           ))}
         </div>
       </div>
 
+      {/* ══════════ MAIN CONTENT ══════════ */}
       <main className={styles.main}>
         <AddPlayer onAdd={handleAdd} />
         {players.length === 0 ? (

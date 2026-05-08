@@ -6,9 +6,9 @@
 .app {
   min-height: 100vh;
   background:
-    radial-gradient(ellipse 80% 50% at 20% 0%,   rgba(111,60,220,0.18) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 85% 10%,  rgba(37,244,238,0.10) 0%, transparent 55%),
-    radial-gradient(ellipse 50% 60% at 50% 100%, rgba(254,44,85,0.10)  0%, transparent 60%),
+    radial-gradient(ellipse 80% 50% at 15% 0%,   rgba(111,60,220,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 88% 8%,   rgba(37,244,238,0.10) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 55% at 50% 100%, rgba(254,44,85,0.09)  0%, transparent 60%),
     #080812;
   color: #fff;
   font-family: 'Kanit', sans-serif;
@@ -23,9 +23,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 28px;
-  height: 60px;
-  background: rgba(10,10,22,0.82);
+  padding: 10px 24px;
+  min-height: 64px;
+  background: rgba(8,8,20,0.88);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255,255,255,0.07);
@@ -37,7 +37,7 @@
 }
 
 .logo {
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 900;
   background: linear-gradient(120deg, #fe2c55 0%, #c770ff 45%, #25f4ee 100%);
   -webkit-background-clip: text;
@@ -45,157 +45,148 @@
   background-clip: text;
   flex-shrink: 0;
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
-/* ── Header action bar ── */
-.headerActions {
+/* ── Right side of header ── */
+.headerRight {
   display: flex;
-  gap: 8px;
   align-items: center;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
-/* ── Base button (shared across ALL header buttons) ── */
-.copyBtn,
-.copyBtnNK,
-.copyBtnT1,
-.copyBtnTG,
-.copyBtnGL,
-.resetTop1Btn,
-.resetBtn,
-.testTopGifterBtn {
+/* ── Button GROUP card ── */
+.btnGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 6px 10px 7px;
+}
+
+.btnGroupLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.30);
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.btnGroupRow {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* ── Vertical divider between groups ── */
+.groupDivider {
+  width: 1px;
+  height: 44px;
+  background: rgba(255,255,255,0.08);
+  flex-shrink: 0;
+  border-radius: 1px;
+}
+
+/* ═══════════════════════════════
+   HEADER BUTTONS — uniform base
+═══════════════════════════════ */
+.hBtn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 0 16px;
-  height: 36px;
-  border-radius: 10px;
+  justify-content: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 13px;
+  border-radius: 8px;
   font-family: 'Kanit', sans-serif;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.18s, box-shadow 0.18s, transform 0.12s, border-color 0.18s;
   border: 1.5px solid transparent;
+  transition: background 0.16s, box-shadow 0.16s, transform 0.1s, border-color 0.16s;
 }
-.copyBtn:active,
-.copyBtnNK:active,
-.copyBtnT1:active,
-.copyBtnTG:active,
-.copyBtnGL:active,
-.resetTop1Btn:active,
-.resetBtn:active {
-  transform: translateY(1px);
-}
+.hBtn:active { transform: translateY(1px); }
 
-/* ── 📺 Overlay — cyan ── */
-.copyBtn {
-  background: rgba(37,244,238,0.08);
-  border-color: rgba(37,244,238,0.50);
+/* Cyan — Overlay */
+.hBtnCyan {
+  background: rgba(37,244,238,0.10);
+  border-color: rgba(37,244,238,0.45);
   color: #25f4ee;
 }
-.copyBtn:hover {
-  background: rgba(37,244,238,0.16);
+.hBtnCyan:hover {
+  background: rgba(37,244,238,0.20);
   border-color: #25f4ee;
-  box-shadow: 0 0 16px rgba(37,244,238,0.30);
+  box-shadow: 0 0 14px rgba(37,244,238,0.30);
 }
 
-/* ── 👑 New King — gold ── */
-.copyBtnNK {
-  background: rgba(255,215,0,0.08);
-  border-color: rgba(255,215,0,0.50);
+/* Gold — New King */
+.hBtnGold {
+  background: rgba(255,215,0,0.10);
+  border-color: rgba(255,215,0,0.45);
   color: #ffd700;
 }
-.copyBtnNK:hover {
-  background: rgba(255,215,0,0.16);
+.hBtnGold:hover {
+  background: rgba(255,215,0,0.20);
   border-color: #ffd700;
-  box-shadow: 0 0 16px rgba(255,215,0,0.30);
+  box-shadow: 0 0 14px rgba(255,215,0,0.28);
 }
 
-/* ── 🥇 Top 1 — orange ── */
-.copyBtnT1 {
-  background: rgba(255,140,0,0.08);
-  border-color: rgba(255,140,0,0.50);
+/* Orange — Top 1 */
+.hBtnOrange {
+  background: rgba(255,150,0,0.10);
+  border-color: rgba(255,150,0,0.45);
   color: #ff9933;
 }
-.copyBtnT1:hover {
-  background: rgba(255,140,0,0.16);
+.hBtnOrange:hover {
+  background: rgba(255,150,0,0.20);
   border-color: #ff9933;
-  box-shadow: 0 0 16px rgba(255,140,0,0.28);
+  box-shadow: 0 0 14px rgba(255,150,0,0.28);
 }
 
-/* ── Top Gifter — purple ── */
-.copyBtnTG {
-  background: rgba(224,64,251,0.08);
-  border-color: rgba(224,64,251,0.45);
-  color: #e040fb;
+/* Amber — ล้าง Top 1 */
+.hBtnAmber {
+  background: rgba(245,158,11,0.10);
+  border-color: rgba(245,158,11,0.40);
+  color: #f5a623;
 }
-.copyBtnTG:hover {
-  background: rgba(224,64,251,0.16);
-  border-color: #e040fb;
-  box-shadow: 0 0 16px rgba(224,64,251,0.28);
-}
-
-/* ── Gifter Log — lavender ── */
-.copyBtnGL {
-  background: rgba(192,132,252,0.08);
-  border-color: rgba(192,132,252,0.45);
-  color: #c084fc;
-}
-.copyBtnGL:hover {
-  background: rgba(192,132,252,0.16);
-  border-color: #c084fc;
-  box-shadow: 0 0 16px rgba(192,132,252,0.28);
-}
-
-/* ── ล้าง Top 1 — amber ── */
-.resetTop1Btn {
-  background: rgba(245,158,11,0.08);
-  border-color: rgba(245,158,11,0.45);
-  color: #f59e0b;
-}
-.resetTop1Btn:hover {
-  background: rgba(245,158,11,0.15);
-  border-color: #f59e0b;
+.hBtnAmber:hover {
+  background: rgba(245,158,11,0.20);
+  border-color: #f5a623;
   box-shadow: 0 0 14px rgba(245,158,11,0.25);
 }
 
-/* ── ล้างข้อมูล — red ── */
-.resetBtn {
-  background: rgba(239,68,68,0.08);
-  border-color: rgba(239,68,68,0.45);
+/* Red — ล้างข้อมูล */
+.hBtnRed {
+  background: rgba(239,68,68,0.10);
+  border-color: rgba(239,68,68,0.40);
   color: #ef4444;
 }
-.resetBtn:hover {
-  background: rgba(239,68,68,0.16);
+.hBtnRed:hover {
+  background: rgba(239,68,68,0.20);
   border-color: #ef4444;
   box-shadow: 0 0 14px rgba(239,68,68,0.25);
 }
 
-/* ── Test button (dashed variant) ── */
-.testTopGifterBtn {
-  background: rgba(192,132,252,0.06);
-  border: 1.5px dashed rgba(192,132,252,0.45);
-  color: #c084fc;
-}
-.testTopGifterBtn:hover {
-  background: rgba(192,132,252,0.14);
-  border-color: #c084fc;
-  box-shadow: 0 0 14px rgba(192,132,252,0.25);
-}
-
-/* ── User badge ── */
+/* ═══════════════════════════════
+   USER BADGE
+═══════════════════════════════ */
 .userBadge {
   display: flex;
   align-items: center;
-  gap: 7px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.09);
+  gap: 6px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
   border-radius: 10px;
-  padding: 4px 10px 4px 8px;
-  margin-left: 4px;
+  padding: 5px 10px 5px 8px;
   flex-shrink: 0;
-  height: 36px;
+  height: 38px;
 }
 
 .userIcon { font-size: 14px; }
@@ -214,10 +205,10 @@
   background: rgba(255,215,0,0.10);
   border: 1.5px solid rgba(255,215,0,0.40);
   color: #ffd700;
-  width: 30px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 7px;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   transition: background 0.18s, box-shadow 0.18s, transform 0.12s;
   display: flex;
@@ -235,7 +226,7 @@
 .logoutBtn {
   background: transparent;
   border: 1px solid rgba(255,255,255,0.12);
-  color: #666;
+  color: rgba(255,255,255,0.40);
   padding: 0 10px;
   height: 26px;
   border-radius: 6px;
@@ -251,9 +242,9 @@
    OVERLAY URL PANEL
 ═══════════════════════════════ */
 .overlayPanel {
-  background: rgba(255,255,255,0.025);
+  background: rgba(255,255,255,0.022);
   border-bottom: 1px solid rgba(255,255,255,0.07);
-  padding: 12px 28px;
+  padding: 10px 24px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -266,7 +257,7 @@
   gap: 6px;
   font-size: 11px;
   font-weight: 700;
-  color: rgba(255,255,255,0.28);
+  color: rgba(255,255,255,0.25);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -287,15 +278,15 @@
   align-items: center;
   gap: 8px;
   background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.06);
   border-left: 3px solid var(--oc, #25f4ee);
   border-radius: 10px;
-  padding: 6px 10px 6px 12px;
+  padding: 5px 10px 5px 12px;
   transition: background 0.18s, box-shadow 0.18s;
 }
 .overlayRow:hover {
   background: rgba(255,255,255,0.055);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--oc, #25f4ee) 15%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--oc, #25f4ee) 14%, transparent);
 }
 
 .overlayLabel {
@@ -308,7 +299,7 @@
 
 .urlCode {
   background: transparent;
-  color: rgba(255,255,255,0.30);
+  color: rgba(255,255,255,0.28);
   padding: 0;
   border: none;
   font-family: monospace;
@@ -323,7 +314,7 @@
   white-space: nowrap;
   max-width: 240px;
 }
-.urlCode:hover { color: rgba(255,255,255,0.65); }
+.urlCode:hover { color: rgba(255,255,255,0.60); }
 
 .copyMiniBtn {
   background: color-mix(in srgb, var(--oc, #25f4ee) 12%, transparent);
@@ -344,9 +335,15 @@
   background: color-mix(in srgb, var(--oc, #25f4ee) 24%, transparent);
 }
 
-.overlayHint    { display: none; }
-.overlayHintNK  { display: none; }
-.overlayHintT1  { display: none; }
+/* Legacy classes (kept for safety) */
+.copyBtn, .copyBtnNK, .copyBtnT1,
+.copyBtnTG, .copyBtnGL,
+.resetTop1Btn, .resetBtn,
+.testTopGifterBtn { display: none; }
+
+.overlayHint   { display: none; }
+.overlayHintNK { display: none; }
+.overlayHintT1 { display: none; }
 
 /* ═══════════════════════════════
    MAIN CONTENT AREA
@@ -391,7 +388,7 @@
   box-shadow: 0 6px 28px rgba(0,0,0,0.55);
   border: 1px solid rgba(255,255,255,0.12);
 }
-.success { background: linear-gradient(135deg, #166534, #15803d); color: #d1fae5; }
+.success { background: linear-gradient(135deg, #166534, #16a34a); color: #d1fae5; }
 .info    { background: linear-gradient(135deg, #1e3a8a, #1d4ed8); color: #dbeafe; }
 .error   { background: linear-gradient(135deg, #7f1d1d, #dc2626); color: #fee2e2; }
 

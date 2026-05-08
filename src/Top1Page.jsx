@@ -150,27 +150,6 @@ function Top1Card({ player }) {
       {/* Frame + avatar + all FX */}
       <div className={s.frameWrap}>
 
-        {/* God rays */}
-        <div className={s.rays} />
-
-        {/* Aura glow */}
-        <div className={s.aura} />
-
-        {/* Decorative rings */}
-        <div className={s.ringOuter} />
-        <div className={s.ringMid} />
-        <div className={s.ringInner} />
-
-        {/* Gem dots orbiting outer ring */}
-        <div className={s.ringGems}>
-          {[0,60,120,180,240,300].map((deg, i) => (
-            <div key={i} className={s.gem} style={{
-              transform: `rotate(${deg}deg) translateX(134px)`,
-              animationDelay: `${-i * 2}s`,
-            }} />
-          ))}
-        </div>
-
         {/* Orbit particles */}
         <OrbitParticles count={14} radius={126} />
 
@@ -199,10 +178,10 @@ function Top1Card({ player }) {
       {/* Name */}
       <div className={s.name}>{player.displayName || player.username}</div>
 
-      {/* Wins — big & clear */}
+      {/* Wins — horizontal: WIN [number] */}
       <div className={s.wins}>
+        <span className={s.winsLabel}>WIN</span>
         <span className={s.winsNum}>{player.win}</span>
-        <span className={s.winsLabel}>WINS</span>
       </div>
 
     </div>

@@ -24,11 +24,11 @@
   background: #13131f;
   border: 2px solid var(--medal-color, #333);
   border-radius: 16px;
-  padding: 24px 16px 20px;
+  padding: 16px 16px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   box-shadow: 0 0 24px color-mix(in srgb, var(--medal-color) 20%, transparent);
   transition: transform 0.15s;
   position: relative;
@@ -53,6 +53,7 @@
   transition: opacity 0.15s, background 0.15s, border-color 0.15s;
   padding: 0;
   line-height: 1;
+  z-index: 10;
 }
 .card:hover .deleteBtn { opacity: 0.7; }
 .deleteBtn:hover {
@@ -61,14 +62,27 @@
   border-color: #ef4444;
 }
 
-.medal { font-size: 30px; }
+/* ── Frame wrapper — avatar + overlay frame ── */
+.frameWrap {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
 
-.avatarWrap {
+.avatarCircle {
+  position: absolute;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   overflow: hidden;
-  border: 3px solid var(--medal-color);
-  position: relative;
-  flex-shrink: 0;
+  top: calc(50% - 12px);
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
 }
 
 .avatarImg {
@@ -82,15 +96,27 @@
   width: 100%;
   height: 100%;
   background: linear-gradient(135deg, #fe2c55, #25f4ee);
+  display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 900;
   color: #fff;
 }
 
+.rankFrame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  z-index: 2;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.60));
+}
+
 .name {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   text-align: center;
   max-width: 200px;
@@ -98,16 +124,17 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   margin-top: 2px;
+  color: #fff;
 }
 
 .usertag {
-  font-size: 12px;
+  font-size: 11px;
   color: #555;
   margin-top: -4px;
 }
 
 .winCount {
-  font-size: 38px;
+  font-size: 36px;
   font-weight: 900;
   color: var(--medal-color);
   line-height: 1;
@@ -116,7 +143,7 @@
   gap: 6px;
 }
 .winCount span {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   opacity: 0.7;
 }

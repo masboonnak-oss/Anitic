@@ -1,20 +1,23 @@
 import React, { useState } from 'react';
 import styles from './Podium.module.css';
 
-const MEDALS = ['🥇', '🥈', '🥉'];
-const COLORS = ['#ffd700', '#c0c0c0', '#cd7f32'];
+const FRAMES = ['/frame-rank1.png', '/frame-rank2.png', '/frame-rank3.png'];
+const COLORS = ['#ffd700', '#6ab0ff', '#e480ff'];
 
-function Avatar({ player, size = 72 }) {
+function Avatar({ player, rank }) {
   const [err, setErr] = useState(false);
   const src = player.profilePicUrl;
   return (
-    <div className={styles.avatarWrap} style={{ width: size, height: size }}>
-      {!err && src
-        ? <img className={styles.avatarImg} src={src} alt={player.displayName} onError={() => setErr(true)} />
-        : <div className={styles.avatarFallback}>
-            {(player.displayName || player.username || '?')[0].toUpperCase()}
-          </div>
-      }
+    <div className={styles.frameWrap}>
+      <div className={styles.avatarCircle}>
+        {!err && src
+          ? <img className={styles.avatarImg} src={src} alt={player.displayName} onError={() => setErr(true)} />
+          : <div className={styles.avatarFallback}>
+              {(player.displayName || player.username || '?')[0].toUpperCase()}
+            </div>
+        }
+      </div>
+      <img src={FRAMES[rank]} className={styles.rankFrame} alt="" draggable={false} />
     </div>
   );
 }
@@ -37,8 +40,7 @@ export default function Podium({ players, onWin, onDelete }) {
                 🗑️
               </button>
             )}
-            <div className={styles.medal}>{MEDALS[i]}</div>
-            <Avatar player={p} size={72} />
+            <Avatar player={p} rank={i} />
             <div className={styles.name}>{p.displayName || p.username}</div>
             <div className={styles.usertag}>@{p.username}</div>
             <div className={styles.winCount}>{p.win}<span>WIN</span></div>

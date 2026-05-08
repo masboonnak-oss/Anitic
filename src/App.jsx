@@ -12,9 +12,10 @@ const socket = io('/', { transports: ['websocket', 'polling'] });
 export default function App({ username, role, onLogout }) {
   const [players, setPlayers]   = useState([]);
   const [toast, setToast]       = useState(null);
-  const [copied,   setCopied]   = useState(false);
-  const [copiedNK, setCopiedNK] = useState(false);
-  const [copiedT1, setCopiedT1] = useState(false);
+  const [copied,    setCopied]    = useState(false);
+  const [copiedNK,  setCopiedNK]  = useState(false);
+  const [copiedT1,  setCopiedT1]  = useState(false);
+  const [copiedVIP, setCopiedVIP] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [menuOpen, setMenuOpen]   = useState(false);
   const menuRef = useRef(null);
@@ -46,9 +47,10 @@ export default function App({ username, role, onLogout }) {
   }
 
   const origin     = window.location.origin;
-  const overlayUrl = `${origin}/overlay?u=${encodeURIComponent(username)}`;
-  const newkingUrl = `${origin}/newking?u=${encodeURIComponent(username)}`;
-  const top1Url    = `${origin}/top1?u=${encodeURIComponent(username)}`;
+  const overlayUrl    = `${origin}/overlay?u=${encodeURIComponent(username)}`;
+  const newkingUrl    = `${origin}/newking?u=${encodeURIComponent(username)}`;
+  const top1Url       = `${origin}/top1?u=${encodeURIComponent(username)}`;
+  const vipOverlayUrl = `${origin}/vip-overlay`;
 
   function copyUrl(url, setter) {
     navigator.clipboard.writeText(url).then(() => {
@@ -130,6 +132,10 @@ export default function App({ username, role, onLogout }) {
               <button className={`${styles.hBtn} ${styles.hBtnOrange}`}
                 onClick={() => { copyUrl(top1Url, setCopiedT1); }}>
                 {copiedT1 ? '✓ คัดลอก' : '🥇 Top 1'}
+              </button>
+              <button className={`${styles.hBtn} ${styles.hBtnVip}`}
+                onClick={() => { copyUrl(vipOverlayUrl, setCopiedVIP); }}>
+                {copiedVIP ? '✓ คัดลอก' : '👑 VIP Entrance'}
               </button>
             </div>
           </div>

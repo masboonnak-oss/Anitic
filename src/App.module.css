@@ -299,6 +299,17 @@
   box-shadow: 0 0 14px rgba(255,150,0,0.28);
 }
 
+.hBtnVip {
+  background: rgba(160,0,255,0.10);
+  border-color: rgba(160,0,255,0.45);
+  color: #c966ff;
+}
+.hBtnVip:hover {
+  background: rgba(160,0,255,0.22);
+  border-color: #c966ff;
+  box-shadow: 0 0 14px rgba(160,0,255,0.32);
+}
+
 .hBtnAmber {
   background: rgba(245,158,11,0.10);
   border-color: rgba(245,158,11,0.40);

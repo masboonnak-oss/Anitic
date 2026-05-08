@@ -44,7 +44,7 @@
     "username": "atichat_6649",
     "displayName": "อ้ายโอ'โอ้ล่ะน้อ",
     "profilePicUrl": "/api/avatar/atichat_6649",
-    "win": 3,
+    "win": 2,
     "joinedAt": 1778220443122
   },
   {
@@ -52,7 +52,7 @@
     "username": "golflike",
     "displayName": "อารายม่ายรูัว🤩",
     "profilePicUrl": "/api/avatar/golflike",
-    "win": 2,
+    "win": 3,
     "joinedAt": 1778221151392
   },
   {
@@ -110,5 +110,21 @@
     "profilePicUrl": "/api/avatar/prasit1878",
     "win": 1,
     "joinedAt": 1778225874311
+  },
+  {
+    "id": "fff_ornggg",
+    "username": "fff_ornggg",
+    "displayName": "fff_ornggg",
+    "profilePicUrl": "/api/avatar/fff_ornggg",
+    "win": 2,
+    "joinedAt": 1778256525514
+  },
+  {
+    "id": "gamemijb_",
+    "username": "gamemijb_",
+    "displayName": "ชิ",
+    "profilePicUrl": "/api/avatar/gamemijb_",
+    "win": 1,
+    "joinedAt": 1778256787095
   }
 ]

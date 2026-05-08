@@ -2,12 +2,11 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ── PAGE ── */
+/* ── PAGE — centered ── */
 .page {
   position: fixed; inset: 0;
   font-family: 'Kanit', sans-serif;
-  display: flex; align-items: flex-end; justify-content: flex-start;
-  padding: 24px 28px;
+  display: flex; align-items: center; justify-content: center;
   pointer-events: none;
   overflow: hidden;
 }
@@ -15,21 +14,19 @@
 /* ── WIDGET ── */
 .widget {
   display: flex; flex-direction: column; align-items: center;
-  gap: 2px;
+  gap: 10px;
   will-change: transform, opacity;
   animation: widgetIn 0.65s cubic-bezier(0.34,1.56,0.64,1) both;
 }
 @keyframes widgetIn {
-  from { opacity: 0; transform: translateY(40px) scale(0.80); }
-  to   { opacity: 1; transform: translateY(0)    scale(1.00); }
+  from { opacity: 0; transform: scale(0.75); }
+  to   { opacity: 1; transform: scale(1.00); }
 }
 
 /* ── TITLE ── */
-.titleWrap {
-  margin-bottom: 4px;
-}
+.titleWrap { margin-bottom: 2px; }
 .titleLine {
-  font-size: 14px; font-weight: 900; letter-spacing: 0.24em;
+  font-size: 13px; font-weight: 900; letter-spacing: 0.3em;
   text-transform: uppercase;
   background: linear-gradient(90deg, #ff8800, #ffd700, #ffffff, #ffd700, #ff8800);
   background-size: 300% 100%;
@@ -37,7 +34,7 @@
   background-clip: text;
   will-change: background-position;
   animation: shimmer 2.2s linear infinite;
-  filter: drop-shadow(0 0 10px #ffd700bb) drop-shadow(0 1px 0 #6a3400);
+  filter: drop-shadow(0 0 10px #ffd700bb);
 }
 @keyframes shimmer {
   0%   { background-position: 0%   50%; }
@@ -47,25 +44,25 @@
 /* ── FRAME WRAPPER ── */
 .frameWrap {
   position: relative;
-  width: 240px; height: 240px;
+  width: 280px; height: 280px;
   display: flex; align-items: center; justify-content: center;
 }
 
-/* ── GOD RAYS behind frame ── */
+/* ── GOD RAYS ── */
 .rays {
   position: absolute;
-  width: 380px; height: 380px;
+  width: 420px; height: 420px;
   top: 50%; left: 50%;
   background: conic-gradient(from 0deg at 50% 50%,
-    transparent 0deg,   rgba(255,210,30,0.30) 5deg,  transparent 10deg,
+    transparent 0deg,   rgba(255,210,30,0.32) 5deg,  transparent 10deg,
     transparent 30deg,  rgba(255,230,80,0.22) 35deg, transparent 40deg,
-    transparent 65deg,  rgba(255,200,20,0.26) 70deg, transparent 75deg,
-    transparent 105deg, rgba(255,240,60,0.18) 110deg,transparent 115deg,
-    transparent 145deg, rgba(255,220,40,0.24) 150deg,transparent 155deg,
-    transparent 185deg, rgba(255,200,30,0.20) 190deg,transparent 195deg,
-    transparent 220deg, rgba(255,230,70,0.26) 225deg,transparent 230deg,
-    transparent 265deg, rgba(255,210,50,0.22) 270deg,transparent 275deg,
-    transparent 305deg, rgba(255,240,80,0.20) 310deg,transparent 315deg
+    transparent 65deg,  rgba(255,200,20,0.28) 70deg, transparent 75deg,
+    transparent 105deg, rgba(255,240,60,0.20) 110deg,transparent 115deg,
+    transparent 145deg, rgba(255,220,40,0.26) 150deg,transparent 155deg,
+    transparent 185deg, rgba(255,200,30,0.22) 190deg,transparent 195deg,
+    transparent 220deg, rgba(255,230,70,0.28) 225deg,transparent 230deg,
+    transparent 265deg, rgba(255,210,50,0.24) 270deg,transparent 275deg,
+    transparent 305deg, rgba(255,240,80,0.22) 310deg,transparent 315deg
   );
   will-change: transform;
   animation: raysRotate 18s linear infinite;
@@ -76,29 +73,87 @@
   to   { transform: translate(-50%,-50%) rotate(360deg); }
 }
 
-/* ── AURA bloom ── */
+/* ── AURA GLOW ── */
 .aura {
   position: absolute;
-  width: 260px; height: 260px;
+  width: 290px; height: 290px;
   border-radius: 50%;
   background: radial-gradient(circle,
-    rgba(255,190,40,0.60)  0%,
-    rgba(255,100,0,0.28)   45%,
+    rgba(255,190,40,0.55)  0%,
+    rgba(255,100,0,0.22)   45%,
     transparent            70%);
   will-change: transform, opacity;
-  animation: auraPulse 2s ease-in-out infinite;
+  animation: auraPulse 2.2s ease-in-out infinite;
   pointer-events: none; z-index: 1;
 }
 @keyframes auraPulse {
-  0%,100% { transform: scale(0.88); opacity: 0.75; }
+  0%,100% { transform: scale(0.88); opacity: 0.70; }
   50%     { transform: scale(1.16); opacity: 1.00; }
+}
+
+/* ── DECORATIVE RINGS ── */
+/* Outermost — slow dashed spin */
+.ringOuter {
+  position: absolute;
+  width: 268px; height: 268px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255,215,0,0.50);
+  box-shadow: 0 0 12px rgba(255,215,0,0.20), inset 0 0 12px rgba(255,215,0,0.10);
+  pointer-events: none; z-index: 2;
+  will-change: transform;
+  animation: spinCW 12s linear infinite;
+}
+/* Mid — faster reverse dotted */
+.ringMid {
+  position: absolute;
+  width: 240px; height: 240px;
+  border-radius: 50%;
+  border: 2px dotted rgba(255,170,0,0.55);
+  pointer-events: none; z-index: 2;
+  will-change: transform;
+  animation: spinCCW 7s linear infinite;
+}
+/* Inner solid glow ring */
+.ringInner {
+  position: absolute;
+  width: 210px; height: 210px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,215,0,0.80);
+  box-shadow:
+    0 0 0 2px rgba(255,120,0,0.30),
+    0 0 22px rgba(255,215,0,0.70),
+    inset 0 0 16px rgba(255,215,0,0.25);
+  pointer-events: none; z-index: 2;
+  will-change: opacity;
+  animation: ringPulse 2s ease-in-out infinite;
+}
+/* Gem dots on outer ring */
+.ringGems {
+  position: absolute; top: 50%; left: 50%;
+  width: 0; height: 0;
+  pointer-events: none; z-index: 3;
+}
+.gem {
+  position: absolute;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff8d0 0%, #ffd700 50%, #ff8800 100%);
+  box-shadow: 0 0 8px #ffd700, 0 0 18px #ff8800;
+  will-change: transform;
+  animation: spinCW 12s linear infinite;
+}
+@keyframes spinCW  { from { transform: rotate(0deg);   } to { transform: rotate(360deg);  } }
+@keyframes spinCCW { from { transform: rotate(0deg);   } to { transform: rotate(-360deg); } }
+@keyframes ringPulse {
+  0%,100% { opacity: 0.75; box-shadow: 0 0 22px rgba(255,215,0,0.70), inset 0 0 16px rgba(255,215,0,0.25); }
+  50%     { opacity: 1.00; box-shadow: 0 0 42px rgba(255,215,0,1.00), inset 0 0 24px rgba(255,215,0,0.45); }
 }
 
 /* ── ORBIT PARTICLES ── */
 .orbitRing {
   position: absolute; top: 50%; left: 50%;
   width: 0; height: 0;
-  pointer-events: none; z-index: 2;
+  pointer-events: none; z-index: 4;
 }
 .orbitDot {
   position: absolute;
@@ -116,22 +171,32 @@
 
 /* ── LIGHTNING SVG ── */
 .lightning {
-  position: absolute; pointer-events: none; z-index: 3; overflow: visible;
+  position: absolute; pointer-events: none; z-index: 5; overflow: visible;
   will-change: contents;
 }
 
 /* ── AVATAR ── */
 .avatarCircle {
   position: absolute;
-  width: 132px; height: 132px;
+  width: 155px; height: 155px;
   border-radius: 50%; overflow: hidden;
-  z-index: 4;
-  box-shadow: 0 0 0 3px rgba(255,215,0,0.45), 0 0 28px #ffd700aa;
+  border: 4px solid #ffd700;
+  box-shadow:
+    0 0 0 3px rgba(255,120,0,0.40),
+    0 0 32px #ffd700cc,
+    0 0 64px rgba(255,120,0,0.50);
+  z-index: 6;
+  will-change: box-shadow;
+  animation: avatarGlow 2s ease-in-out infinite;
+}
+@keyframes avatarGlow {
+  0%,100% { box-shadow: 0 0 0 3px rgba(255,120,0,0.40), 0 0 28px #ffd700bb, 0 0 55px rgba(255,120,0,0.40); }
+  50%     { box-shadow: 0 0 0 4px rgba(255,120,0,0.60), 0 0 48px #ffd700ff, 0 0 90px rgba(255,120,0,0.70); }
 }
 .avatarCircle::after {
   content: '';
   position: absolute; inset: 0; border-radius: 50%;
-  background: radial-gradient(circle, transparent 60%, rgba(0,0,0,0.30) 100%);
+  background: radial-gradient(circle, transparent 58%, rgba(0,0,0,0.28) 100%);
   pointer-events: none;
 }
 .avatarImg { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -139,55 +204,30 @@
   width: 100%; height: 100%;
   background: linear-gradient(135deg, #fe2c55, #25f4ee);
   display: flex; align-items: center; justify-content: center;
-  font-size: 48px; font-weight: 900; color: #fff;
+  font-size: 56px; font-weight: 900; color: #fff;
 }
 
-/* ── ORNATE FRAME — static, breathing glow ── */
+/* ── ORNATE FRAME ── */
 .frameImg {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   object-fit: contain;
-  pointer-events: none; z-index: 5;
-  will-change: filter, opacity;
+  pointer-events: none; z-index: 7;
+  will-change: filter;
   animation: framePulse 2.4s ease-in-out infinite;
 }
 @keyframes framePulse {
-  0%,100% {
-    filter: drop-shadow(0 0 10px rgba(255,130,0,0.60))
-            drop-shadow(0 0 24px rgba(255,80,0,0.35))
-            brightness(0.95);
-  }
-  50% {
-    filter: drop-shadow(0 0 24px rgba(255,200,0,0.90))
-            drop-shadow(0 0 55px rgba(255,80,0,0.60))
-            brightness(1.15);
-  }
-}
-
-/* ── CROWN floating above frame ── */
-.crown {
-  position: absolute;
-  top: -32px; left: 50%;
-  width: 56px; height: auto;
-  transform: translateX(-50%);
-  z-index: 6;
-  filter: drop-shadow(0 0 10px #ffd700) drop-shadow(0 0 28px #ff8800aa);
-  will-change: transform, filter;
-  animation: crownFloat 2.5s ease-in-out infinite;
-}
-@keyframes crownFloat {
-  0%,100% { transform: translateX(-50%) translateY(0)    rotate(-4deg); filter: drop-shadow(0 0 10px #ffd700) drop-shadow(0 0 28px #ff8800aa); }
-  50%     { transform: translateX(-50%) translateY(-8px) rotate(4deg);  filter: drop-shadow(0 0 22px #ffd700) drop-shadow(0 0 50px #ff8800cc); }
+  0%,100% { filter: drop-shadow(0 0 10px rgba(255,130,0,0.65)) drop-shadow(0 0 28px rgba(255,80,0,0.35)) brightness(0.95); }
+  50%     { filter: drop-shadow(0 0 26px rgba(255,200,0,1.00)) drop-shadow(0 0 60px rgba(255,80,0,0.65)) brightness(1.18); }
 }
 
 /* ── RISING EMBERS ── */
 .embers {
   position: absolute; inset: 0;
-  pointer-events: none; z-index: 7;
+  pointer-events: none; z-index: 8;
 }
 .ember {
-  position: absolute;
-  bottom: 10%;
+  position: absolute; bottom: 10%;
   width: var(--es, 3px); height: var(--es, 3px);
   border-radius: 50%;
   background: radial-gradient(circle, #fff8c0 0%, var(--ec, #ff8800) 60%, transparent 100%);
@@ -197,54 +237,65 @@
   animation-delay: var(--edd, 0s);
 }
 @keyframes emberRise {
-  0%   { transform: translateY(0)        translateX(0)          scale(1);   opacity: 0;    }
+  0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
   10%  { opacity: 0.9; }
   70%  { opacity: 0.5; }
-  100% { transform: translateY(-170px)   translateX(var(--ex))  scale(0.1); opacity: 0;    }
+  100% { transform: translateY(-170px) translateX(var(--ex)) scale(0.1); opacity: 0; }
 }
 
 /* ── NAME ── */
 .name {
-  font-size: 20px; font-weight: 900;
-  text-align: center; max-width: 240px;
+  font-size: 22px; font-weight: 900;
+  text-align: center; max-width: 280px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   background: linear-gradient(90deg, #ffe566, #ffffff, #ffd700, #fff5a0, #ffe566);
   background-size: 300% 100%;
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   background-clip: text;
-  will-change: background-position;
   animation: shimmer 3s linear infinite;
-  filter: drop-shadow(0 0 10px #ffd700aa);
-  margin-top: 4px;
+  filter: drop-shadow(0 0 12px #ffd700aa);
+  margin-top: 2px;
 }
 
-/* ── WIN BADGE ── */
+/* ── WIN BADGE — big & clear ── */
 .wins {
-  display: flex; align-items: baseline; gap: 5px;
-  background: rgba(20,8,0,0.70);
-  border: 1.5px solid rgba(255,215,0,0.80);
-  border-radius: 14px;
-  padding: 4px 22px 5px;
-  will-change: transform, opacity;
+  display: flex; flex-direction: column; align-items: center; gap: 0;
+  background: linear-gradient(160deg, rgba(30,12,0,0.88), rgba(10,4,0,0.92));
+  border: 2.5px solid #ffd700;
+  border-radius: 20px;
+  padding: 8px 44px 10px;
+  box-shadow:
+    0 0 0 1px rgba(255,120,0,0.30),
+    0 0 28px rgba(255,215,0,0.60),
+    0 0 60px rgba(255,120,0,0.30),
+    inset 0 1px 0 rgba(255,255,180,0.20);
+  will-change: transform, box-shadow;
   animation: winsPulse 2s ease-in-out infinite;
+  margin-top: 2px;
 }
 @keyframes winsPulse {
-  0%,100% { transform: scale(1.00); opacity: 0.85; }
-  50%     { transform: scale(1.06); opacity: 1.00; }
+  0%,100% { transform: scale(1.00); box-shadow: 0 0 0 1px rgba(255,120,0,0.30), 0 0 24px rgba(255,215,0,0.55), 0 0 50px rgba(255,120,0,0.25), inset 0 1px 0 rgba(255,255,180,0.20); }
+  50%     { transform: scale(1.05); box-shadow: 0 0 0 2px rgba(255,120,0,0.50), 0 0 44px rgba(255,215,0,0.90), 0 0 80px rgba(255,120,0,0.50), inset 0 1px 0 rgba(255,255,180,0.35); }
 }
 .winsNum {
-  font-size: 32px; font-weight: 900; line-height: 1;
+  font-size: 58px; font-weight: 900; line-height: 1;
   color: #ffe44d;
-  text-shadow: 0 0 18px #ffd700cc, 0 2px 0 #6a3400;
+  text-shadow:
+    0 0 20px #ffd700,
+    0 0 45px #ff8800aa,
+    0 3px 0 #5a2800;
+  letter-spacing: -0.02em;
 }
 .winsLabel {
-  font-size: 12px; font-weight: 700;
-  letter-spacing: 0.2em; color: rgba(255,255,255,0.65);
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.30em;
+  color: rgba(255,240,160,0.80);
+  margin-top: -2px;
 }
 
 /* ── POP on update ── */
 .update { animation: updatePop 0.45s cubic-bezier(0.34,1.56,0.64,1); }
 @keyframes updatePop {
-  0%   { transform: scale(0.88); opacity: 0.5; }
+  0%   { transform: scale(0.85); opacity: 0.5; }
   100% { transform: scale(1.00); opacity: 1.0; }
 }

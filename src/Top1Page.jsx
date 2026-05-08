@@ -150,17 +150,32 @@ function Top1Card({ player }) {
       {/* Frame + avatar + all FX */}
       <div className={s.frameWrap}>
 
-        {/* God rays rotating behind everything */}
+        {/* God rays */}
         <div className={s.rays} />
 
-        {/* Aura glow blob */}
+        {/* Aura glow */}
         <div className={s.aura} />
 
+        {/* Decorative rings */}
+        <div className={s.ringOuter} />
+        <div className={s.ringMid} />
+        <div className={s.ringInner} />
+
+        {/* Gem dots orbiting outer ring */}
+        <div className={s.ringGems}>
+          {[0,60,120,180,240,300].map((deg, i) => (
+            <div key={i} className={s.gem} style={{
+              transform: `rotate(${deg}deg) translateX(134px)`,
+              animationDelay: `${-i * 2}s`,
+            }} />
+          ))}
+        </div>
+
         {/* Orbit particles */}
-        <OrbitParticles count={14} radius={118} />
+        <OrbitParticles count={14} radius={126} />
 
         {/* Lightning arcs */}
-        <LightningRing radius={106} pad={32} />
+        <LightningRing radius={112} pad={32} />
 
         {/* Avatar */}
         <div className={s.avatarCircle}>
@@ -174,9 +189,8 @@ function Top1Card({ player }) {
           )}
         </div>
 
-        {/* Ornate frame — static, no spin */}
+        {/* Ornate frame */}
         <img src="/frame-top1.png" className={s.frameImg} alt="" draggable={false} />
-
 
         {/* Rising embers */}
         <Embers count={18} />
@@ -185,7 +199,7 @@ function Top1Card({ player }) {
       {/* Name */}
       <div className={s.name}>{player.displayName || player.username}</div>
 
-      {/* Wins */}
+      {/* Wins — big & clear */}
       <div className={s.wins}>
         <span className={s.winsNum}>{player.win}</span>
         <span className={s.winsLabel}>WINS</span>

@@ -62,5 +62,13 @@
     "profilePicUrl": "/api/avatar/pppppp_5072",
     "win": 0,
     "joinedAt": 1778211038583
+  },
+  {
+    "id": "v8eather",
+    "username": "v8eather",
+    "displayName": "เติสร์",
+    "profilePicUrl": "/api/avatar/v8eather",
+    "win": 0,
+    "joinedAt": 1778211210159
   }
 ]

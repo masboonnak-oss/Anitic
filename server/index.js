@@ -42,9 +42,11 @@ async function downloadAvatar(username, remoteUrl) {
 
 /* Fetch real TikTok user info from tikwm.com, download avatar, return {displayName, profilePicUrl} */
 async function fetchTikwmUser(username) {
+  // ถ้าเป็นตัวเลขล้วน → TikTok auto-username คือ "user" + ตัวเลข
+  const queryId = /^\d+$/.test(username) ? `user${username}` : username;
   try {
     const tikwm = await axios.get(
-      `https://www.tikwm.com/api/user/info?unique_id=${encodeURIComponent(username)}`,
+      `https://www.tikwm.com/api/user/info?unique_id=${encodeURIComponent(queryId)}`,
       { timeout: 8000, headers: { 'User-Agent': 'Mozilla/5.0' } }
     );
     const user = tikwm.data?.data?.user;

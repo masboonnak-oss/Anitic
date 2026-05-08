@@ -9,9 +9,9 @@ socket.on('connect', joinRoom);
 joinRoom();
 
 const CONFIGS = [
-  { playerIdx: 1, rank: 2, barH: 105, barGrad: 'linear-gradient(180deg,#c8c8e0 0%,#6a6a8a 100%)', avatarSize: 80,  frameSize: 144, label: 'silver', avatarOffsetY: -13 },
-  { playerIdx: 0, rank: 1, barH: 148, barGrad: 'linear-gradient(180deg,#ffe566 0%,#f0a800 45%,#c06000 100%)',      avatarSize: 106, frameSize: 192, label: 'gold',   avatarOffsetY: -18 },
-  { playerIdx: 2, rank: 3, barH: 80,  barGrad: 'linear-gradient(180deg,#d49060 0%,#8a4020 100%)', avatarSize: 71,  frameSize: 128, label: 'bronze', avatarOffsetY: -12 },
+  { playerIdx: 1, rank: 2, barH: 105, barGrad: 'linear-gradient(180deg,#c8c8e0 0%,#6a6a8a 100%)', avatarSize: 80,  frameSize: 144, label: 'silver', avatarOffsetY: -13, fxTop: '34%' },
+  { playerIdx: 0, rank: 1, barH: 148, barGrad: 'linear-gradient(180deg,#ffe566 0%,#f0a800 45%,#c06000 100%)',      avatarSize: 106, frameSize: 192, label: 'gold',   avatarOffsetY: -18, fxTop: '54%' },
+  { playerIdx: 2, rank: 3, barH: 80,  barGrad: 'linear-gradient(180deg,#d49060 0%,#8a4020 100%)', avatarSize: 71,  frameSize: 128, label: 'bronze', avatarOffsetY: -12, fxTop: '33%' },
 ];
 
 const FRAME_SRCS = ['/frame-rank1.png', '/frame-rank2.png', '/frame-rank3.png'];
@@ -183,7 +183,7 @@ function Particles({ count = 16, areaSize }) {
 }
 
 /* ─── Gold FX: massive bloom + star sparkles + lens flares (most spectacular) ─── */
-function FxGold() {
+function FxGold({ topPct = '54%' }) {
   const stars = [
     { t:  '3%', l:  '8%', dur: '2.0s', del: '0.0s' },
     { t:  '6%', r: '10%', dur: '2.8s', del: '0.6s' },
@@ -202,7 +202,7 @@ function FxGold() {
   ];
   return (
     <>
-      <div className={styles.goldBloom} />
+      <div className={styles.goldBloom} style={{ top: topPct }} />
       {stars.map((s, i) => (
         <div key={i} className={styles.goldStar}
           style={{ top: s.t, left: s.l, right: s.r, '--gsd': s.dur, '--gsd2': s.del }} />
@@ -230,7 +230,7 @@ function FxGold() {
 }
 
 /* ─── Silver FX: blue frost bloom + ice star sparkles + rotating frost rings ─── */
-function FxSilver() {
+function FxSilver({ topPct = '34%' }) {
   const stars = [
     { t:  '5%', l: '14%', dur: '2.8s', del: '0.0s' },
     { t:  '8%', r: '16%', dur: '3.4s', del: '0.8s' },
@@ -245,8 +245,8 @@ function FxSilver() {
   ];
   return (
     <>
-      <div className={styles.silverBloom} />
-      <div className={styles.silverRingWrap}>
+      <div className={styles.silverBloom} style={{ top: topPct }} />
+      <div className={styles.silverRingWrap} style={{ top: topPct }}>
         <svg className={styles.silverRingSvg} viewBox="0 0 240 240">
           <circle cx="120" cy="120" r="108" fill="none" stroke="rgba(140,210,255,0.50)" strokeWidth="1.5" strokeDasharray="10 14" />
           <circle cx="120" cy="120" r="95"  fill="none" stroke="rgba(180,235,255,0.30)" strokeWidth="1.0" strokeDasharray="5 18" />
@@ -261,7 +261,7 @@ function FxSilver() {
 }
 
 /* ─── Bronze FX: pink bloom + pink star sparkles + rising embers ─── */
-function FxBronze() {
+function FxBronze({ topPct = '33%' }) {
   const stars = [
     { t:  '5%', l: '15%', dur: '2.6s', del: '0.0s' },
     { t:  '8%', r: '17%', dur: '3.2s', del: '0.7s' },
@@ -284,8 +284,8 @@ function FxBronze() {
   ];
   return (
     <>
-      <div className={styles.bronzeBloom} />
-      <div className={styles.bronzeInnerGlow} />
+      <div className={styles.bronzeBloom} style={{ top: topPct }} />
+      <div className={styles.bronzeInnerGlow} style={{ top: topPct }} />
       {stars.map((s, i) => (
         <div key={i} className={styles.pinkStar}
           style={{ top: s.t, left: s.l, right: s.r, '--psd': s.dur, '--psd2': s.del }} />
@@ -359,11 +359,10 @@ export default function Overlay() {
           return (
             <div key={cfg.rank} className={`${styles.column} ${isFirst ? styles.colFirst : ''}`}>
               <div className={`${styles.card} ${styles[cfg.label + 'Card']}`}>
-                {cfg.rank === 1 && <FxGold />}
-                {cfg.rank === 2 && <FxSilver />}
-                {cfg.rank === 3 && <FxBronze />}
+                {cfg.rank === 1 && <FxGold    topPct={cfg.fxTop} />}
+                {cfg.rank === 2 && <FxSilver  topPct={cfg.fxTop} />}
+                {cfg.rank === 3 && <FxBronze  topPct={cfg.fxTop} />}
                 {isFirst && <Sparkles count={12} />}
-                {isFirst && <Particles count={18} areaSize={cfg.frameSize * 1.6} />}
 
                 {isFirst && (
                   <div className={`${styles.crownWrap} ${styles.crownFirst}`}>

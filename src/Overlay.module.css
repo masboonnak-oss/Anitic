@@ -371,8 +371,8 @@
   animation: goldBloomPulse 2.2s ease-in-out infinite;
 }
 @keyframes goldBloomPulse {
-  0%,100% { opacity: 0.80; transform: scale(0.95); }
-  50%     { opacity: 1.00; transform: scale(1.12); }
+  0%,100% { opacity: 0.78; }
+  50%     { opacity: 1.00; }
 }
 
 /* Rotating god rays — conic gradient */
@@ -469,8 +469,8 @@
   animation: silverBloomPulse 3.4s ease-in-out infinite;
 }
 @keyframes silverBloomPulse {
-  0%,100% { opacity: 0.72; transform: scale(0.95); }
-  50%     { opacity: 1.00; transform: scale(1.12); }
+  0%,100% { opacity: 0.70; }
+  50%     { opacity: 1.00; }
 }
 
 /* Rotating dashed frost rings — centered in card */
@@ -530,8 +530,8 @@
   animation: bronzeBloomPulse 2.8s ease-in-out infinite;
 }
 @keyframes bronzeBloomPulse {
-  0%,100% { opacity: 0.75; transform: scale(0.93); }
-  50%     { opacity: 1.00; transform: scale(1.10); }
+  0%,100% { opacity: 0.72; }
+  50%     { opacity: 1.00; }
 }
 
 /* Subtle pink inner glow */
@@ -549,8 +549,8 @@
   animation: bronzeInnerPulse 1.9s ease-in-out infinite alternate;
 }
 @keyframes bronzeInnerPulse {
-  from { opacity: 0.5; transform: scale(0.88); }
-  to   { opacity: 1.0; transform: scale(1.18); }
+  from { opacity: 0.5; }
+  to   { opacity: 1.0; }
 }
 
 /* Inner bloom — centered inside avatarWrap via inline size+margin */

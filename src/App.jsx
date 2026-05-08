@@ -4,7 +4,6 @@ import Podium from './components/Podium.jsx';
 import PlayerList from './components/PlayerList.jsx';
 import AddPlayer from './components/AddPlayer.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
-import WatchedGifterPanel from './components/WatchedGifterPanel.jsx';
 import styles from './App.module.css';
 import { apiFetch, getToken } from './auth.js';
 
@@ -16,8 +15,6 @@ export default function App({ username, role, onLogout }) {
   const [copied,   setCopied]   = useState(false);
   const [copiedNK, setCopiedNK] = useState(false);
   const [copiedT1, setCopiedT1] = useState(false);
-  const [copiedTG, setCopiedTG] = useState(false);
-  const [copiedGL, setCopiedGL] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
 
   const isSuperAdmin = role === 'superadmin';
@@ -35,12 +32,10 @@ export default function App({ username, role, onLogout }) {
     setTimeout(() => setToast(null), 2500);
   }
 
-  const origin       = window.location.origin;
-  const overlayUrl   = `${origin}/overlay?u=${encodeURIComponent(username)}`;
-  const newkingUrl   = `${origin}/newking?u=${encodeURIComponent(username)}`;
-  const top1Url      = `${origin}/top1?u=${encodeURIComponent(username)}`;
-  const topgifterUrl = `${origin}/topgifter?u=${encodeURIComponent(username)}`;
-  const gifterlogUrl = `${origin}/gifterlog?u=${encodeURIComponent(username)}`;
+  const origin     = window.location.origin;
+  const overlayUrl = `${origin}/overlay?u=${encodeURIComponent(username)}`;
+  const newkingUrl = `${origin}/newking?u=${encodeURIComponent(username)}`;
+  const top1Url    = `${origin}/top1?u=${encodeURIComponent(username)}`;
 
   function copyUrl(url, setter) {
     navigator.clipboard.writeText(url).then(() => { setter(true); setTimeout(() => setter(false), 2000); });
@@ -60,12 +55,6 @@ export default function App({ username, role, onLogout }) {
   async function handleDelete(id) {
     await apiFetch(`/api/player/${encodeURIComponent(id)}`, { method: 'DELETE' });
     notify('ลบผู้เล่นแล้ว', 'info');
-  }
-
-  async function handleTestTopGifter() {
-    const res = await apiFetch('/api/test-top-gifter', { method: 'POST' });
-    if (res.ok) notify('🧪 ทดสอบ Top Gifter แล้ว — เปิดหน้า /topgifter ดูเอฟเฟกต์', 'success');
-    else notify('ทดสอบไม่ได้', 'error');
   }
 
   async function handleResetTop1() {
@@ -88,14 +77,9 @@ export default function App({ username, role, onLogout }) {
       <header className={styles.header}>
         <div className={styles.logo}>🏆 WIN Leaderboard</div>
         <div className={styles.headerActions}>
-          <button className={styles.copyBtn}      onClick={() => copyUrl(overlayUrl,   setCopied)}>  {copied   ? '✓' : '📺 Overlay'}</button>
-          <button className={styles.copyBtnNK}    onClick={() => copyUrl(newkingUrl,   setCopiedNK)}>{copiedNK ? '✓' : '👑 New King'}</button>
-          <button className={styles.copyBtnT1}    onClick={() => copyUrl(top1Url,      setCopiedT1)}>{copiedT1 ? '✓' : '🥇 Top 1'}</button>
-          <button className={styles.copyBtnTG}    onClick={() => copyUrl(topgifterUrl, setCopiedTG)}>{copiedTG ? '✓' : '💎 Top Gifter'}</button>
-          <button className={styles.copyBtnGL}    onClick={() => copyUrl(gifterlogUrl, setCopiedGL)}>{copiedGL ? '✓' : '🎁 Gift Log'}</button>
-          {isSuperAdmin && (
-            <button className={styles.testTopGifterBtn} onClick={handleTestTopGifter}>🧪 เทสต์ Top Gifter</button>
-          )}
+          <button className={styles.copyBtn}   onClick={() => copyUrl(overlayUrl, setCopied)}>  {copied   ? '✓' : '📺 Overlay'}</button>
+          <button className={styles.copyBtnNK} onClick={() => copyUrl(newkingUrl, setCopiedNK)}>{copiedNK ? '✓' : '👑 New King'}</button>
+          <button className={styles.copyBtnT1} onClick={() => copyUrl(top1Url,   setCopiedT1)}>{copiedT1 ? '✓' : '🥇 Top 1'}</button>
           <button className={styles.resetTop1Btn} onClick={handleResetTop1}>ล้าง Top 1</button>
           <button className={styles.resetBtn}     onClick={handleReset}>ล้างข้อมูล</button>
           <div className={styles.userBadge}>
@@ -117,11 +101,9 @@ export default function App({ username, role, onLogout }) {
         <div className={styles.overlayPanelTitle}><span className={styles.overlayPanelIcon}>🎬</span> Overlay URLs</div>
         <div className={styles.overlayRows}>
           {[
-            { label: '📺 Overlay',    url: overlayUrl,   color: '#25f4ee', copied,           setter: setCopied   },
-            { label: '👑 New King',  url: newkingUrl,   color: '#ffd700', copied: copiedNK, setter: setCopiedNK },
-            { label: '🥇 Top 1',    url: top1Url,      color: '#ff9933', copied: copiedT1, setter: setCopiedT1 },
-            { label: '💎 Top Gifter', url: topgifterUrl, color: '#e040fb', copied: copiedTG, setter: setCopiedTG },
-            { label: '🎁 Gift Log',   url: gifterlogUrl, color: '#c084fc', copied: copiedGL, setter: setCopiedGL },
+            { label: '📺 Overlay',  url: overlayUrl, color: '#25f4ee', copied,           setter: setCopied   },
+            { label: '👑 New King', url: newkingUrl, color: '#ffd700', copied: copiedNK, setter: setCopiedNK },
+            { label: '🥇 Top 1',   url: top1Url,    color: '#ff9933', copied: copiedT1, setter: setCopiedT1 },
           ].map(({ label, url, color, copied: c, setter }) => (
             <div className={styles.overlayRow} key={label} style={{ '--oc': color }}>
               <span className={styles.overlayLabel}>{label}</span>
@@ -133,7 +115,6 @@ export default function App({ username, role, onLogout }) {
       </div>
 
       <main className={styles.main}>
-        <WatchedGifterPanel socket={socket} />
         <AddPlayer onAdd={handleAdd} />
         {players.length === 0 ? (
           <div className={styles.empty}>

@@ -1079,8 +1079,8 @@ function saveGifters(data) {
   fs.writeFileSync(GIFTERS_FILE, JSON.stringify(data, null, 2), 'utf8');
 }
 
-/* Serve the overlay HTML page */
-app.get('/overlay', (req, res) => {
+/* Serve the Tikfinity VIP Entrance overlay HTML page */
+app.get('/vip-overlay', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'overlay.html'));
 });
 

@@ -17,7 +17,7 @@ export default defineConfig({
         ws: true,
         changeOrigin: true
       },
-      '/overlay': {
+      '/vip-overlay': {
         target: 'http://localhost:3001',
         changeOrigin: true
       }

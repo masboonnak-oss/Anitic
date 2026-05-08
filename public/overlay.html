@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VIP Entrance Overlay</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: transparent;
+    overflow: hidden;
+    font-family: 'Kanit', 'Prompt', 'Sarabun', sans-serif;
+  }
+
+  /* ── Card container — bottom-left anchor ── */
+  #card-wrap {
+    position: fixed;
+    bottom: 40px;
+    left: 40px;
+    z-index: 9999;
+    pointer-events: none;
+  }
+
+  /* ── BASE CARD ── */
+  .vip-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 380px;
+    padding: 18px 22px;
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+    /* hidden by default — GSAP controls visibility */
+    opacity: 0;
+    transform: translateX(-120%);
+  }
+
+  /* ── TOP GIFTER — Gold glow ── */
+  .vip-card.type-top {
+    background: linear-gradient(135deg,
+      rgba(30,15,0,0.92) 0%,
+      rgba(50,25,0,0.88) 100%);
+    border: 2px solid rgba(255,200,50,0.90);
+    box-shadow:
+      0 0 18px  rgba(255,180,0,0.70),
+      0 0 40px  rgba(255,150,0,0.40),
+      0 0 80px  rgba(255,120,0,0.20),
+      inset 0 0 20px rgba(255,200,50,0.08);
+  }
+  .vip-card.type-top .card-badge {
+    background: linear-gradient(135deg, #ffd700, #ff9500);
+    color: #1a0a00;
+  }
+  .vip-card.type-top .card-title { color: #ffd700; }
+  .vip-card.type-top .card-sub   { color: rgba(255,200,100,0.70); }
+  .vip-card.type-top .ring {
+    border-color: rgba(255,200,50,0.60);
+    box-shadow: 0 0 12px rgba(255,180,0,0.80), 0 0 28px rgba(255,130,0,0.50);
+  }
+
+  /* ── LEVEL 20+ — Blue premium ── */
+  .vip-card.type-vip {
+    background: linear-gradient(135deg,
+      rgba(0,10,30,0.92) 0%,
+      rgba(0,20,50,0.88) 100%);
+    border: 2px solid rgba(60,160,255,0.90);
+    box-shadow:
+      0 0 18px  rgba(40,140,255,0.70),
+      0 0 40px  rgba(20,100,255,0.40),
+      0 0 80px  rgba(0,60,200,0.20),
+      inset 0 0 20px rgba(60,160,255,0.08);
+  }
+  .vip-card.type-vip .card-badge {
+    background: linear-gradient(135deg, #3ca0ff, #005bff);
+    color: #fff;
+  }
+  .vip-card.type-vip .card-title { color: #7dd4ff; }
+  .vip-card.type-vip .card-sub   { color: rgba(120,200,255,0.70); }
+  .vip-card.type-vip .ring {
+    border-color: rgba(60,160,255,0.60);
+    box-shadow: 0 0 12px rgba(40,140,255,0.80), 0 0 28px rgba(0,80,255,0.50);
+  }
+
+  /* ── Scan-line overlay effect ── */
+  .vip-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255,255,255,0.015) 2px,
+      rgba(255,255,255,0.015) 4px
+    );
+    pointer-events: none;
+    border-radius: inherit;
+  }
+
+  /* ── Avatar ring ── */
+  .avatar-wrap {
+    position: relative;
+    flex-shrink: 0;
+  }
+  .ring {
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 2px solid;
+    animation: ringPulse 2s ease-in-out infinite;
+  }
+  @keyframes ringPulse {
+    0%, 100% { opacity: 1;   transform: scale(1); }
+    50%       { opacity: 0.5; transform: scale(1.08); }
+  }
+  .avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    background: rgba(255,255,255,0.08);
+  }
+  .avatar-fallback {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 900;
+    color: #fff;
+    background: rgba(255,255,255,0.12);
+  }
+
+  /* ── Text ── */
+  .card-text { flex: 1; min-width: 0; }
+  .card-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 900;
+    padding: 2px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .card-title {
+    font-size: 18px;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+    text-shadow: 0 0 20px currentColor;
+  }
+  .card-sub {
+    font-size: 12px;
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .card-level {
+    font-size: 11px;
+    margin-top: 2px;
+    opacity: 0.55;
+  }
+
+  /* ── Icon (top-right) ── */
+  .card-icon {
+    font-size: 28px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 8px currentColor);
+    line-height: 1;
+  }
+  .type-top .card-icon { color: #ffd700; }
+  .type-vip .card-icon { color: #3ca0ff; }
+
+  /* ── Progress bar (bottom) ── */
+  .progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    border-radius: 0 0 20px 20px;
+    width: 100%;
+  }
+  .type-top .progress-bar { background: linear-gradient(90deg, #ffd700, #ff9500); }
+  .type-vip .progress-bar { background: linear-gradient(90deg, #3ca0ff, #005bff); }
+
+  /* ── Particles ── */
+  .particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    border-radius: inherit;
+  }
+  .particle {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0;
+  }
+</style>
+</head>
+<body>
+
+<div id="card-wrap">
+  <div class="vip-card" id="vip-card">
+    <div class="particles" id="particles"></div>
+    <div class="avatar-wrap">
+      <div class="ring"></div>
+      <img class="avatar" id="card-avatar" src="" alt="" onerror="this.style.display='none'; document.getElementById('card-fallback').style.display='flex';" />
+      <div class="avatar-fallback" id="card-fallback" style="display:none;"></div>
+    </div>
+    <div class="card-text">
+      <div class="card-badge" id="card-badge">TOP GIFTER</div>
+      <div class="card-title" id="card-name">ชื่อผู้ใช้</div>
+      <div class="card-sub"  id="card-sub">เข้าร่วมห้อง</div>
+      <div class="card-level" id="card-level">Level 1</div>
+    </div>
+    <div class="card-icon" id="card-icon">🏆</div>
+    <div class="progress-bar" id="progress-bar"></div>
+  </div>
+</div>
+
+<script>
+  const card      = document.getElementById('vip-card');
+  const elName    = document.getElementById('card-name');
+  const elSub     = document.getElementById('card-sub');
+  const elBadge   = document.getElementById('card-badge');
+  const elLevel   = document.getElementById('card-level');
+  const elIcon    = document.getElementById('card-icon');
+  const elAvatar  = document.getElementById('card-avatar');
+  const elFallback= document.getElementById('card-fallback');
+  const elProg    = document.getElementById('progress-bar');
+  const particles = document.getElementById('particles');
+
+  const DISPLAY_MS = 6000;  // time card stays visible
+  let hideTimer    = null;
+  let tl           = null;
+
+  // ── Connect to Socket.io ──────────────────────
+  const socket = io({ transports: ['websocket'] });
+
+  socket.on('overlay:entrance', (data) => {
+    showCard(data);
+  });
+
+  // ── Show card ──────────────────────────────────
+  function showCard(data) {
+    // Cancel previous animation if still running
+    if (tl) tl.kill();
+    if (hideTimer) clearTimeout(hideTimer);
+
+    // Populate content
+    const isTop = data.isTopGifter;
+    card.className = `vip-card type-${isTop ? 'top' : 'vip'}`;
+
+    elBadge.textContent  = isTop ? '🏆 อันดับ 1 ของห้อง'  : `⭐ VIP Level ${data.level}`;
+    elName.textContent   = data.nickname || data.uniqueId;
+    elSub.textContent    = isTop
+      ? 'อันดับ 1 ของห้องกลับมาแล้ว!'
+      : 'ผู้ใช้ระดับ Premium เข้าร่วม';
+    elLevel.textContent  = `Level ${data.level ?? '?'}  •  ${isTop ? `💎 ${data.diamonds ?? 0} diamonds` : ''}`;
+    elIcon.textContent   = isTop ? '🏆' : '👑';
+
+    // Avatar
+    elFallback.style.display = 'none';
+    elAvatar.style.display   = 'block';
+    if (data.profilePicture) {
+      elAvatar.src = `/api/img?url=${encodeURIComponent(data.profilePicture)}`;
+    } else {
+      elAvatar.src = '';
+      elAvatar.style.display = 'none';
+      elFallback.style.display = 'flex';
+      elFallback.textContent = (data.nickname || data.uniqueId || '?')[0].toUpperCase();
+    }
+
+    spawnParticles(isTop);
+
+    // ── GSAP animation ──
+    tl = gsap.timeline();
+
+    // Slide in from left
+    tl.set(card, { opacity: 1, x: '-120%', scale: 0.85 })
+      .to(card, {
+        x: 0, scale: 1,
+        duration: 0.65,
+        ease: 'back.out(1.6)',
+      })
+      // subtle bounce glow
+      .to(card, {
+        boxShadow: isTop
+          ? '0 0 40px rgba(255,180,0,0.95), 0 0 80px rgba(255,120,0,0.60), 0 0 140px rgba(255,80,0,0.30)'
+          : '0 0 40px rgba(40,140,255,0.95), 0 0 80px rgba(0,80,255,0.60), 0 0 140px rgba(0,40,200,0.30)',
+        duration: 0.35,
+        ease: 'power2.out',
+        yoyo: true, repeat: 1,
+      });
+
+    // Progress bar countdown
+    gsap.set(elProg, { scaleX: 1, transformOrigin: 'left center' });
+    gsap.to(elProg, {
+      scaleX: 0,
+      duration: DISPLAY_MS / 1000,
+      ease: 'none',
+      delay: 0.65,
+    });
+
+    // Auto hide
+    hideTimer = setTimeout(() => hideCard(), DISPLAY_MS + 650);
+  }
+
+  function hideCard() {
+    gsap.to(card, {
+      x: '-120%', scale: 0.85, opacity: 0,
+      duration: 0.55,
+      ease: 'back.in(1.4)',
+      onComplete: () => gsap.set(card, { opacity: 0 }),
+    });
+  }
+
+  // ── Particle burst ─────────────────────────────
+  function spawnParticles(isTop) {
+    particles.innerHTML = '';
+    const colors = isTop
+      ? ['#ffd700','#ffb300','#ff8c00','#fff8dc']
+      : ['#3ca0ff','#005bff','#00cfff','#c0e8ff'];
+    const count = 18;
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      const size = 4 + Math.random() * 6;
+      p.style.cssText = `
+        width:${size}px; height:${size}px;
+        background:${colors[Math.floor(Math.random()*colors.length)]};
+        left:${15 + Math.random() * 70}%;
+        top:${20 + Math.random() * 60}%;
+      `;
+      particles.appendChild(p);
+      gsap.fromTo(p,
+        { opacity: 0.9, scale: 1 },
+        {
+          x: (Math.random()-0.5)*80,
+          y: (Math.random()-0.5)*60,
+          opacity: 0, scale: 0,
+          duration: 0.8 + Math.random()*0.6,
+          delay: Math.random()*0.3,
+          ease: 'power2.out',
+        }
+      );
+    }
+  }
+</script>
+</body>
+</html>

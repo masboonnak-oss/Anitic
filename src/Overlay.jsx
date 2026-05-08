@@ -9,10 +9,12 @@ socket.on('connect', joinRoom);
 joinRoom();
 
 const CONFIGS = [
-  { playerIdx: 1, rank: 2, barH: 105, barGrad: 'linear-gradient(180deg,#c8c8e0 0%,#6a6a8a 100%)', avatarSize: 70,  frameSize: 144, label: 'silver' },
-  { playerIdx: 0, rank: 1, barH: 148, barGrad: 'linear-gradient(180deg,#ffe566 0%,#f0a800 45%,#c06000 100%)',      avatarSize: 94,  frameSize: 192, label: 'gold'   },
-  { playerIdx: 2, rank: 3, barH: 80,  barGrad: 'linear-gradient(180deg,#d49060 0%,#8a4020 100%)', avatarSize: 62,  frameSize: 128, label: 'bronze' },
+  { playerIdx: 1, rank: 2, barH: 105, barGrad: 'linear-gradient(180deg,#c8c8e0 0%,#6a6a8a 100%)', avatarSize: 70,  frameSize: 144, label: 'silver', avatarOffsetY: -10 },
+  { playerIdx: 0, rank: 1, barH: 148, barGrad: 'linear-gradient(180deg,#ffe566 0%,#f0a800 45%,#c06000 100%)',      avatarSize: 94,  frameSize: 192, label: 'gold',   avatarOffsetY: -14 },
+  { playerIdx: 2, rank: 3, barH: 80,  barGrad: 'linear-gradient(180deg,#d49060 0%,#8a4020 100%)', avatarSize: 62,  frameSize: 128, label: 'bronze', avatarOffsetY: -9  },
 ];
+
+const FRAME_SRCS = ['/frame-rank1.png', '/frame-rank2.png', '/frame-rank3.png'];
 
 const RC = {
   gold:   { core:'#ffffff', hi:'#fff9c0', mid:'#ffe566', outer:'#ff8800', glow:'#ffd700', ray:'#ffe03a' },
@@ -337,11 +339,11 @@ function Avatar({ player, cfg }) {
       {isBronze && <BronzeFxInner />}
       <LightningOrbit label={cfg.label} frameSize={cfg.frameSize} isGold={isGold} />
       {isGold && <GoldenRays size={cfg.frameSize * 1.3} />}
-      <img src="/gold-frame2.png"
+      <img src={FRAME_SRCS[cfg.rank - 1]}
         className={`${styles.frameImg} ${styles['frame_' + cfg.label]}`}
         alt="" draggable={false}/>
       <div className={`${styles.avatarCircle} ${isGold ? styles.avatarCircleGold : ''}`}
-        style={{ width: cfg.avatarSize, height: cfg.avatarSize }}>
+        style={{ width: cfg.avatarSize, height: cfg.avatarSize, marginTop: cfg.avatarOffsetY ?? 0 }}>
         {!err && player.profilePicUrl ? (
           <img src={player.profilePicUrl} alt={player.displayName}
             className={styles.avatarImg} onError={() => setErr(true)}/>

@@ -259,6 +259,24 @@
   box-shadow: 0 0 12px #ff660044;
 }
 
+.copyBtnTG {
+  background: linear-gradient(135deg, #1d1d2e, #2a2a40);
+  border: 1.5px solid #e040fb;
+  color: #e040fb;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-family: 'Kanit', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+}
+.copyBtnTG:hover {
+  background: rgba(224,64,251,0.10);
+  box-shadow: 0 0 12px rgba(224,64,251,0.3);
+}
+
 .overlayHintNK { display: none; }
 .overlayHintT1 { display: none; }
 

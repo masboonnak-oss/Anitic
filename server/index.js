@@ -240,6 +240,7 @@ function getUserState(username) {
       liveStatus:     'disconnected',
       liveError:      null,
       commenters:     new Map(),
+      giftTracker:    new Map(),   // uniqueId → { uniqueId, displayName, profilePicUrl, diamonds }
       retryTimer:     null,
       retryAttempt:   0,
     });
@@ -377,6 +378,36 @@ function connectLive(adminUser, tiktokUser, attempt) {
       st.commenters.clear(); entries.slice(0, MAX_COMMENTERS).forEach(([k, v]) => st.commenters.set(k, v));
     }
     broadcastCommenters(adminUser);
+  });
+
+  /* ── Gift events → track diamonds per sender ── */
+  const giftEvent = WebcastEvent?.GIFT || 'gift';
+  conn.on(giftEvent, (data) => {
+    const uid      = data?.user?.uniqueId || data?.uniqueId;
+    const nickname = data?.user?.nickname  || data?.nickname || uid;
+    const picRaw   = data?.user?.profilePictureUrl || data?.user?.avatarUrl || data?.profilePictureUrl;
+    /* only count "streakEnd" or non-streaking gifts to avoid double-count */
+    if (data?.giftType === 1 && !data?.repeatEnd) return;
+    const diamonds = (data?.diamondCount || data?.gift?.diamondCount || 1) * (data?.repeatCount || 1);
+    if (!uid || diamonds <= 0) return;
+    const prev = st.giftTracker.get(uid) || { uniqueId: uid, displayName: nickname || uid, profilePicUrl: proxiedPic(picRaw, uid), diamonds: 0 };
+    prev.diamonds += diamonds;
+    if (nickname) prev.displayName = nickname;
+    if (picRaw)   prev.profilePicUrl = proxiedPic(picRaw, uid);
+    st.giftTracker.set(uid, prev);
+    console.log(`[gift:${adminUser}] @${uid} total=${prev.diamonds} diamonds`);
+  });
+
+  /* ── Member join → check if top gifter entered ── */
+  const memberEvent = WebcastEvent?.MEMBER || 'member';
+  conn.on(memberEvent, (data) => {
+    const uid = data?.user?.uniqueId || data?.uniqueId;
+    if (!uid || st.giftTracker.size === 0) return;
+    const topGifter = [...st.giftTracker.values()].sort((a, b) => b.diamonds - a.diamonds)[0];
+    if (topGifter.uniqueId === uid && topGifter.diamonds > 0) {
+      io.to(`room:${adminUser}`).emit('topGifterEnter', topGifter);
+      console.log(`[TikTok:${adminUser}] 💎 Top gifter @${uid} entered (${topGifter.diamonds} 💎)`);
+    }
   });
 
   conn.on('disconnected', () => {

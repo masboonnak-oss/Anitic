@@ -139,7 +139,11 @@ export default function AuthPage({ onAuth }) {
         <div className={styles.leftPanel}>
           <div className={styles.logoContainer}>
             <div className={styles.logoGlow} />
-            <img src="/babynoey-logo.png" alt="BABYNOEY" className={styles.logo} />
+            <div className={styles.logoCircle}>
+              <div className={styles.logoInnerGlow} />
+              <img src="/babynoey-logo-nobg.png" alt="BABYNOEY" className={styles.logo} />
+              <div className={styles.logoRing} />
+            </div>
           </div>
           <div className={styles.leftText}>
             <h1 className={styles.brandName}>WIN Leaderboard</h1>

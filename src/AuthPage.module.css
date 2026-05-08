@@ -646,31 +646,51 @@
 .sentNote strong { color: #ffd700; }
 
 /* ══════════════════════════════════════════
-   RESPONSIVE
+   RESPONSIVE — iPad (portrait / small tablet)
 ══════════════════════════════════════════ */
-@media (max-width: 700px) {
-  .bg { padding: 72px 12px 48px; }
+@media (max-width: 860px) {
+  .wrapper {
+    grid-template-columns: 1fr 1fr;
+    max-width: 700px;
+  }
+  .logoContainer { width: 160px; height: 160px; }
+  .logoCircle    { width: 140px; height: 140px; }
+  .logoGlow      { inset: -24px; }
+  .brandName     { font-size: 18px; }
+  .leftPanel     { padding: 28px 20px; gap: 16px; }
+  .rightPanel    { padding: 28px 22px; }
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE — Mobile
+══════════════════════════════════════════ */
+@media (max-width: 600px) {
+  .bg { padding: 60px 12px 40px; }
   .wrapper {
     grid-template-columns: 1fr;
     max-width: 420px;
     border-radius: 22px;
   }
   .leftPanel {
-    padding: 28px 24px 20px;
+    padding: 20px 20px 16px;
     border-right: none;
     border-bottom: 1px solid rgba(160,0,255,0.15);
     flex-direction: row;
+    align-items: center;
     justify-content: flex-start;
-    gap: 18px;
+    gap: 16px;
   }
-  .logoContainer { width: 80px; height: 80px; flex-shrink: 0; }
-  .logoGlow { inset: -8px; }
-  .logo { width: 72px; height: 72px; }
-  .leftText { text-align: left; }
-  .brandName { font-size: 16px; }
-  .features { display: none; }
-  .leftFooter { display: none; }
-  .rightPanel { padding: 28px 20px; }
-  .otpBox { width: 40px; height: 50px; font-size: 20px; border-radius: 10px; }
-  .otpRow { gap: 6px; }
+  /* ← KEY FIX: size both container AND circle */
+  .logoContainer { width: 72px; height: 72px; flex-shrink: 0; }
+  .logoCircle    { width: 72px; height: 72px; }
+  .logoGlow      { inset: -6px; }
+  .leftText      { text-align: left; }
+  .brandName     { font-size: 15px; margin-bottom: 2px; }
+  .brandSub      { font-size: 11px; margin-bottom: 0; }
+  .features      { display: none; }
+  .leftFooter    { display: none; }
+  .rightPanel    { padding: 24px 18px; }
+  .otpBox        { width: 38px; height: 48px; font-size: 20px; border-radius: 10px; }
+  .otpRow        { gap: 5px; }
+  .cardTitle     { font-size: 19px; }
 }

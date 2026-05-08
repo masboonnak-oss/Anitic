@@ -3,20 +3,23 @@ import { io } from 'socket.io-client';
 import Podium from './components/Podium.jsx';
 import PlayerList from './components/PlayerList.jsx';
 import AddPlayer from './components/AddPlayer.jsx';
+import AdminPanel from './components/AdminPanel.jsx';
 import styles from './App.module.css';
 import { apiFetch, getToken } from './auth.js';
 
 const socket = io('/', { transports: ['websocket', 'polling'] });
 
-export default function App({ username, onLogout }) {
-  const [players, setPlayers] = useState([]);
-  const [toast, setToast] = useState(null);
-  const [copied, setCopied] = useState(false);
+export default function App({ username, role, onLogout }) {
+  const [players, setPlayers]   = useState([]);
+  const [toast, setToast]       = useState(null);
+  const [copied, setCopied]     = useState(false);
   const [copiedNK, setCopiedNK] = useState(false);
   const [copiedT1, setCopiedT1] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
+
+  const isSuperAdmin = role === 'superadmin';
 
   useEffect(() => {
-    /* Authenticate socket → join user's room */
     const token = getToken();
     if (token) socket.emit('authenticate', { token });
     socket.on('connect', () => { if (token) socket.emit('authenticate', { token }); });
@@ -29,10 +32,10 @@ export default function App({ username, onLogout }) {
     setTimeout(() => setToast(null), 2500);
   }
 
-  const origin = window.location.origin;
-  const overlayUrl  = `${origin}/overlay?u=${encodeURIComponent(username)}`;
-  const newkingUrl  = `${origin}/newking?u=${encodeURIComponent(username)}`;
-  const top1Url     = `${origin}/top1?u=${encodeURIComponent(username)}`;
+  const origin     = window.location.origin;
+  const overlayUrl = `${origin}/overlay?u=${encodeURIComponent(username)}`;
+  const newkingUrl = `${origin}/newking?u=${encodeURIComponent(username)}`;
+  const top1Url    = `${origin}/top1?u=${encodeURIComponent(username)}`;
 
   function copyUrl(url, setter) {
     navigator.clipboard.writeText(url).then(() => { setter(true); setTimeout(() => setter(false), 2000); });
@@ -74,14 +77,21 @@ export default function App({ username, onLogout }) {
       <header className={styles.header}>
         <div className={styles.logo}>🏆 WIN Leaderboard</div>
         <div className={styles.headerActions}>
-          <button className={styles.copyBtn}      onClick={() => copyUrl(overlayUrl, setCopied)}>  {copied    ? '✓' : '📺 Overlay'}</button>
-          <button className={styles.copyBtnNK}    onClick={() => copyUrl(newkingUrl, setCopiedNK)}>{copiedNK  ? '✓' : '👑 New King'}</button>
-          <button className={styles.copyBtnT1}    onClick={() => copyUrl(top1Url,    setCopiedT1)}>{copiedT1  ? '✓' : '🥇 Top 1'}</button>
+          <button className={styles.copyBtn}      onClick={() => copyUrl(overlayUrl, setCopied)}>  {copied   ? '✓' : '📺 Overlay'}</button>
+          <button className={styles.copyBtnNK}    onClick={() => copyUrl(newkingUrl, setCopiedNK)}>{copiedNK ? '✓' : '👑 New King'}</button>
+          <button className={styles.copyBtnT1}    onClick={() => copyUrl(top1Url,    setCopiedT1)}>{copiedT1 ? '✓' : '🥇 Top 1'}</button>
           <button className={styles.resetTop1Btn} onClick={handleResetTop1}>ล้าง Top 1</button>
           <button className={styles.resetBtn}     onClick={handleReset}>ล้างข้อมูล</button>
           <div className={styles.userBadge}>
-            <span className={styles.userIcon}>👤</span>
-            <span className={styles.userName}>{username}</span>
+            {isSuperAdmin && (
+              <button className={styles.adminPanelBtn} onClick={() => setShowAdmin(true)} title="Super Admin Panel">
+                👑
+              </button>
+            )}
+            <span className={styles.userIcon}>{isSuperAdmin ? '⭐' : '👤'}</span>
+            <span className={styles.userName} style={isSuperAdmin ? { color: '#ffd700' } : {}}>
+              {username}
+            </span>
             <button className={styles.logoutBtn} onClick={onLogout}>ออก</button>
           </div>
         </div>
@@ -120,6 +130,7 @@ export default function App({ username, onLogout }) {
       </main>
 
       {toast && <div className={`${styles.toast} ${styles[toast.type]}`}>{toast.msg}</div>}
+      {showAdmin && <AdminPanel onClose={() => setShowAdmin(false)} />}
     </div>
   );
 }

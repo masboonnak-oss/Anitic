@@ -27,7 +27,7 @@ export default function AuthPage({ onAuth }) {
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'เกิดข้อผิดพลาด'); return; }
       setToken(data.token);
-      onAuth(data.username);
+      onAuth(data.username, data.role || 'user');
     } catch (_) {
       setError('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
     } finally {

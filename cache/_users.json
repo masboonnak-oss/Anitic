@@ -1,6 +1,11 @@
 [
   {
     "username": "mas102",
-    "passwordHash": "$2b$12$lZQW7ME0YhCdsanffYgnNuJtW6YCqSafNjfkIUn4b9WQFoaF.Cvnm"
+    "passwordHash": "$2b$12$lZQW7ME0YhCdsanffYgnNuJtW6YCqSafNjfkIUn4b9WQFoaF.Cvnm",
+    "role": "superadmin"
+  },
+  {
+    "username": "noey",
+    "passwordHash": "$2b$12$3zY6.hP/Zyiw434r4KCsE.BTftAbOBYKGUHfCSVUf4gn7RqBUC16i"
   }
 ]

@@ -20,8 +20,9 @@ if (path === '/overlay') {
 } else {
   /* Admin panel — requires auth */
   function Root() {
-    const [authed, setAuthed]   = useState(false);
+    const [authed,   setAuthed]   = useState(false);
     const [username, setUsername] = useState('');
+    const [role,     setRole]     = useState('user');
     const [checking, setChecking] = useState(true);
 
     useEffect(() => {
@@ -29,7 +30,10 @@ if (path === '/overlay') {
       if (!token) { setChecking(false); return; }
       fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.json())
-        .then(d => { if (d.ok) { setAuthed(true); setUsername(d.username); } else clearToken(); })
+        .then(d => {
+          if (d.ok) { setAuthed(true); setUsername(d.username); setRole(d.role || 'user'); }
+          else clearToken();
+        })
         .catch(() => clearToken())
         .finally(() => setChecking(false));
     }, []);
@@ -42,13 +46,14 @@ if (path === '/overlay') {
     );
 
     if (!authed) return (
-      <AuthPage onAuth={(u) => { setUsername(u); setAuthed(true); }} />
+      <AuthPage onAuth={(u, r) => { setUsername(u); setRole(r || 'user'); setAuthed(true); }} />
     );
 
     return (
       <App
         username={username}
-        onLogout={() => { clearToken(); setAuthed(false); setUsername(''); }}
+        role={role}
+        onLogout={() => { clearToken(); setAuthed(false); setUsername(''); setRole('user'); }}
       />
     );
   }

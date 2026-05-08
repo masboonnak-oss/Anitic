@@ -378,7 +378,7 @@ app.post('/api/auth/register', async (req, res) => {
   saveUsers(users);
   const token = jwt.sign({ username: u }, JWT_SECRET, { expiresIn: '30d' });
   console.log(`[auth] registered: ${u}`);
-  res.json({ ok: true, token, username: u });
+  res.json({ ok: true, token, username: u, role: 'user' });
 });
 
 app.post('/api/auth/login', async (req, res) => {
@@ -389,11 +389,77 @@ app.post('/api/auth/login', async (req, res) => {
   if (!ok) return res.status(401).json({ error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
   const token = jwt.sign({ username: u }, JWT_SECRET, { expiresIn: '30d' });
   console.log(`[auth] login: ${u}`);
-  res.json({ ok: true, token, username: u });
+  res.json({ ok: true, token, username: u, role: user.role || 'user' });
 });
 
 app.get('/api/auth/me', authMiddleware, (req, res) => {
-  res.json({ ok: true, username: req.admin.username });
+  const user = findUser(req.admin.username);
+  res.json({ ok: true, username: req.admin.username, role: user?.role || 'user' });
+});
+
+/* ── Super-admin middleware ── */
+function superAdminMiddleware(req, res, next) {
+  const user = findUser(req.admin.username);
+  if (user?.role !== 'superadmin') return res.status(403).json({ error: 'เฉพาะ Super Admin เท่านั้น' });
+  next();
+}
+
+/* ── Super Admin: list all users ── */
+app.get('/api/admin/users', authMiddleware, superAdminMiddleware, (req, res) => {
+  const users = loadUsers().map(u => {
+    const st = userStates.get(u.username);
+    const playerCount = st ? st.players.size : (() => {
+      try {
+        const file = path.join(USERS_DIR, u.username, '_players.json');
+        if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, 'utf8')).length;
+      } catch (_) {}
+      return 0;
+    })();
+    return { username: u.username, role: u.role || 'user', playerCount };
+  });
+  res.json(users);
+});
+
+/* ── Super Admin: delete a user ── */
+app.delete('/api/admin/users/:username', authMiddleware, superAdminMiddleware, (req, res) => {
+  const target = req.params.username;
+  if (target === req.admin.username) return res.status(400).json({ error: 'ไม่สามารถลบตัวเองได้' });
+  const users = loadUsers();
+  const idx   = users.findIndex(u => u.username === target);
+  if (idx === -1) return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
+
+  /* Disconnect live if running */
+  if (userStates.has(target)) {
+    const st = userStates.get(target);
+    if (st.retryTimer) clearTimeout(st.retryTimer);
+    if (st.liveConnection) { try { st.liveConnection.disconnect(); } catch (_) {} }
+    userStates.delete(target);
+  }
+
+  /* Remove user files */
+  try {
+    const userDir = path.join(USERS_DIR, target);
+    if (fs.existsSync(userDir)) fs.rmSync(userDir, { recursive: true, force: true });
+  } catch (_) {}
+
+  users.splice(idx, 1);
+  saveUsers(users);
+  console.log(`[superadmin] deleted user: ${target}`);
+  res.json({ ok: true });
+});
+
+/* ── Super Admin: promote/demote ── */
+app.patch('/api/admin/users/:username/role', authMiddleware, superAdminMiddleware, (req, res) => {
+  const target = req.params.username;
+  const { role } = req.body;
+  if (!['user', 'superadmin'].includes(role)) return res.status(400).json({ error: 'role ต้องเป็น user หรือ superadmin' });
+  const users = loadUsers();
+  const user  = users.find(u => u.username === target);
+  if (!user) return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
+  user.role = role;
+  saveUsers(users);
+  console.log(`[superadmin] set ${target} role → ${role}`);
+  res.json({ ok: true, username: target, role });
 });
 
 /* ── Image proxy ── */

@@ -129,6 +129,28 @@
   white-space: nowrap;
 }
 
+.adminPanelBtn {
+  background: rgba(255,215,0,0.1);
+  border: 1.5px solid rgba(255,215,0,0.35);
+  color: #ffd700;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+.adminPanelBtn:hover {
+  background: rgba(255,215,0,0.2);
+  box-shadow: 0 0 14px rgba(255,215,0,0.3);
+  transform: translateY(-1px);
+}
+
 .logoutBtn {
   background: transparent;
   border: 1px solid #333;

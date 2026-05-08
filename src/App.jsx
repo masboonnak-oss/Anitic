@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import Podium from './components/Podium.jsx';
 import PlayerList from './components/PlayerList.jsx';
@@ -16,6 +16,8 @@ export default function App({ username, role, onLogout }) {
   const [copiedNK, setCopiedNK] = useState(false);
   const [copiedT1, setCopiedT1] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [menuOpen, setMenuOpen]   = useState(false);
+  const menuRef = useRef(null);
 
   const isSuperAdmin = role === 'superadmin';
 
@@ -26,6 +28,17 @@ export default function App({ username, role, onLogout }) {
     socket.on('players', setPlayers);
     return () => { socket.off('connect'); socket.off('players'); };
   }, []);
+
+  /* close mobile menu when clicking outside */
+  useEffect(() => {
+    function handleOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [menuOpen]);
 
   function notify(msg, type = 'success') {
     setToast({ msg, type });
@@ -38,7 +51,10 @@ export default function App({ username, role, onLogout }) {
   const top1Url    = `${origin}/top1?u=${encodeURIComponent(username)}`;
 
   function copyUrl(url, setter) {
-    navigator.clipboard.writeText(url).then(() => { setter(true); setTimeout(() => setter(false), 2000); });
+    navigator.clipboard.writeText(url).then(() => {
+      setter(true);
+      setTimeout(() => setter(false), 2000);
+    });
   }
 
   async function handleAdd({ username: uname, displayName, profilePicUrl }) {
@@ -61,12 +77,14 @@ export default function App({ username, role, onLogout }) {
     if (!confirm('ล้าง Top 1 overlay?')) return;
     await apiFetch('/api/reset-top1', { method: 'POST' });
     notify('ล้าง Top 1 แล้ว', 'info');
+    setMenuOpen(false);
   }
 
   async function handleReset() {
     if (!confirm('ล้างข้อมูลทั้งหมด?')) return;
     await apiFetch('/api/reset', { method: 'POST' });
     notify('ล้างข้อมูลแล้ว', 'info');
+    setMenuOpen(false);
   }
 
   const top3 = players.slice(0, 3);
@@ -76,7 +94,7 @@ export default function App({ username, role, onLogout }) {
     <div className={styles.app}>
 
       {/* ══════════ HEADER ══════════ */}
-      <header className={styles.header}>
+      <header className={styles.header} ref={menuRef}>
 
         {/* Logo */}
         <div className={styles.logo}>
@@ -85,22 +103,32 @@ export default function App({ username, role, onLogout }) {
           <span className={styles.logoSpark}>✨</span>
         </div>
 
-        <div className={styles.headerRight}>
+        {/* Hamburger — mobile only */}
+        <button
+          className={`${styles.hamburger} ${menuOpen ? styles.hamburgerOpen : ''}`}
+          onClick={() => setMenuOpen(o => !o)}
+          aria-label="Toggle menu"
+        >
+          <span /><span /><span />
+        </button>
+
+        {/* Desktop always visible · Mobile slide-down */}
+        <div className={`${styles.headerRight} ${menuOpen ? styles.headerRightOpen : ''}`}>
 
           {/* ── Group 1: URL copy buttons ── */}
           <div className={styles.btnGroup}>
             <span className={styles.btnGroupLabel}>🔗 Copy URL</span>
             <div className={styles.btnGroupRow}>
               <button className={`${styles.hBtn} ${styles.hBtnCyan}`}
-                onClick={() => copyUrl(overlayUrl, setCopied)}>
+                onClick={() => { copyUrl(overlayUrl, setCopied); }}>
                 {copied   ? '✓ คัดลอก' : '📺 Overlay'}
               </button>
               <button className={`${styles.hBtn} ${styles.hBtnGold}`}
-                onClick={() => copyUrl(newkingUrl, setCopiedNK)}>
+                onClick={() => { copyUrl(newkingUrl, setCopiedNK); }}>
                 {copiedNK ? '✓ คัดลอก' : '👑 New King'}
               </button>
               <button className={`${styles.hBtn} ${styles.hBtnOrange}`}
-                onClick={() => copyUrl(top1Url, setCopiedT1)}>
+                onClick={() => { copyUrl(top1Url, setCopiedT1); }}>
                 {copiedT1 ? '✓ คัดลอก' : '🥇 Top 1'}
               </button>
             </div>
@@ -131,19 +159,26 @@ export default function App({ username, role, onLogout }) {
             <div className={styles.btnGroupRow}>
               {isSuperAdmin && (
                 <button className={styles.adminPanelBtn}
-                  onClick={() => setShowAdmin(true)} title="Super Admin Panel">
+                  onClick={() => { setShowAdmin(true); setMenuOpen(false); }}
+                  title="Super Admin Panel">
                   👑
                 </button>
               )}
               <span className={styles.userNameBadge} style={isSuperAdmin ? { color: '#ffd700' } : {}}>
                 {isSuperAdmin ? '⭐' : '👤'} {username}
               </span>
-              <button className={`${styles.hBtn} ${styles.hBtnLogout}`} onClick={onLogout}>ออก</button>
+              <button className={`${styles.hBtn} ${styles.hBtnLogout}`}
+                onClick={() => { onLogout(); setMenuOpen(false); }}>
+                ออก
+              </button>
             </div>
           </div>
 
         </div>
       </header>
+
+      {/* overlay backdrop for mobile menu */}
+      {menuOpen && <div className={styles.menuBackdrop} onClick={() => setMenuOpen(false)} />}
 
       {/* ══════════ BRANDING BAR ══════════ */}
       <div className={styles.brandBar}>

@@ -8,6 +8,7 @@
 .app {
   min-height: 100vh;
   padding-top: 68px;
+  padding-bottom: 36px;
   background:
     linear-gradient(
       180deg,
@@ -23,24 +24,21 @@
 }
 
 /* ═══════════════════════════════
-   HEADER
+   HEADER — fixed gaming navbar
 ═══════════════════════════════ */
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 20px;
   height: 68px;
-  /* ── Fixed: stays on screen when scrolling ── */
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 500;
-  gap: 14px;
-  flex-wrap: nowrap;
-  overflow: visible;
-  /* ── Gaming glass background ── */
+  gap: 12px;
+  /* gaming glass */
   background:
     repeating-linear-gradient(
       0deg,
@@ -51,46 +49,37 @@
     ),
     linear-gradient(
       90deg,
-      rgba(60,0,40,0.92) 0%,
-      rgba(12,0,28,0.96) 30%,
-      rgba(12,0,28,0.96) 70%,
-      rgba(60,0,40,0.92) 100%
+      rgba(60,0,40,0.94) 0%,
+      rgba(12,0,28,0.97) 30%,
+      rgba(12,0,28,0.97) 70%,
+      rgba(60,0,40,0.94) 100%
     );
   backdrop-filter: blur(28px) saturate(1.4);
   -webkit-backdrop-filter: blur(28px) saturate(1.4);
-  /* ── Neon bottom edge ── */
-  border-bottom: none;
 }
 
 /* animated neon bottom line */
 .header::after {
   content: '';
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: 0; left: 0; right: 0;
   height: 2px;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    #ff2d78 15%,
-    #c770ff 35%,
-    #ff2d78 50%,
-    #c770ff 70%,
-    #ff2d78 85%,
-    transparent 100%
+    #ff2d78 15%, #c770ff 35%,
+    #ff2d78 50%, #c770ff 70%,
+    #ff2d78 85%, transparent 100%
   );
   background-size: 200% 100%;
   animation: neonSweep 3s linear infinite;
   box-shadow: 0 0 12px rgba(200,80,255,0.60), 0 0 24px rgba(255,45,120,0.30);
 }
-/* top accent thin line */
+/* top accent line */
 .header::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: 0; left: 0; right: 0;
   height: 1px;
   background: linear-gradient(
     90deg,
@@ -114,6 +103,7 @@
   flex-shrink: 0;
   white-space: nowrap;
   text-decoration: none;
+  min-width: 0;
 }
 
 .logoTrophy {
@@ -128,27 +118,23 @@
 
 .logoText {
   font-family: 'Orbitron', sans-serif;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 900;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   background: linear-gradient(
     105deg,
-    #ff2d78 0%,
-    #d94fff 35%,
-    #b44fff 55%,
-    #ff2daf 80%,
-    #ff2d78 100%
+    #ff2d78 0%, #d94fff 35%,
+    #b44fff 55%, #ff2daf 80%, #ff2d78 100%
   );
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   animation: logoGradFlow 4s linear infinite;
-  text-shadow: none;
   filter:
-    drop-shadow(0 0 10px rgba(210, 50, 200, 0.70))
-    drop-shadow(0 0 22px rgba(180, 0, 160, 0.40));
+    drop-shadow(0 0 10px rgba(210,50,200,0.70))
+    drop-shadow(0 0 22px rgba(180,0,160,0.40));
 }
 
 .logoSpark {
@@ -172,12 +158,53 @@
   100% { background-position: 200% center; }
 }
 
-/* ── Right side ── */
+/* ════════════════════════════════════
+   HAMBURGER BUTTON — mobile only
+════════════════════════════════════ */
+.hamburger {
+  display: none; /* hidden on desktop */
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(255,45,120,0.45);
+  background: rgba(255,45,120,0.08);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+  z-index: 2;
+}
+.hamburger:hover {
+  background: rgba(255,45,120,0.18);
+  border-color: #ff2d78;
+  box-shadow: 0 0 16px rgba(255,45,120,0.35);
+}
+.hamburger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: #ff2d78;
+  border-radius: 2px;
+  transition: transform 0.28s cubic-bezier(0.4,0,0.2,1),
+              opacity   0.28s,
+              width     0.28s;
+  box-shadow: 0 0 6px rgba(255,45,120,0.60);
+}
+/* X shape when open */
+.hamburgerOpen span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.hamburgerOpen span:nth-child(2) { opacity: 0; width: 0; }
+.hamburgerOpen span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* ── Right side — desktop ── */
 .headerRight {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 /* ── Button GROUP card ── */
@@ -190,6 +217,7 @@
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 12px;
   padding: 6px 10px 7px;
+  flex-shrink: 0;
 }
 
 .btnGroupLabel {
@@ -294,9 +322,9 @@
 }
 
 /* ═══════════════════════════════
-   USER BADGE (now uses btnGroup)
+   USER BADGE
 ═══════════════════════════════ */
-.userBadge { display: none; } /* legacy — no longer used */
+.userBadge { display: none; }
 .userIcon  { display: none; }
 .userName  { display: none; }
 
@@ -312,7 +340,6 @@
   padding: 0 4px;
 }
 
-/* Super-admin panel button — same height as hBtn */
 .adminPanelBtn {
   background: rgba(255,215,0,0.10);
   border: 1.5px solid rgba(255,215,0,0.45);
@@ -334,7 +361,6 @@
   transform: translateY(-1px);
 }
 
-/* Logout button — same height as hBtn, muted style */
 .hBtnLogout {
   background: rgba(255,255,255,0.05);
   border-color: rgba(255,255,255,0.18);
@@ -363,6 +389,138 @@
 .logoutBtn:hover { border-color: #ef4444; color: #ef4444; }
 
 /* ═══════════════════════════════
+   MOBILE BACKDROP
+═══════════════════════════════ */
+.menuBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 498;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* ═══════════════════════════════
+   RESPONSIVE — mobile / tablet
+═══════════════════════════════ */
+@media (max-width: 860px) {
+  /* show hamburger */
+  .hamburger { display: flex; }
+
+  /* hide desktop groups by default — keep display:flex so transition works */
+  .headerRight {
+    display: flex;
+    position: fixed;
+    top: 68px;
+    left: 0;
+    right: 0;
+    z-index: 499;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+    /* gaming glass panel */
+    background:
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(255,255,255,0.012) 2px,
+        rgba(255,255,255,0.012) 4px
+      ),
+      linear-gradient(
+        180deg,
+        rgba(30,0,50,0.98) 0%,
+        rgba(12,0,28,0.98) 100%
+      );
+    backdrop-filter: blur(28px) saturate(1.4);
+    -webkit-backdrop-filter: blur(28px) saturate(1.4);
+    border-bottom: 2px solid rgba(199,80,255,0.45);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.70);
+    /* hidden state */
+    visibility: hidden;
+    transform: translateY(-16px);
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      transform 0.30s cubic-bezier(0.34,1.56,0.64,1),
+      opacity   0.25s ease,
+      visibility 0s linear 0.30s;
+  }
+
+  /* open state — slides down */
+  .headerRightOpen {
+    visibility: visible;
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+    transition:
+      transform 0.30s cubic-bezier(0.34,1.56,0.64,1),
+      opacity   0.25s ease,
+      visibility 0s linear 0s;
+  }
+
+  /* divider becomes horizontal rule */
+  .groupDivider {
+    width: 100%;
+    height: 1px;
+    background: rgba(255,255,255,0.07);
+  }
+
+  /* each group fills the row */
+  .btnGroup {
+    border-radius: 0;
+    border: none;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding: 12px 20px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    background: transparent;
+    width: 100%;
+  }
+  .btnGroup:last-child { border-bottom: none; }
+
+  .btnGroupLabel {
+    font-size: 11px;
+    min-width: 80px;
+    color: rgba(255,255,255,0.40);
+  }
+
+  .btnGroupRow {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  /* bigger tap targets on mobile */
+  .hBtn {
+    height: 34px;
+    padding: 0 14px;
+    font-size: 13px;
+  }
+
+  .adminPanelBtn {
+    height: 34px;
+    padding: 0 12px;
+  }
+
+  .userNameBadge {
+    max-width: 120px;
+    font-size: 14px;
+  }
+
+  /* hide logoSpark on very small screens */
+  .logoSpark { display: none; }
+  .logoText  { font-size: 13px; }
+}
+
+@media (max-width: 400px) {
+  .logoText { display: none; }
+  .header   { padding: 0 14px; }
+}
+
+/* ═══════════════════════════════
    BRANDING BAR
 ═══════════════════════════════ */
 .brandBar {
@@ -382,7 +540,6 @@
   overflow: hidden;
 }
 
-/* shimmer sweep */
 .brandBar::before {
   content: '';
   position: absolute;
@@ -493,8 +650,8 @@
 ═══════════════════════════════ */
 .toast {
   position: fixed;
-  bottom: 28px;
-  right: 28px;
+  bottom: 48px;
+  right: 20px;
   padding: 13px 22px;
   border-radius: 12px;
   font-size: 14px;
@@ -535,13 +692,11 @@
   align-items: center;
 }
 
-/* fade masks at left/right edges */
 .ticker::before,
 .ticker::after {
   content: '';
   position: absolute;
-  top: 0;
-  bottom: 0;
+  top: 0; bottom: 0;
   width: 60px;
   z-index: 2;
   pointer-events: none;
@@ -596,9 +751,4 @@
 @keyframes tickerScroll {
   0%   { transform: translateX(0); }
   100% { transform: translateX(-50%); }
-}
-
-@keyframes gradientFlow {
-  0%   { background-position: 0%   center; }
-  100% { background-position: 200% center; }
 }

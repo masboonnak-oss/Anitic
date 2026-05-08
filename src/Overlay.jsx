@@ -9,9 +9,9 @@ socket.on('connect', joinRoom);
 joinRoom();
 
 const CONFIGS = [
-  { playerIdx: 1, rank: 2, barH: 105, barGrad: 'linear-gradient(180deg,#c8c8e0 0%,#6a6a8a 100%)', avatarSize: 70,  frameSize: 144, label: 'silver', avatarOffsetY: -10 },
-  { playerIdx: 0, rank: 1, barH: 148, barGrad: 'linear-gradient(180deg,#ffe566 0%,#f0a800 45%,#c06000 100%)',      avatarSize: 94,  frameSize: 192, label: 'gold',   avatarOffsetY: -14 },
-  { playerIdx: 2, rank: 3, barH: 80,  barGrad: 'linear-gradient(180deg,#d49060 0%,#8a4020 100%)', avatarSize: 62,  frameSize: 128, label: 'bronze', avatarOffsetY: -9  },
+  { playerIdx: 1, rank: 2, barH: 105, barGrad: 'linear-gradient(180deg,#c8c8e0 0%,#6a6a8a 100%)', avatarSize: 96,  frameSize: 144, label: 'silver', avatarOffsetY: -16 },
+  { playerIdx: 0, rank: 1, barH: 148, barGrad: 'linear-gradient(180deg,#ffe566 0%,#f0a800 45%,#c06000 100%)',      avatarSize: 128, frameSize: 192, label: 'gold',   avatarOffsetY: -20 },
+  { playerIdx: 2, rank: 3, barH: 80,  barGrad: 'linear-gradient(180deg,#d49060 0%,#8a4020 100%)', avatarSize: 84,  frameSize: 128, label: 'bronze', avatarOffsetY: -14 },
 ];
 
 const FRAME_SRCS = ['/frame-rank1.png', '/frame-rank2.png', '/frame-rank3.png'];
@@ -273,75 +273,11 @@ function Sparkles({ count = 10 }) {
 
 function Avatar({ player, cfg }) {
   const [err, setErr] = useState(false);
-  const isGold   = cfg.rank === 1;
-  const isSilver = cfg.rank === 2;
-  const isBronze = cfg.rank === 3;
+  const isGold = cfg.rank === 1;
   useEffect(() => { setErr(false); }, [player.id, player.profilePicUrl]);
-
-  /* Silver bloom + frost ring sized to match avatarWrap */
-  function SilverFxInner() {
-    const sz = cfg.frameSize * 1.55;
-    return (
-      <>
-        <div className={styles.silverBloomInner}
-          style={{ width: sz, height: sz }} />
-        <div className={styles.silverRingWrap}
-          style={{ width: sz, height: sz }}>
-          <svg className={styles.silverRingSvg} viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(160,220,255,0.40)" strokeWidth="0.6" strokeDasharray="8 10" />
-            <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(200,240,255,0.25)" strokeWidth="0.4" strokeDasharray="4 14" />
-          </svg>
-        </div>
-        {[
-          { t: '-18%', l: '-14%', is: '3.0s', id: '0.0s' },
-          { t: '-10%', r: '-12%', is: '3.6s', id: '0.9s' },
-          { t:  '50%', l: '-20%', is: '2.4s', id: '1.6s' },
-          { t:  '45%', r: '-18%', is: '3.2s', id: '0.4s' },
-          { t: '105%', l:  '15%', is: '2.8s', id: '1.2s' },
-          { t: '110%', r:  '20%', is: '3.8s', id: '2.0s' },
-        ].map((s, i) => (
-          <div key={i} className={styles.iceStar} style={{ top: s.t, left: s.l, right: s.r, '--is': s.is, '--id': s.id }} />
-        ))}
-      </>
-    );
-  }
-
-  /* Bronze bloom sized to match avatarWrap */
-  function BronzeFxInner() {
-    const sz = cfg.frameSize * 1.50;
-    const szInner = cfg.frameSize * 1.25;
-    const embers = [
-      { l: '18%', ed: '2.3s', edd: '0.0s', ex: -0.3 },
-      { l: '32%', ed: '1.9s', edd: '0.6s', ex:  0.2 },
-      { l: '48%', ed: '2.7s', edd: '1.2s', ex: -0.1 },
-      { l: '63%', ed: '2.1s', edd: '0.3s', ex:  0.4 },
-      { l: '78%', ed: '1.7s', edd: '0.9s', ex: -0.2 },
-      { l: '26%', ed: '3.1s', edd: '1.7s', ex:  0.1 },
-      { l: '55%', ed: '2.5s', edd: '0.5s', ex: -0.4 },
-    ];
-    return (
-      <>
-        <div className={styles.bronzeBloomInner}
-          style={{ width: sz, height: sz }} />
-        <div className={styles.bronzeInnerGlowInner}
-          style={{ width: szInner, height: szInner }} />
-        {embers.map((e, i) => (
-          <div key={i} className={styles.ember}
-            style={{ left: e.l, bottom: '-10%', '--ed': e.ed, '--edd': e.edd, '--ex': e.ex }} />
-        ))}
-      </>
-    );
-  }
 
   return (
     <div className={styles.avatarWrap} style={{ width: cfg.frameSize, height: cfg.frameSize }}>
-      {isSilver && <SilverFxInner />}
-      {isBronze && <BronzeFxInner />}
-      <LightningOrbit label={cfg.label} frameSize={cfg.frameSize} isGold={isGold} />
-      {isGold && <GoldenRays size={cfg.frameSize * 1.3} />}
-      <img src={FRAME_SRCS[cfg.rank - 1]}
-        className={`${styles.frameImg} ${styles['frame_' + cfg.label]}`}
-        alt="" draggable={false}/>
       <div className={`${styles.avatarCircle} ${isGold ? styles.avatarCircleGold : ''}`}
         style={{ width: cfg.avatarSize, height: cfg.avatarSize, marginTop: cfg.avatarOffsetY ?? 0 }}>
         {!err && player.profilePicUrl ? (
@@ -353,6 +289,9 @@ function Avatar({ player, cfg }) {
           </div>
         )}
       </div>
+      <img src={FRAME_SRCS[cfg.rank - 1]}
+        className={`${styles.frameImg} ${styles['frame_' + cfg.label]}`}
+        alt="" draggable={false}/>
     </div>
   );
 }
@@ -382,18 +321,16 @@ export default function Overlay() {
             <div key={cfg.rank} className={`${styles.column} ${isFirst ? styles.colFirst : ''}`}>
               <div className={`${styles.card} ${styles[cfg.label + 'Card']}`}>
                 {cfg.rank === 1 && <FxGold />}
+                {cfg.rank === 2 && <FxSilver />}
+                {cfg.rank === 3 && <FxBronze />}
                 {isFirst && <Sparkles count={12} />}
                 {isFirst && <Particles count={18} areaSize={cfg.frameSize * 1.6} />}
 
-                <div className={`${styles.crownWrap} ${isFirst ? styles.crownFirst : styles.crownSmall}`}>
-                  {isFirst ? (
+                {isFirst && (
+                  <div className={`${styles.crownWrap} ${styles.crownFirst}`}>
                     <img src="/crown-king.png" className={styles.crownKing} alt="crown" draggable={false}/>
-                  ) : (
-                    <span className={cfg.rank === 2 ? styles.crownSilver : styles.crownBronze}>
-                      {cfg.rank === 2 ? '🥈' : '🥉'}
-                    </span>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 <Avatar player={p} cfg={cfg} />
 

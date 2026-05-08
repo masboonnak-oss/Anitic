@@ -416,3 +416,93 @@
   from { transform: translateX(70px) scale(0.9); opacity: 0; }
   to   { transform: translateX(0)    scale(1.0); opacity: 1; }
 }
+
+/* ═══════════════════════════════
+   TICKER FOOTER
+═══════════════════════════════ */
+.ticker {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 36px;
+  overflow: hidden;
+  z-index: 200;
+  background: linear-gradient(
+    90deg,
+    rgba(6,4,18,0.92) 0%,
+    rgba(30,10,50,0.92) 40%,
+    rgba(6,4,18,0.92) 100%
+  );
+  border-top: 1px solid rgba(199,112,255,0.25);
+  display: flex;
+  align-items: center;
+}
+
+/* fade masks at left/right edges */
+.ticker::before,
+.ticker::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 60px;
+  z-index: 2;
+  pointer-events: none;
+}
+.ticker::before {
+  left: 0;
+  background: linear-gradient(to right, rgba(6,4,18,0.95), transparent);
+}
+.ticker::after {
+  right: 0;
+  background: linear-gradient(to left, rgba(6,4,18,0.95), transparent);
+}
+
+.tickerTrack {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  animation: tickerScroll 28s linear infinite;
+  will-change: transform;
+}
+
+.tickerMsg {
+  font-family: 'Kanit', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.70);
+  padding-right: 48px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  letter-spacing: 0.02em;
+}
+
+.tickerHighlight {
+  font-weight: 800;
+  color: #ffd700;
+  text-shadow: 0 0 10px rgba(255,215,0,0.50);
+}
+
+.tickerHandle {
+  font-family: 'Pacifico', cursive;
+  font-size: 14px;
+  background: linear-gradient(90deg, #fe2c55, #c770ff, #25f4ee);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientFlow 4s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(199,112,255,0.55));
+}
+
+@keyframes tickerScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes gradientFlow {
+  0%   { background-position: 0%   center; }
+  100% { background-position: 200% center; }
+}

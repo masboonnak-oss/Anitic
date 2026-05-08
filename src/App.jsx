@@ -174,6 +174,18 @@ export default function App({ username, role, onLogout }) {
 
       {toast && <div className={`${styles.toast} ${styles[toast.type]}`}>{toast.msg}</div>}
       {showAdmin && <AdminPanel onClose={() => setShowAdmin(false)} />}
+
+      {/* ══════════ TICKER FOOTER ══════════ */}
+      <div className={styles.ticker}>
+        <div className={styles.tickerTrack}>
+          {[...Array(4)].map((_, i) => (
+            <span key={i} className={styles.tickerMsg}>
+              ✨ สนใจระบบ&nbsp;<span className={styles.tickerHighlight}>Win Leaderboard</span>&nbsp;ติดต่อสอบถามเข้ามาได้เลยค่ะ &nbsp;🎵&nbsp; TikTok&nbsp;<span className={styles.tickerHandle}>@babynoryy</span>&nbsp;&nbsp;💖&nbsp;&nbsp;
+            </span>
+          ))}
+        </div>
+      </div>
+
     </div>
   );
 }

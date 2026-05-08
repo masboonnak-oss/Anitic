@@ -4,6 +4,7 @@ import Podium from './components/Podium.jsx';
 import PlayerList from './components/PlayerList.jsx';
 import AddPlayer from './components/AddPlayer.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
+import WatchedGifterPanel from './components/WatchedGifterPanel.jsx';
 import styles from './App.module.css';
 import { apiFetch, getToken } from './auth.js';
 
@@ -16,6 +17,7 @@ export default function App({ username, role, onLogout }) {
   const [copiedNK, setCopiedNK] = useState(false);
   const [copiedT1, setCopiedT1] = useState(false);
   const [copiedTG, setCopiedTG] = useState(false);
+  const [copiedGL, setCopiedGL] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
 
   const isSuperAdmin = role === 'superadmin';
@@ -38,6 +40,7 @@ export default function App({ username, role, onLogout }) {
   const newkingUrl   = `${origin}/newking?u=${encodeURIComponent(username)}`;
   const top1Url      = `${origin}/top1?u=${encodeURIComponent(username)}`;
   const topgifterUrl = `${origin}/topgifter?u=${encodeURIComponent(username)}`;
+  const gifterlogUrl = `${origin}/gifterlog?u=${encodeURIComponent(username)}`;
 
   function copyUrl(url, setter) {
     navigator.clipboard.writeText(url).then(() => { setter(true); setTimeout(() => setter(false), 2000); });
@@ -89,6 +92,7 @@ export default function App({ username, role, onLogout }) {
           <button className={styles.copyBtnNK}    onClick={() => copyUrl(newkingUrl,   setCopiedNK)}>{copiedNK ? '✓' : '👑 New King'}</button>
           <button className={styles.copyBtnT1}    onClick={() => copyUrl(top1Url,      setCopiedT1)}>{copiedT1 ? '✓' : '🥇 Top 1'}</button>
           <button className={styles.copyBtnTG}    onClick={() => copyUrl(topgifterUrl, setCopiedTG)}>{copiedTG ? '✓' : '💎 Top Gifter'}</button>
+          <button className={styles.copyBtnGL}    onClick={() => copyUrl(gifterlogUrl, setCopiedGL)}>{copiedGL ? '✓' : '🎁 Gift Log'}</button>
           {isSuperAdmin && (
             <button className={styles.testTopGifterBtn} onClick={handleTestTopGifter}>🧪 เทสต์ Top Gifter</button>
           )}
@@ -117,6 +121,7 @@ export default function App({ username, role, onLogout }) {
             { label: '👑 New King',  url: newkingUrl,   color: '#ffd700', copied: copiedNK, setter: setCopiedNK },
             { label: '🥇 Top 1',    url: top1Url,      color: '#ff9933', copied: copiedT1, setter: setCopiedT1 },
             { label: '💎 Top Gifter', url: topgifterUrl, color: '#e040fb', copied: copiedTG, setter: setCopiedTG },
+            { label: '🎁 Gift Log',   url: gifterlogUrl, color: '#c084fc', copied: copiedGL, setter: setCopiedGL },
           ].map(({ label, url, color, copied: c, setter }) => (
             <div className={styles.overlayRow} key={label} style={{ '--oc': color }}>
               <span className={styles.overlayLabel}>{label}</span>
@@ -128,6 +133,7 @@ export default function App({ username, role, onLogout }) {
       </div>
 
       <main className={styles.main}>
+        <WatchedGifterPanel socket={socket} />
         <AddPlayer onAdd={handleAdd} />
         {players.length === 0 ? (
           <div className={styles.empty}>

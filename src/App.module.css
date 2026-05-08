@@ -277,6 +277,24 @@
   box-shadow: 0 0 12px rgba(224,64,251,0.3);
 }
 
+.copyBtnGL {
+  background: linear-gradient(135deg, #1d1d2e, #2a2a40);
+  border: 1.5px solid #c084fc;
+  color: #c084fc;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-family: 'Kanit', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+}
+.copyBtnGL:hover {
+  background: rgba(192,132,252,0.10);
+  box-shadow: 0 0 12px rgba(192,132,252,0.3);
+}
+
 .testTopGifterBtn {
   background: linear-gradient(135deg, #1a1a1a, #2a1a2a);
   border: 1.5px dashed rgba(224,64,251,0.6);

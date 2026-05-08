@@ -241,6 +241,7 @@ function getUserState(username) {
       liveError:      null,
       commenters:     new Map(),
       giftTracker:    new Map(),   // uniqueId → { uniqueId, displayName, profilePicUrl, diamonds }
+      watchedGifters: new Map(),   // uniqueId → { uniqueId, displayName, profilePicUrl, profileUrl, giftLog[], totalDiamonds }
       retryTimer:     null,
       retryAttempt:   0,
     });
@@ -286,6 +287,7 @@ function sendInitialState(socket, username) {
   socket.emit('liveStatus', { status: st.liveStatus, host: st.liveHost, error: st.liveError, commenterCount: st.commenters.size });
   socket.emit('commenters', Array.from(st.commenters.values()).sort((a, b) => b.lastSeen - a.lastSeen).slice(0, MAX_COMMENTERS));
   socket.emit('top1Threshold', st.top1Threshold);
+  socket.emit('watchedGiftersUpdate', Object.fromEntries([...st.watchedGifters.entries()]));
 }
 
 /* ── TikTok Live (per-user) ── */
@@ -396,6 +398,22 @@ function connectLive(adminUser, tiktokUser, attempt) {
     if (picRaw)   prev.profilePicUrl = proxiedPic(picRaw, uid);
     st.giftTracker.set(uid, prev);
     console.log(`[gift:${adminUser}] @${uid} total=${prev.diamonds} diamonds`);
+
+    /* ── Watched gifter: record gift if this sender is being tracked ── */
+    if (st.watchedGifters.has(uid)) {
+      const wg = st.watchedGifters.get(uid);
+      if (nickname) wg.displayName = nickname;
+      if (picRaw)   wg.profilePicUrl = proxiedPic(picRaw, uid);
+      const giftName = data?.gift?.name || data?.giftName || (data?.giftId ? `Gift #${data.giftId}` : 'ของขวัญ');
+      const entry = { name: giftName, diamonds, count: data?.repeatCount || 1, ts: Date.now() };
+      wg.giftLog.unshift(entry);
+      if (wg.giftLog.length > 100) wg.giftLog.length = 100;
+      wg.totalDiamonds += diamonds;
+      const snapshot = Object.fromEntries([...st.watchedGifters.entries()]);
+      io.to(`room:${adminUser}`).emit('watchedGiftAlert',     { ...wg, latestGift: entry });
+      io.to(`room:${adminUser}`).emit('watchedGiftersUpdate', snapshot);
+      console.log(`[watch:${adminUser}] @${uid} → ${giftName} ×${entry.count} (${diamonds}💎)`);
+    }
   });
 
   /* ── Member join → check if top gifter entered ── */
@@ -847,6 +865,43 @@ app.post('/api/reset-top1', authMiddleware, (req, res) => {
   const top    = sorted[0];
   st.top1Threshold = top ? { id: top.id, win: top.win } : null;
   io.to(`room:${req.admin.username}`).emit('top1Reset', st.top1Threshold);
+  res.json({ ok: true });
+});
+
+/* ── Watched gifter endpoints ── */
+app.get('/api/watch-gifters', authMiddleware, (req, res) => {
+  const st = getUserState(req.admin.username);
+  res.json(Object.fromEntries([...st.watchedGifters.entries()]));
+});
+
+app.post('/api/watch-gifter', authMiddleware, (req, res) => {
+  const uid = (req.body.uniqueId || '').trim().replace(/^@/, '');
+  if (!uid) return res.status(400).json({ error: 'กรุณาระบุ username' });
+  const st = getUserState(req.admin.username);
+  if (!st.watchedGifters.has(uid)) {
+    st.watchedGifters.set(uid, {
+      uniqueId: uid, displayName: uid, profilePicUrl: null,
+      profileUrl: `https://www.tiktok.com/@${uid}`,
+      giftLog: [], totalDiamonds: 0,
+    });
+  }
+  io.to(`room:${req.admin.username}`).emit('watchedGiftersUpdate', Object.fromEntries([...st.watchedGifters.entries()]));
+  console.log(`[watch:${req.admin.username}] tracking @${uid}`);
+  res.json({ ok: true });
+});
+
+app.delete('/api/watch-gifter/:uid', authMiddleware, (req, res) => {
+  const st = getUserState(req.admin.username);
+  st.watchedGifters.delete(req.params.uid);
+  io.to(`room:${req.admin.username}`).emit('watchedGiftersUpdate', Object.fromEntries([...st.watchedGifters.entries()]));
+  res.json({ ok: true });
+});
+
+app.delete('/api/watch-gifter/:uid/log', authMiddleware, (req, res) => {
+  const st = getUserState(req.admin.username);
+  const wg = st.watchedGifters.get(req.params.uid);
+  if (wg) { wg.giftLog = []; wg.totalDiamonds = 0; }
+  io.to(`room:${req.admin.username}`).emit('watchedGiftersUpdate', Object.fromEntries([...st.watchedGifters.entries()]));
   res.json({ ok: true });
 });
 

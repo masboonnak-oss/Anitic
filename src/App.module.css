@@ -277,6 +277,26 @@
   box-shadow: 0 0 12px rgba(224,64,251,0.3);
 }
 
+.testTopGifterBtn {
+  background: linear-gradient(135deg, #1a1a1a, #2a1a2a);
+  border: 1.5px dashed rgba(224,64,251,0.6);
+  color: #c084fc;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-family: 'Kanit', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, border-color 0.2s;
+  white-space: nowrap;
+}
+.testTopGifterBtn:hover {
+  background: rgba(224,64,251,0.12);
+  border-color: #e040fb;
+  box-shadow: 0 0 14px rgba(224,64,251,0.35);
+  color: #e040fb;
+}
+
 .overlayHintNK { display: none; }
 .overlayHintT1 { display: none; }
 

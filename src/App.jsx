@@ -59,6 +59,12 @@ export default function App({ username, role, onLogout }) {
     notify('ลบผู้เล่นแล้ว', 'info');
   }
 
+  async function handleTestTopGifter() {
+    const res = await apiFetch('/api/test-top-gifter', { method: 'POST' });
+    if (res.ok) notify('🧪 ทดสอบ Top Gifter แล้ว — เปิดหน้า /topgifter ดูเอฟเฟกต์', 'success');
+    else notify('ทดสอบไม่ได้', 'error');
+  }
+
   async function handleResetTop1() {
     if (!confirm('ล้าง Top 1 overlay?')) return;
     await apiFetch('/api/reset-top1', { method: 'POST' });
@@ -83,6 +89,9 @@ export default function App({ username, role, onLogout }) {
           <button className={styles.copyBtnNK}    onClick={() => copyUrl(newkingUrl,   setCopiedNK)}>{copiedNK ? '✓' : '👑 New King'}</button>
           <button className={styles.copyBtnT1}    onClick={() => copyUrl(top1Url,      setCopiedT1)}>{copiedT1 ? '✓' : '🥇 Top 1'}</button>
           <button className={styles.copyBtnTG}    onClick={() => copyUrl(topgifterUrl, setCopiedTG)}>{copiedTG ? '✓' : '💎 Top Gifter'}</button>
+          {isSuperAdmin && (
+            <button className={styles.testTopGifterBtn} onClick={handleTestTopGifter}>🧪 เทสต์ Top Gifter</button>
+          )}
           <button className={styles.resetTop1Btn} onClick={handleResetTop1}>ล้าง Top 1</button>
           <button className={styles.resetBtn}     onClick={handleReset}>ล้างข้อมูล</button>
           <div className={styles.userBadge}>

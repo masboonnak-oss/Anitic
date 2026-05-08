@@ -850,5 +850,20 @@ app.post('/api/reset-top1', authMiddleware, (req, res) => {
   res.json({ ok: true });
 });
 
+app.post('/api/test-top-gifter', authMiddleware, (req, res) => {
+  const FAKE_NAMES    = ['SupporterKing', 'DiamondQueen', 'GiftMaster', 'TopFanZ', 'RoyalGifter'];
+  const FAKE_DIAMONDS = [5000, 12345, 8888, 23456, 9999];
+  const idx = Math.floor(Math.random() * FAKE_NAMES.length);
+  const payload = {
+    uniqueId:      `test_${idx}`,
+    displayName:   FAKE_NAMES[idx],
+    profilePicUrl: null,
+    diamonds:      FAKE_DIAMONDS[idx],
+  };
+  io.to(`room:${req.admin.username}`).emit('topGifterEnter', payload);
+  console.log(`[test:${req.admin.username}] topGifterEnter fired (${payload.displayName}, ${payload.diamonds} 💎)`);
+  res.json({ ok: true, payload });
+});
+
 const PORT = 3001;
 server.listen(PORT, () => console.log(`Server on port ${PORT}`));

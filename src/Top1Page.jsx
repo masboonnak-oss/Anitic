@@ -189,8 +189,12 @@ function Top1Card({ player }) {
           )}
         </div>
 
-        {/* Ornate frame */}
-        <img src="/frame-top1.png" className={s.frameImg} alt="" draggable={false} />
+        {/* Ornate frame — video with screen blend to remove dark bg */}
+        <video
+          className={s.frameImg}
+          src="/top1-frame.mp4"
+          autoPlay loop muted playsInline
+        />
 
         {/* Rising embers */}
         <Embers count={18} />

@@ -207,18 +207,14 @@
   font-size: 56px; font-weight: 900; color: #fff;
 }
 
-/* ── ORNATE FRAME ── */
+/* ── ORNATE FRAME — video, screen blend removes dark bg ── */
 .frameImg {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   object-fit: contain;
   pointer-events: none; z-index: 7;
-  will-change: filter;
-  animation: framePulse 2.4s ease-in-out infinite;
-}
-@keyframes framePulse {
-  0%,100% { filter: drop-shadow(0 0 10px rgba(255,130,0,0.65)) drop-shadow(0 0 28px rgba(255,80,0,0.35)) brightness(0.95); }
-  50%     { filter: drop-shadow(0 0 26px rgba(255,200,0,1.00)) drop-shadow(0 0 60px rgba(255,80,0,0.65)) brightness(1.18); }
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 18px rgba(255,180,0,0.70)) drop-shadow(0 0 40px rgba(255,80,0,0.45));
 }
 
 /* ── RISING EMBERS ── */

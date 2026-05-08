@@ -150,11 +150,11 @@ function Top1Card({ player }) {
       {/* Frame + avatar + all FX */}
       <div className={s.frameWrap}>
 
-        {/* Orbit particles */}
-        <OrbitParticles count={14} radius={126} />
+        {/* Orbit particles — outside the frame */}
+        <OrbitParticles count={14} radius={188} />
 
-        {/* Lightning arcs */}
-        <LightningRing radius={112} pad={32} />
+        {/* Lightning arcs — outside the frame */}
+        <LightningRing radius={178} pad={36} />
 
         {/* Avatar */}
         <div className={s.avatarCircle}>
@@ -171,8 +171,8 @@ function Top1Card({ player }) {
         {/* Ornate gold frame PNG */}
         <img src="/frame-top1-gold.png" className={s.frameImg} alt="" draggable={false} />
 
-        {/* Rising embers */}
-        <Embers count={18} />
+        {/* Rising embers — only from bottom, outside avatar area */}
+        <Embers count={12} />
       </div>
 
       {/* Name */}

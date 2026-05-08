@@ -120,13 +120,13 @@
   }
 }
 
-/* ── RISING EMBERS ── */
+/* ── RISING EMBERS — start from bottom edge, below avatar ── */
 .embers {
   position: absolute; inset: 0;
-  pointer-events: none; z-index: 8;
+  pointer-events: none; z-index: 9;
 }
 .ember {
-  position: absolute; bottom: 10%;
+  position: absolute; bottom: 0;
   width: var(--es, 3px); height: var(--es, 3px);
   border-radius: 50%;
   background: radial-gradient(circle, #fff8c0 0%, var(--ec, #ff8800) 60%, transparent 100%);
@@ -137,23 +137,23 @@
 }
 @keyframes emberRise {
   0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
-  10%  { opacity: 0.9; }
-  70%  { opacity: 0.5; }
-  100% { transform: translateY(-170px) translateX(var(--ex)) scale(0.1); opacity: 0; }
+  10%  { opacity: 0.75; }
+  60%  { opacity: 0.35; }
+  100% { transform: translateY(-130px) translateX(var(--ex)) scale(0.1); opacity: 0; }
 }
 
-/* ── NAME ── */
+/* ── NAME — bigger than WIN ── */
 .name {
-  font-size: 22px; font-weight: 900;
-  text-align: center; max-width: 280px;
+  font-size: 34px; font-weight: 900;
+  text-align: center; max-width: 360px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  background: linear-gradient(90deg, #ffe566, #ffffff, #ffd700, #fff5a0, #ffe566);
-  background-size: 300% 100%;
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: shimmer 3s linear infinite;
-  filter: drop-shadow(0 0 12px #ffd700aa);
-  margin-top: 2px;
+  color: #fff;
+  -webkit-text-stroke: 2.5px #000;
+  paint-order: stroke fill;
+  filter:
+    drop-shadow(0 0 14px rgba(255,215,0,0.90))
+    drop-shadow(0 0 30px rgba(255,120,0,0.50));
+  margin-top: 4px;
 }
 
 /* ── WIN — horizontal: WIN [number] ── */
@@ -163,19 +163,16 @@
 }
 
 .winsLabel {
-  font-size: 28px; font-weight: 900;
-  letter-spacing: 0.18em;
-  background: linear-gradient(180deg, #fff5c0 0%, #ffd700 50%, #ff8c00 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  -webkit-text-stroke: 3px #000;
+  font-size: 22px; font-weight: 900;
+  letter-spacing: 0.20em;
+  color: #ffd700;
+  -webkit-text-stroke: 2px #000;
   paint-order: stroke fill;
-  filter: drop-shadow(0 0 10px rgba(255,200,0,0.70));
+  filter: drop-shadow(0 0 8px rgba(255,200,0,0.60));
 }
 
 .winsNum {
-  font-size: 72px; font-weight: 900; line-height: 1;
+  font-size: 56px; font-weight: 900; line-height: 1;
   background: linear-gradient(180deg,
     #ffffff  0%,
     #ffe566 20%,

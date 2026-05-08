@@ -4,7 +4,7 @@ import Podium from './components/Podium.jsx';
 import PlayerList from './components/PlayerList.jsx';
 import AddPlayer from './components/AddPlayer.jsx';
 import styles from './App.module.css';
-import { apiFetch } from './auth.js';
+import { apiFetch, getToken } from './auth.js';
 
 const socket = io('/', { transports: ['websocket', 'polling'] });
 
@@ -16,8 +16,12 @@ export default function App({ username, onLogout }) {
   const [copiedT1, setCopiedT1] = useState(false);
 
   useEffect(() => {
+    /* Authenticate socket → join user's room */
+    const token = getToken();
+    if (token) socket.emit('authenticate', { token });
+    socket.on('connect', () => { if (token) socket.emit('authenticate', { token }); });
     socket.on('players', setPlayers);
-    return () => socket.off('players');
+    return () => { socket.off('connect'); socket.off('players'); };
   }, []);
 
   function notify(msg, type = 'success') {
@@ -25,45 +29,24 @@ export default function App({ username, onLogout }) {
     setTimeout(() => setToast(null), 2500);
   }
 
-  function copyOverlayUrl() {
-    const url = `${window.location.origin}/overlay`;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }
+  const origin = window.location.origin;
+  const overlayUrl  = `${origin}/overlay?u=${encodeURIComponent(username)}`;
+  const newkingUrl  = `${origin}/newking?u=${encodeURIComponent(username)}`;
+  const top1Url     = `${origin}/top1?u=${encodeURIComponent(username)}`;
 
-  function copyNewKingUrl() {
-    const url = `${window.location.origin}/newking`;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopiedNK(true);
-      setTimeout(() => setCopiedNK(false), 2000);
-    });
-  }
-
-  function copyTop1Url() {
-    const url = `${window.location.origin}/top1`;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopiedT1(true);
-      setTimeout(() => setCopiedT1(false), 2000);
-    });
+  function copyUrl(url, setter) {
+    navigator.clipboard.writeText(url).then(() => { setter(true); setTimeout(() => setter(false), 2000); });
   }
 
   async function handleAdd({ username: uname, displayName, profilePicUrl }) {
-    const res = await apiFetch('/api/player', {
-      method: 'POST',
-      body: JSON.stringify({ username: uname, displayName, profilePicUrl }),
-    });
+    const res  = await apiFetch('/api/player', { method: 'POST', body: JSON.stringify({ username: uname, displayName, profilePicUrl }) });
     const data = await res.json();
     if (res.ok) notify(`เพิ่ม ${displayName || uname} แล้ว`);
     else notify(data.error || 'เพิ่มไม่ได้', 'error');
   }
 
   async function handleWin(id, delta) {
-    await apiFetch(`/api/player/${encodeURIComponent(id)}/win`, {
-      method: 'PATCH',
-      body: JSON.stringify({ delta }),
-    });
+    await apiFetch(`/api/player/${encodeURIComponent(id)}/win`, { method: 'PATCH', body: JSON.stringify({ delta }) });
   }
 
   async function handleDelete(id) {
@@ -91,60 +74,38 @@ export default function App({ username, onLogout }) {
       <header className={styles.header}>
         <div className={styles.logo}>🏆 WIN Leaderboard</div>
         <div className={styles.headerActions}>
-          <button className={styles.copyBtn} onClick={copyOverlayUrl}>
-            {copied ? '✓ คัดลอกแล้ว!' : '📺 คัดลอก URL Overlay'}
-          </button>
-          <button className={styles.copyBtnNK} onClick={copyNewKingUrl}>
-            {copiedNK ? '✓ คัดลอกแล้ว!' : '👑 New King'}
-          </button>
-          <button className={styles.copyBtnT1} onClick={copyTop1Url}>
-            {copiedT1 ? '✓ คัดลอกแล้ว!' : '🥇 Top 1'}
-          </button>
+          <button className={styles.copyBtn}      onClick={() => copyUrl(overlayUrl, setCopied)}>  {copied    ? '✓' : '📺 Overlay'}</button>
+          <button className={styles.copyBtnNK}    onClick={() => copyUrl(newkingUrl, setCopiedNK)}>{copiedNK  ? '✓' : '👑 New King'}</button>
+          <button className={styles.copyBtnT1}    onClick={() => copyUrl(top1Url,    setCopiedT1)}>{copiedT1  ? '✓' : '🥇 Top 1'}</button>
           <button className={styles.resetTop1Btn} onClick={handleResetTop1}>ล้าง Top 1</button>
-          <button className={styles.resetBtn} onClick={handleReset}>ล้างข้อมูล</button>
+          <button className={styles.resetBtn}     onClick={handleReset}>ล้างข้อมูล</button>
           <div className={styles.userBadge}>
             <span className={styles.userIcon}>👤</span>
             <span className={styles.userName}>{username}</span>
-            <button className={styles.logoutBtn} onClick={onLogout} title="ออกจากระบบ">
-              ออก
-            </button>
+            <button className={styles.logoutBtn} onClick={onLogout}>ออก</button>
           </div>
         </div>
       </header>
 
       <div className={styles.overlayPanel}>
-        <div className={styles.overlayPanelTitle}>
-          <span className={styles.overlayPanelIcon}>🎬</span>
-          Overlay URLs
-        </div>
+        <div className={styles.overlayPanelTitle}><span className={styles.overlayPanelIcon}>🎬</span> Overlay URLs</div>
         <div className={styles.overlayRows}>
-          <div className={styles.overlayRow}>
-            <span className={styles.overlayLabel} style={{'--oc':'#25f4ee'}}>📺 Overlay</span>
-            <code className={styles.urlCode} onClick={copyOverlayUrl}>{window.location.origin}/overlay</code>
-            <button className={styles.copyMiniBtn} style={{'--oc':'#25f4ee'}} onClick={copyOverlayUrl}>
-              {copied ? '✓' : 'คัดลอก'}
-            </button>
-          </div>
-          <div className={styles.overlayRow}>
-            <span className={styles.overlayLabel} style={{'--oc':'#ffd700'}}>👑 New King</span>
-            <code className={styles.urlCode} onClick={copyNewKingUrl}>{window.location.origin}/newking</code>
-            <button className={styles.copyMiniBtn} style={{'--oc':'#ffd700'}} onClick={copyNewKingUrl}>
-              {copiedNK ? '✓' : 'คัดลอก'}
-            </button>
-          </div>
-          <div className={styles.overlayRow}>
-            <span className={styles.overlayLabel} style={{'--oc':'#ff9933'}}>🥇 Top 1</span>
-            <code className={styles.urlCode} onClick={copyTop1Url}>{window.location.origin}/top1</code>
-            <button className={styles.copyMiniBtn} style={{'--oc':'#ff9933'}} onClick={copyTop1Url}>
-              {copiedT1 ? '✓' : 'คัดลอก'}
-            </button>
-          </div>
+          {[
+            { label: '📺 Overlay', url: overlayUrl, color: '#25f4ee', copied, setter: setCopied },
+            { label: '👑 New King', url: newkingUrl, color: '#ffd700', copied: copiedNK, setter: setCopiedNK },
+            { label: '🥇 Top 1',   url: top1Url,    color: '#ff9933', copied: copiedT1, setter: setCopiedT1 },
+          ].map(({ label, url, color, copied: c, setter }) => (
+            <div className={styles.overlayRow} key={label} style={{ '--oc': color }}>
+              <span className={styles.overlayLabel}>{label}</span>
+              <code className={styles.urlCode} onClick={() => copyUrl(url, setter)}>{url}</code>
+              <button className={styles.copyMiniBtn} onClick={() => copyUrl(url, setter)}>{c ? '✓' : 'คัดลอก'}</button>
+            </div>
+          ))}
         </div>
       </div>
 
       <main className={styles.main}>
         <AddPlayer onAdd={handleAdd} />
-
         {players.length === 0 ? (
           <div className={styles.empty}>
             <div className={styles.emptyIcon}>🎮</div>
@@ -153,18 +114,12 @@ export default function App({ username, onLogout }) {
         ) : (
           <>
             <Podium players={top3} onWin={handleWin} onDelete={handleDelete} />
-            {rest.length > 0 && (
-              <PlayerList players={rest} onWin={handleWin} onDelete={handleDelete} />
-            )}
+            {rest.length > 0 && <PlayerList players={rest} onWin={handleWin} onDelete={handleDelete} />}
           </>
         )}
       </main>
 
-      {toast && (
-        <div className={`${styles.toast} ${styles[toast.type]}`}>
-          {toast.msg}
-        </div>
-      )}
+      {toast && <div className={`${styles.toast} ${styles[toast.type]}`}>{toast.msg}</div>}
     </div>
   );
 }

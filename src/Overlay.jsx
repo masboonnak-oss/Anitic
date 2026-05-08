@@ -3,6 +3,10 @@ import { io } from 'socket.io-client';
 import styles from './Overlay.module.css';
 
 const socket = io('/', { transports: ['websocket', 'polling'] });
+const ROOM_USER = new URLSearchParams(window.location.search).get('u') || '';
+function joinRoom() { if (ROOM_USER) socket.emit('joinRoom', { username: ROOM_USER }); }
+socket.on('connect', joinRoom);
+joinRoom();
 
 const CONFIGS = [
   { playerIdx: 1, rank: 2, barH: 105, barGrad: 'linear-gradient(180deg,#c8c8e0 0%,#6a6a8a 100%)', avatarSize: 70,  frameSize: 144, label: 'silver' },

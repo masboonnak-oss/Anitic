@@ -3,6 +3,10 @@ import { io } from 'socket.io-client';
 import s from './NewKing.module.css';
 
 const socket = io('/', { transports: ['websocket', 'polling'] });
+const ROOM_USER = new URLSearchParams(window.location.search).get('u') || '';
+function joinRoom() { if (ROOM_USER) socket.emit('joinRoom', { username: ROOM_USER }); }
+socket.on('connect', joinRoom);
+joinRoom();
 
 /* ─── Lightning bolt generator ─── */
 function makeBolt(cx, cy, r, startDeg, arcDeg, jitter, color, opacity, thick) {

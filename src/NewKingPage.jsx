@@ -213,6 +213,13 @@ function NewKingDisplay({ king, phase }) {
     <div className={`${s.page} ${s['page_' + phase]}`}>
       <style>{FW_STYLE}</style>
 
+      {/* Video background */}
+      <video
+        className={s.videoBg}
+        src="/newking-bg.mp4"
+        autoPlay loop muted playsInline
+      />
+
       {/* Screen flash */}
       {phase === 'show' && <div className={s.flash} />}
 

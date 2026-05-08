@@ -816,42 +816,6 @@ app.patch('/api/admin/users/:username/role', authMiddleware, superAdminMiddlewar
   res.json({ ok: true, username: target, role });
 });
 
-/* ══════════════════════════════════════
-   TikTok QR Login / SSID Extractor
-══════════════════════════════════════ */
-const SSID_FILE = path.join(CACHE_DIR, '_tiktok_ssid.json');
-function loadSsidData() {
-  try { return JSON.parse(fs.readFileSync(SSID_FILE, 'utf8')); } catch (_) { return { ssid: '', updatedAt: null }; }
-}
-function saveSsidData(ssid) {
-  fs.writeFileSync(SSID_FILE, JSON.stringify({ ssid, updatedAt: Date.now() }), 'utf8');
-  process.env.TIKTOK_SESSION_ID = ssid;
-}
-
-// Load persisted SSID into env on startup
-const _savedSsid = loadSsidData();
-if (_savedSsid.ssid && !process.env.TIKTOK_SESSION_ID) {
-  process.env.TIKTOK_SESSION_ID = _savedSsid.ssid;
-  console.log('[tiktok-ssid] loaded persisted sessionid from cache');
-}
-
-/* GET current saved SSID */
-app.get('/api/admin/tiktok-ssid', authMiddleware, superAdminMiddleware, (req, res) => {
-  const d = loadSsidData();
-  const env = process.env.TIKTOK_SESSION_ID || '';
-  const ssid = d.ssid || env;
-  res.json({ ssid: ssid ? ssid.slice(0, 10) + '…' : '', hasSsid: !!ssid, updatedAt: d.updatedAt });
-});
-
-/* POST manual SSID */
-app.post('/api/admin/tiktok-ssid', authMiddleware, superAdminMiddleware, (req, res) => {
-  const { ssid } = req.body;
-  if (!ssid || ssid.trim().length < 10) return res.status(400).json({ error: 'SSID ไม่ถูกต้อง' });
-  saveSsidData(ssid.trim());
-  console.log('[tiktok-ssid] manual update');
-  res.json({ ok: true });
-});
-
 /* ── Image proxy ── */
 app.get('/api/img', async (req, res) => {
   const url = req.query.url;

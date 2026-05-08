@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../auth.js';
 import s from './AdminPanel.module.css';
-import TikTokSsidPanel from './TikTokSsidPanel.jsx';
-
 export default function AdminPanel({ onClose }) {
   const [users,   setUsers]   = useState([]);
   const [reqs,    setReqs]    = useState([]);
@@ -13,7 +11,7 @@ export default function AdminPanel({ onClose }) {
   const [newPw,   setNewPw]   = useState('');
   const [pwError, setPwError] = useState('');
   const [pwLoading, setPwLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('users'); // 'users' | 'requests' | 'tiktok'
+  const [activeTab, setActiveTab] = useState('users'); // 'users' | 'requests'
 
   const notify = (msg, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast(null), 2800); };
 
@@ -142,19 +140,11 @@ export default function AdminPanel({ onClose }) {
             🔑 คำขอรีเซ็ต
             {reqs.length > 0 && <span className={s.badge}>{reqs.length}</span>}
           </button>
-          <button
-            className={`${s.tabBtn} ${activeTab === 'tiktok' ? s.tabBtnActive : ''}`}
-            onClick={() => setActiveTab('tiktok')}
-          >
-            🎵 TikTok SSID
-          </button>
         </div>
 
         {/* Body */}
         <div className={s.body}>
-          {activeTab === 'tiktok' ? (
-            <TikTokSsidPanel notify={notify} />
-          ) : loading ? (
+          {loading ? (
             <div className={s.loadingWrap}><div className={s.spinner} /></div>
           ) : activeTab === 'users' ? (
             /* ─── User list ─── */

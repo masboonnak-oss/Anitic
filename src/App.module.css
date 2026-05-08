@@ -8,12 +8,13 @@
 .app {
   min-height: 100vh;
   background:
-    radial-gradient(ellipse 75% 55% at 85% 15%,  rgba(200, 0, 110, 0.50) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at 10% 80%,  rgba(90,  0, 180, 0.45) 0%, transparent 60%),
-    radial-gradient(ellipse 55% 45% at 50% 5%,   rgba(140, 0, 200, 0.30) 0%, transparent 55%),
-    radial-gradient(ellipse 90% 65% at 40% 55%,  rgba(50,  0, 100, 0.35) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 30% at 70% 90%,  rgba(170, 0,  80, 0.25) 0%, transparent 55%),
-    #05000e;
+    linear-gradient(
+      180deg,
+      rgba(5,0,12,0.72) 0%,
+      rgba(8,0,18,0.60) 40%,
+      rgba(5,0,10,0.70) 100%
+    ),
+    url('/bg.jpg') center center / cover no-repeat fixed;
   color: #fff;
   font-family: 'Kanit', sans-serif;
   display: flex;

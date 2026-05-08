@@ -41,10 +41,10 @@
   100% { background-position: 300% 50%; }
 }
 
-/* ── FRAME WRAPPER ── */
+/* ── FRAME WRAPPER — match frame image size ── */
 .frameWrap {
   position: relative;
-  width: 280px; height: 280px;
+  width: 360px; height: 360px;
   display: flex; align-items: center; justify-content: center;
 }
 
@@ -77,18 +77,15 @@
   will-change: contents;
 }
 
-/* ── AVATAR — sized to fill the inner circle of the frame ── */
+/* ── AVATAR — fill inner circle, shifted up to match frame's opening ── */
 .avatarCircle {
   position: absolute;
-  width: 168px; height: 168px;
+  width: 192px; height: 192px;
   border-radius: 50%; overflow: hidden;
+  top: calc(50% - 14px);
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: 6;
-}
-.avatarCircle::after {
-  content: '';
-  position: absolute; inset: 0; border-radius: 50%;
-  background: radial-gradient(circle, transparent 58%, rgba(0,0,0,0.28) 100%);
-  pointer-events: none;
 }
 .avatarImg { width: 100%; height: 100%; object-fit: cover; display: block; }
 .avatarFallback {

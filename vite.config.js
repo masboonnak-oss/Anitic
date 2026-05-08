@@ -12,11 +12,11 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'https://fuzzy-space-rotary-phone-r7gv9rqwr97gcp4vj-3001.app.github.dev',
         changeOrigin: true
       },
       '/socket.io': {
-        target: 'http://localhost:3001',
+        target: 'https://fuzzy-space-rotary-phone-r7gv9rqwr97gcp4vj-3001.app.github.dev',
         ws: true,
         changeOrigin: true
       },

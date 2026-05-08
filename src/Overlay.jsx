@@ -9,9 +9,9 @@ socket.on('connect', joinRoom);
 joinRoom();
 
 const CONFIGS = [
-  { playerIdx: 1, rank: 2, barH: 105, barGrad: 'linear-gradient(180deg,#c8c8e0 0%,#6a6a8a 100%)', avatarSize: 96,  frameSize: 144, label: 'silver', avatarOffsetY: -16 },
-  { playerIdx: 0, rank: 1, barH: 148, barGrad: 'linear-gradient(180deg,#ffe566 0%,#f0a800 45%,#c06000 100%)',      avatarSize: 128, frameSize: 192, label: 'gold',   avatarOffsetY: -20 },
-  { playerIdx: 2, rank: 3, barH: 80,  barGrad: 'linear-gradient(180deg,#d49060 0%,#8a4020 100%)', avatarSize: 84,  frameSize: 128, label: 'bronze', avatarOffsetY: -14 },
+  { playerIdx: 1, rank: 2, barH: 105, barGrad: 'linear-gradient(180deg,#c8c8e0 0%,#6a6a8a 100%)', avatarSize: 80,  frameSize: 144, label: 'silver', avatarOffsetY: -13 },
+  { playerIdx: 0, rank: 1, barH: 148, barGrad: 'linear-gradient(180deg,#ffe566 0%,#f0a800 45%,#c06000 100%)',      avatarSize: 106, frameSize: 192, label: 'gold',   avatarOffsetY: -18 },
+  { playerIdx: 2, rank: 3, barH: 80,  barGrad: 'linear-gradient(180deg,#d49060 0%,#8a4020 100%)', avatarSize: 71,  frameSize: 128, label: 'bronze', avatarOffsetY: -12 },
 ];
 
 const FRAME_SRCS = ['/frame-rank1.png', '/frame-rank2.png', '/frame-rank3.png'];

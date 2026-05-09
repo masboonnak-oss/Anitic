@@ -4,17 +4,20 @@ import Podium from './components/Podium.jsx';
 import PlayerList from './components/PlayerList.jsx';
 import AddPlayer from './components/AddPlayer.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
+import LiveConnect from './components/LiveConnect.jsx';
+import ChatCapture from './components/ChatCapture.jsx';
+import StreamDPSPanel from './components/StreamDPSPanel.jsx';
 import styles from './App.module.css';
 import { apiFetch, getToken } from './auth.js';
 
 export default function App({ username, role, onLogout }) {
-  const [players, setPlayers]   = useState([]);
-  const [toast, setToast]       = useState(null);
-  const [copied,   setCopied]   = useState(false);
-  const [copiedNK, setCopiedNK] = useState(false);
-  const [copiedT1, setCopiedT1] = useState(false);
+  const [players,   setPlayers]   = useState([]);
+  const [toast,     setToast]     = useState(null);
+  const [copied,    setCopied]    = useState(false);
+  const [copiedNK,  setCopiedNK]  = useState(false);
+  const [copiedT1,  setCopiedT1]  = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
-  const [menuOpen, setMenuOpen]   = useState(false);
+  const [menuOpen,  setMenuOpen]  = useState(false);
   const menuRef = useRef(null);
 
   const isSuperAdmin = role === 'superadmin';
@@ -24,14 +27,12 @@ export default function App({ username, role, onLogout }) {
       const token = getToken();
       if (token) socket.emit('authenticate', { token });
     }
-
     authenticate();
-    socket.on('connect', authenticate);
-    socket.on('players', setPlayers);
-
+    socket.on('connect',  authenticate);
+    socket.on('players',  setPlayers);
     return () => {
-      socket.off('connect', authenticate);
-      socket.off('players', setPlayers);
+      socket.off('connect',  authenticate);
+      socket.off('players',  setPlayers);
     };
   }, []);
 
@@ -65,6 +66,16 @@ export default function App({ username, role, onLogout }) {
     const data = await res.json();
     if (res.ok) notify(`เพิ่ม ${displayName || uname} แล้ว`);
     else notify(data.error || 'เพิ่มไม่ได้', 'error');
+  }
+
+  async function handleAddFromCapture(player) {
+    const res  = await apiFetch('/api/player', {
+      method: 'POST',
+      body: JSON.stringify({ username: player.uniqueId || player.username, displayName: player.displayName || player.nickname, profilePicUrl: player.profilePicUrl }),
+    });
+    const data = await res.json();
+    if (res.ok) notify(`เพิ่ม ${player.displayName || player.uniqueId} แล้ว`);
+    else if (data.error !== 'มีผู้เล่นนี้อยู่แล้ว') notify(data.error || 'เพิ่มไม่ได้', 'error');
   }
 
   async function handleWin(id, delta) {
@@ -179,7 +190,13 @@ export default function App({ username, role, onLogout }) {
       </div>
 
       <main className={styles.main}>
+
+        <StreamDPSPanel />
+        <LiveConnect onAddPlayer={handleAddFromCapture} />
+        <ChatCapture onAddPlayer={handleAddFromCapture} />
+
         <AddPlayer onAdd={handleAdd} />
+
         {players.length === 0 ? (
           <div className={styles.empty}>
             <div className={styles.emptyIcon}>🎮</div>

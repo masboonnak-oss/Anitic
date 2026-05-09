@@ -1,0 +1,116 @@
+ADD NEW FEATURE: TIKTOK LIVE + STREAMDPS CONNECTOR SYSTEM
+
+====================================
+1. STREAMDPS INTEGRATION PANEL
+====================================
+
+Create admin panel section:
+
+Title: "TikTok Gift Connector"
+
+UI:
+- Input box: "Enter TikTok @username"
+- Button: "Connect"
+- Button: "Disconnect"
+- Status badge:
+  - Connecting (yellow)
+  - Connected (green)
+  - Disconnected (red)
+
+====================================
+2. STREAMDPS EMBED SYSTEM
+====================================
+
+Create iframe panel:
+
+URL:
+https://streamdps.com/tiktok-widgets/gifts/?username=INPUT_USERNAME
+
+Rules:
+- When user clicks CONNECT:
+  - Inject username into iframe URL
+  - Load widget inside dashboard preview
+  - Save active connection in database
+
+====================================
+3. BACKEND CONNECTION TRACKER
+====================================
+
+Create API:
+
+POST /api/tiktok/connect
+POST /api/tiktok/disconnect
+GET /api/tiktok/status
+
+Store:
+- username
+- status
+- connectedAt
+- lastPing
+
+====================================
+4. REAL STATUS CHECK SYSTEM
+====================================
+
+Every 5 seconds:
+- Ping backend
+- Verify connection is active
+- If no response -> mark DISCONNECTED
+
+====================================
+5. TIKTOK LIVE CONNECTOR (NODE.JS)
+
+Install:
+tiktok-live-connector
+
+Create server module:
+
+- Connect to TikTok LIVE using username
+- Listen to events:
+  - gift
+  - like
+  - follow
+  - comment
+
+When event happens:
+- Send via Socket.IO to frontend
+- Update overlay instantly
+
+====================================
+6. OVERLAY LIVE UPDATE
+====================================
+
+Overlay must show:
+- Gift animations
+- Username who sent gift
+- Gift type
+- Real-time counter
+
+====================================
+7. SAFETY + STABILITY
+====================================
+
+- Auto reconnect if connection drops
+- Retry TikTok LIVE connection 3 times
+- Error handling for invalid usernames
+- Prevent duplicate connections
+
+====================================
+8. UI DESIGN
+====================================
+
+- Gaming neon style
+- Purple / pink glow
+- Glassmorphism panel
+- Animated status indicator
+- Smooth connect animation
+
+====================================
+9. FINAL OUTPUT
+====================================
+
+After setup:
+- Show connection status live
+- Show StreamDPS iframe working
+- Show TikTok LIVE events streaming
+- Print overlay URL for OBS/TikTok Live Studio

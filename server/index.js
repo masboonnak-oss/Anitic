@@ -108,6 +108,13 @@ async function initDb() {
       email TEXT NOT NULL,
       requested_at BIGINT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS streamdps_connections (
+      owner TEXT PRIMARY KEY,
+      username TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'disconnected',
+      connected_at BIGINT,
+      last_ping BIGINT
+    );
   `);
   console.log('[db] tables ready');
 }
@@ -1083,6 +1090,58 @@ app.delete('/api/watch-gifter/:uid/log', authMiddleware, async (req, res) => {
   if (wg) { wg.giftLog = []; wg.totalDiamonds = 0; }
   io.to(`room:${req.admin.username}`).emit('watchedGiftersUpdate', Object.fromEntries([...st.watchedGifters.entries()]));
   res.json({ ok: true });
+});
+
+/* ── StreamDPS routes ── */
+app.post('/api/streamdps/connect', authMiddleware, async (req, res) => {
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ error: 'username required' });
+  const uname = username.trim().replace(/^@/, '');
+  const now   = Date.now();
+  await pool.query(
+    `INSERT INTO streamdps_connections (owner, username, status, connected_at, last_ping)
+     VALUES ($1,$2,'connected',$3,$3)
+     ON CONFLICT (owner) DO UPDATE SET username=$2, status='connected', connected_at=$3, last_ping=$3`,
+    [req.admin.username, uname, now]
+  );
+  io.to(`room:${req.admin.username}`).emit('streamdpsStatus', { status: 'connected', username: uname, connectedAt: now });
+  console.log(`[streamdps:${req.admin.username}] connected @${uname}`);
+  res.json({ ok: true, username: uname, connectedAt: now });
+});
+
+app.post('/api/streamdps/disconnect', authMiddleware, async (req, res) => {
+  await pool.query(
+    `UPDATE streamdps_connections SET status='disconnected', last_ping=NULL WHERE owner=$1`,
+    [req.admin.username]
+  );
+  io.to(`room:${req.admin.username}`).emit('streamdpsStatus', { status: 'disconnected', username: null });
+  console.log(`[streamdps:${req.admin.username}] disconnected`);
+  res.json({ ok: true });
+});
+
+app.post('/api/streamdps/ping', authMiddleware, async (req, res) => {
+  const now = Date.now();
+  await pool.query(
+    `UPDATE streamdps_connections SET last_ping=$1 WHERE owner=$2`,
+    [now, req.admin.username]
+  );
+  res.json({ ok: true, ts: now });
+});
+
+app.get('/api/streamdps/status', authMiddleware, async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT username, status, connected_at, last_ping FROM streamdps_connections WHERE owner=$1`,
+    [req.admin.username]
+  );
+  if (rows.length === 0) return res.json({ status: 'idle', username: null });
+  const r = rows[0];
+  const stale = r.last_ping && (Date.now() - Number(r.last_ping)) > 30000;
+  res.json({
+    status:      stale ? 'disconnected' : r.status,
+    username:    r.username,
+    connectedAt: r.connected_at ? Number(r.connected_at) : null,
+    lastPing:    r.last_ping    ? Number(r.last_ping)    : null,
+  });
 });
 
 /* ── Start server after DB is ready ── */

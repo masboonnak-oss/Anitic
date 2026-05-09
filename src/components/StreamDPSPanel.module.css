@@ -1,0 +1,345 @@
+.panel {
+  background: rgba(10, 5, 25, 0.88);
+  border: 1px solid rgba(138, 43, 226, 0.35);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 0 32px rgba(138, 43, 226, 0.12), inset 0 0 40px rgba(138, 43, 226, 0.04);
+  backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+}
+
+.panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(200, 80, 255, 0.6), rgba(254, 44, 85, 0.5), transparent);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.iconWrap {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(138, 43, 226, 0.3), rgba(254, 44, 85, 0.2));
+  border-radius: 12px;
+  border: 1px solid rgba(138, 43, 226, 0.4);
+  flex-shrink: 0;
+}
+
+.icon {
+  font-size: 22px;
+  position: relative;
+  z-index: 1;
+}
+
+.iconPulse {
+  position: absolute;
+  inset: -4px;
+  border-radius: 14px;
+  border: 2px solid rgba(80, 255, 140, 0.6);
+  animation: iconPulse 2s ease-in-out infinite;
+}
+
+@keyframes iconPulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.06); }
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.3px;
+}
+
+.sub {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 2px;
+}
+
+/* ── Status badge ── */
+.badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.badgeIdle {
+  background: rgba(80, 80, 100, 0.3);
+  color: #888;
+  border: 1px solid rgba(80, 80, 100, 0.4);
+}
+
+.badgeConnecting {
+  background: rgba(255, 180, 0, 0.15);
+  color: #ffb400;
+  border: 1px solid rgba(255, 180, 0, 0.35);
+  animation: badgePulse 1.2s ease-in-out infinite;
+}
+
+.badgeConnected {
+  background: rgba(80, 200, 80, 0.15);
+  color: #50e880;
+  border: 1px solid rgba(80, 200, 80, 0.4);
+  animation: badgePulse 2s ease-in-out infinite;
+}
+
+.badgeError {
+  background: rgba(254, 44, 85, 0.15);
+  color: #fe2c55;
+  border: 1px solid rgba(254, 44, 85, 0.35);
+}
+
+@keyframes badgePulse {
+  0%, 100% { opacity: 0.8; box-shadow: 0 0 0 0 currentColor; }
+  50%       { opacity: 1;   box-shadow: 0 0 10px rgba(80, 200, 80, 0.3); }
+}
+
+/* ── Form ── */
+.form {
+  margin-bottom: 16px;
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(138, 43, 226, 0.25);
+  border-radius: 12px;
+  padding: 8px 12px;
+  transition: border-color 0.2s;
+}
+
+.inputRow:focus-within {
+  border-color: rgba(138, 43, 226, 0.6);
+  box-shadow: 0 0 16px rgba(138, 43, 226, 0.15);
+}
+
+.at {
+  color: rgba(200, 80, 255, 0.8);
+  font-weight: 700;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 14px;
+  min-width: 0;
+}
+
+.input::placeholder { color: rgba(255, 255, 255, 0.3); }
+.input:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btn {
+  flex-shrink: 0;
+  padding: 8px 18px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.btnConnect {
+  background: linear-gradient(135deg, #8a2be2, #fe2c55);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(138, 43, 226, 0.4);
+}
+
+.btnConnect:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(138, 43, 226, 0.6);
+}
+
+.btnConnect:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btnDisconnect {
+  background: rgba(254, 44, 85, 0.15);
+  color: #fe2c55;
+  border: 1px solid rgba(254, 44, 85, 0.4);
+}
+
+.btnDisconnect:hover {
+  background: rgba(254, 44, 85, 0.25);
+  border-color: rgba(254, 44, 85, 0.7);
+}
+
+.spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Error bar ── */
+.errorBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(254, 44, 85, 0.1);
+  border: 1px solid rgba(254, 44, 85, 0.3);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #ff7090;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.retryBtn {
+  margin-left: auto;
+  background: rgba(254, 44, 85, 0.2);
+  border: 1px solid rgba(254, 44, 85, 0.4);
+  color: #fe2c55;
+  border-radius: 8px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.retryBtn:hover { background: rgba(254, 44, 85, 0.35); }
+
+/* ── iframe section ── */
+.iframeSection {
+  margin-top: 4px;
+}
+
+.iframeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.iframeLive {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fe2c55;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  animation: livePulse 1.5s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 0.8; }
+  50%       { opacity: 1; }
+}
+
+.iframePowered {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.3);
+  font-style: italic;
+}
+
+.iframeWrap {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(138, 43, 226, 0.4);
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.iframeGlow {
+  position: absolute;
+  inset: -1px;
+  border-radius: 14px;
+  background: transparent;
+  box-shadow: 0 0 30px rgba(138, 43, 226, 0.25), 0 0 60px rgba(254, 44, 85, 0.1);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.iframe {
+  display: block;
+  width: 100%;
+  height: 500px;
+  border: none;
+  border-radius: 14px;
+  position: relative;
+  z-index: 0;
+}
+
+.iframeNote {
+  margin-top: 10px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.35);
+  text-align: center;
+}
+
+.pingWarn {
+  color: #ffb400;
+}
+
+/* ── Placeholder ── */
+.placeholder {
+  text-align: center;
+  padding: 36px 20px;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.placeholderIcon {
+  font-size: 40px;
+  margin-bottom: 12px;
+  opacity: 0.4;
+}
+
+.placeholder p {
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.placeholder strong { color: rgba(200, 80, 255, 0.9); }
+
+.placeholderSub {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.25);
+}

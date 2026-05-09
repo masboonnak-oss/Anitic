@@ -5,8 +5,6 @@ import PlayerList from './components/PlayerList.jsx';
 import AddPlayer from './components/AddPlayer.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
 import LiveConnect from './components/LiveConnect.jsx';
-import ChatCapture from './components/ChatCapture.jsx';
-import StreamDPSPanel from './components/StreamDPSPanel.jsx';
 import styles from './App.module.css';
 import { apiFetch, getToken } from './auth.js';
 
@@ -205,9 +203,7 @@ export default function App({ username, role, onLogout }) {
 
       <main className={styles.main}>
 
-        <StreamDPSPanel />
         <LiveConnect onAddPlayer={handleAddFromCapture} />
-        <ChatCapture onAddPlayer={handleAddFromCapture} />
 
         <AddPlayer onAdd={handleAdd} />
 

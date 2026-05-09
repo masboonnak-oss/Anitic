@@ -141,6 +141,20 @@ export default function App({ username, role, onLogout }) {
           <div className={styles.groupDivider} />
 
           <div className={styles.btnGroup}>
+            <span className={styles.btnGroupLabel}>🎁 Gift</span>
+            <div className={styles.btnGroupRow}>
+              <button
+                className={`${styles.hBtn} ${styles.hBtnGift}`}
+                onClick={() => { window.location.href = '/giftconnector'; }}
+              >
+                🎁 Gift Connector
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.groupDivider} />
+
+          <div className={styles.btnGroup}>
             <span className={styles.btnGroupLabel}>⚙️ จัดการ</span>
             <div className={styles.btnGroupRow}>
               <button className={`${styles.hBtn} ${styles.hBtnAmber}`} onClick={handleResetTop1}>

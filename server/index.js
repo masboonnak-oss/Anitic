@@ -551,6 +551,7 @@ function connectLive(adminUser, tiktokUser, attempt) {
     st.commenters.set(uid, { uniqueId: uid, nickname: displayName, profilePicUrl: picUrl, lastSeen: Date.now(), msgCount: (st.commenters.get(uid)?.msgCount || 0) + 1, lastMsg: data?.comment || '' });
     saveToCache(uid, { displayName, profilePicUrl: picUrl }).catch(() => {});
     io.to(`room:${adminUser}`).emit('chatCapture', { uniqueId: uid, displayName, profilePicUrl: picUrl });
+    io.to(`room:${adminUser}`).emit('tiktokChat', { uniqueId: uid, displayName, profilePicUrl: picUrl, comment: data?.comment || '', ts: Date.now() });
     if (st.commenters.size > MAX_COMMENTERS * 2) {
       const entries = [...st.commenters.entries()].sort((a, b) => b[1].lastSeen - a[1].lastSeen);
       st.commenters = new Map(entries.slice(0, MAX_COMMENTERS));
@@ -585,6 +586,34 @@ function connectLive(adminUser, tiktokUser, attempt) {
       io.to(`room:${adminUser}`).emit('watchedGiftAlert',     { ...wg, latestGift: entry });
       io.to(`room:${adminUser}`).emit('watchedGiftersUpdate', snapshot);
     }
+    // Broadcast raw gift event for Gift Connector page
+    const giftName = data?.gift?.name || data?.giftName || (data?.giftId ? `Gift #${data.giftId}` : 'ของขวัญ');
+    io.to(`room:${adminUser}`).emit('tiktokGift', {
+      uniqueId: uid, displayName: prev.displayName, profilePicUrl: prev.profilePicUrl,
+      giftName, diamonds, repeatCount: data?.repeatCount || 1, giftId: data?.giftId, ts: Date.now(),
+    });
+  });
+
+  // Like events
+  const likeEvent = WebcastEvent?.LIKE || 'like';
+  conn.on(likeEvent, (data) => {
+    if (typeof data?.totalLikeCount === 'number') {
+      io.to(`room:${adminUser}`).emit('tiktokLike', { totalLikeCount: data.totalLikeCount, likeCount: data.likeCount || 0 });
+    }
+  });
+
+  // Viewer count
+  conn.on('roomUser', (data) => {
+    if (typeof data?.viewerCount === 'number') {
+      io.to(`room:${adminUser}`).emit('tiktokViewers', { viewerCount: data.viewerCount });
+    }
+  });
+
+  // Member join
+  conn.on('member', (data) => {
+    const mUid  = data?.user?.uniqueId || data?.uniqueId;
+    const mNick = data?.user?.nickname  || data?.nickname || mUid;
+    if (mUid) io.to(`room:${adminUser}`).emit('tiktokMember', { uniqueId: mUid, displayName: mNick, ts: Date.now() });
   });
 
   conn.on('disconnected', () => {
@@ -609,6 +638,91 @@ io.on('connection', (socket) => {
     socket.join(`room:${username}`);
     await ensureUserLoaded(username);
     sendInitialState(socket, username);
+  });
+
+  /* ── Per-socket TikTok connection (standalone / OBS mode) ── */
+  socket.on('setUniqueId', async (uniqueId, options) => {
+    if (typeof options === 'object' && options) {
+      delete options.requestOptions;
+      delete options.websocketOptions;
+    } else {
+      options = {};
+    }
+    if (socket._tiktokConn) {
+      try { socket._tiktokConn.disconnect(); } catch (_) {}
+      socket._tiktokConn = null;
+    }
+    if (!TikTokLiveConnection) {
+      socket.emit('tiktokDisconnected', 'TikTok connector ไม่พร้อมใช้งาน');
+      return;
+    }
+    try {
+      const conn = new TikTokLiveConnection(uniqueId, { processInitialData: true, fetchRoomInfoOnConnect: true });
+      socket._tiktokConn = conn;
+
+      conn.connect()
+        .then(state => { socket.emit('tiktokConnected', state); })
+        .catch(err => {
+          let msg = err?.message || String(err);
+          if (Array.isArray(err?.errors) && err.errors.length > 0) {
+            msg += ': ' + err.errors.map(e => e.message || String(e)).filter(Boolean).join(' | ');
+          }
+          socket.emit('tiktokDisconnected', msg);
+          socket._tiktokConn = null;
+        });
+
+      conn.on(WebcastEvent?.CHAT || 'chat', (data) => {
+        const uid  = data?.user?.uniqueId || data?.uniqueId;
+        const nick = data?.user?.nickname  || uid;
+        const pic  = proxiedPic(data?.user?.profilePictureUrl, uid);
+        socket.emit('chat', { uniqueId: uid, displayName: nick, profilePicUrl: pic, comment: data?.comment || '', ts: Date.now() });
+      });
+
+      conn.on(WebcastEvent?.GIFT || 'gift', (data) => {
+        if (data?.giftType === 1 && !data?.repeatEnd) return;
+        const uid = data?.user?.uniqueId || data?.uniqueId;
+        const diamonds = (data?.diamondCount || data?.gift?.diamondCount || 1) * (data?.repeatCount || 1);
+        socket.emit('gift', {
+          uniqueId: uid, displayName: data?.user?.nickname || uid,
+          profilePicUrl: proxiedPic(data?.user?.profilePictureUrl, uid),
+          giftName: data?.gift?.name || data?.giftName || 'ของขวัญ',
+          diamonds, repeatCount: data?.repeatCount || 1, ts: Date.now(),
+        });
+      });
+
+      conn.on(WebcastEvent?.LIKE || 'like', (data) => {
+        socket.emit('like', { totalLikeCount: data?.totalLikeCount, likeCount: data?.likeCount });
+      });
+
+      conn.on('roomUser', (data) => {
+        socket.emit('roomUser', { viewerCount: data?.viewerCount });
+      });
+
+      conn.on('member', (data) => {
+        socket.emit('member', { uniqueId: data?.user?.uniqueId, displayName: data?.user?.nickname });
+      });
+
+      conn.on('disconnected', () => {
+        socket.emit('tiktokDisconnected', 'การเชื่อมต่อถูกตัด');
+      });
+
+    } catch (err) {
+      socket.emit('tiktokDisconnected', err?.message || 'เชื่อมต่อไม่ได้');
+    }
+  });
+
+  socket.on('disconnect_tiktok', () => {
+    if (socket._tiktokConn) {
+      try { socket._tiktokConn.disconnect(); } catch (_) {}
+      socket._tiktokConn = null;
+    }
+  });
+
+  socket.on('disconnect', () => {
+    if (socket._tiktokConn) {
+      try { socket._tiktokConn.disconnect(); } catch (_) {}
+      socket._tiktokConn = null;
+    }
   });
 });
 

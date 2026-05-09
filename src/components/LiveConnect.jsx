@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { io } from 'socket.io-client';
+import React, { useState, useEffect, useRef } from 'react';
+import socket from '../socket.js';
+import { apiFetch } from '../auth.js';
 import styles from './LiveConnect.module.css';
-
-const socket = io('/', { transports: ['websocket', 'polling'] });
 
 export default function LiveConnect({ onAddPlayer }) {
   const [input, setInput] = useState('');
@@ -12,33 +11,41 @@ export default function LiveConnect({ onAddPlayer }) {
   const [added, setAdded] = useState(new Set());
 
   useEffect(() => {
-    socket.on('liveStatus', setStatus);
-    socket.on('commenters', setCommenters);
-    fetch('/api/live/status').then(r => r.json()).then(setStatus).catch(() => {});
-    fetch('/api/live/commenters').then(r => r.json()).then(setCommenters).catch(() => {});
-    return () => { socket.off('liveStatus'); socket.off('commenters'); };
+    function onLiveStatus(d) { setStatus(d); }
+    function onCommenters(d) { setCommenters(d); }
+
+    socket.on('liveStatus', onLiveStatus);
+    socket.on('commenters', onCommenters);
+
+    apiFetch('/api/live/status').then(r => r.json()).then(setStatus).catch(() => {});
+    apiFetch('/api/live/commenters').then(r => r.json()).then(setCommenters).catch(() => {});
+
+    return () => {
+      socket.off('liveStatus', onLiveStatus);
+      socket.off('commenters', onCommenters);
+    };
   }, []);
 
   async function connect(e) {
     e.preventDefault();
     const uname = input.trim().replace('@', '');
     if (!uname) return;
-    await fetch('/api/live/connect', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: uname })
+    await apiFetch('/api/live/connect', {
+      method: 'POST',
+      body: JSON.stringify({ username: uname }),
     });
   }
 
   async function disconnect() {
-    await fetch('/api/live/disconnect', { method: 'POST' });
+    await apiFetch('/api/live/disconnect', { method: 'POST' });
     setAdded(new Set());
   }
 
   async function addPlayer(c) {
     if (added.has(c.uniqueId)) return;
-    const res = await fetch('/api/player', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: c.uniqueId, displayName: c.nickname, profilePicUrl: c.profilePicUrl })
+    const res = await apiFetch('/api/player', {
+      method: 'POST',
+      body: JSON.stringify({ username: c.uniqueId, displayName: c.nickname, profilePicUrl: c.profilePicUrl }),
     });
     const data = await res.json();
     if (res.ok || data.error === 'มีผู้เล่นนี้อยู่แล้ว') {
@@ -69,8 +76,6 @@ export default function LiveConnect({ onAddPlayer }) {
 
       {open && (
         <div className={styles.panel}>
-
-          {/* ── Cloud IP warning ── */}
           {isLocalBlock && (
             <div className={styles.cloudWarn}>
               <div className={styles.cloudTitle}>⚠️ TikTok บล็อค Replit Cloud</div>
@@ -90,7 +95,6 @@ export default function LiveConnect({ onAddPlayer }) {
             </div>
           )}
 
-          {/* ── Connect form (when not connected/connecting) ── */}
           {!isConnected && !isConnecting && !isLocalBlock && (
             <form className={styles.form} onSubmit={connect}>
               <span className={styles.at}>@</span>
@@ -128,7 +132,6 @@ export default function LiveConnect({ onAddPlayer }) {
             </div>
           )}
 
-          {/* ── Commenter list ── */}
           {commenters.length > 0 && (
             <>
               <div className={styles.listHdr}>

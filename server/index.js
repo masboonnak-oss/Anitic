@@ -1,24 +1,25 @@
-const express = require('express');
-const http    = require('http');
+const express  = require('express');
+const http     = require('http');
 const { Server } = require('socket.io');
-const cors   = require('cors');
-const axios  = require('axios');
-const fs     = require('fs');
-const path   = require('path');
-const jwt    = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
+const cors     = require('cors');
+const axios    = require('axios');
+const fs       = require('fs');
+const path     = require('path');
+const jwt      = require('jsonwebtoken');
+const bcrypt   = require('bcryptjs');
+const crypto   = require('crypto');
 const nodemailer = require('nodemailer');
+const { Pool } = require('pg');
+
+/* ── PostgreSQL Pool ── */
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 /* ── Gmail / Nodemailer email helper ── */
 function getMailTransporter() {
   const user = process.env.GMAIL_USER;
   const pass = process.env.GMAIL_APP_PASSWORD;
   if (!user || !pass) return null;
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user, pass },
-  });
+  return nodemailer.createTransport({ service: 'gmail', auth: { user, pass } });
 }
 
 async function sendVerificationEmail(toEmail, username, otp) {
@@ -29,20 +30,7 @@ async function sendVerificationEmail(toEmail, username, otp) {
       from: `"WIN Leaderboard" <${process.env.GMAIL_USER}>`,
       to: toEmail,
       subject: '✅ WIN Leaderboard — ยืนยันอีเมลของคุณ',
-      html: `
-<div style="font-family:'Segoe UI',Arial,sans-serif;background:#060612;color:#fff;padding:40px 20px;text-align:center;max-width:480px;margin:0 auto;border-radius:16px;">
-  <div style="font-size:48px;margin-bottom:12px;">🏆</div>
-  <h2 style="color:#ffd700;margin:0 0 6px;">WIN Leaderboard</h2>
-  <p style="color:#aaa;margin:0 0 28px;">ยืนยันอีเมลสำหรับบัญชี <strong style="color:#fff;">${username}</strong></p>
-  <div style="background:#0d0d1f;border:2px solid rgba(254,44,85,0.4);border-radius:16px;padding:28px 20px;margin-bottom:24px;">
-    <p style="color:#888;font-size:14px;margin:0 0 16px;">รหัสยืนยัน OTP ของคุณ</p>
-    <div style="font-size:42px;font-weight:900;letter-spacing:16px;color:#fff;font-family:'Courier New',monospace;text-shadow:0 0 20px rgba(254,44,85,0.6);">
-      ${otp}
-    </div>
-    <p style="color:#555;font-size:13px;margin:16px 0 0;">รหัสนี้จะหมดอายุใน <strong style="color:#ffd700;">10 นาที</strong></p>
-  </div>
-  <p style="color:#333;font-size:12px;margin:0;">หากคุณไม่ได้สมัคร กรุณาเพิกเฉยต่ออีเมลนี้</p>
-</div>`,
+      html: `<div style="font-family:'Segoe UI',Arial,sans-serif;background:#060612;color:#fff;padding:40px 20px;text-align:center;max-width:480px;margin:0 auto;border-radius:16px;"><div style="font-size:48px;margin-bottom:12px;">🏆</div><h2 style="color:#ffd700;margin:0 0 6px;">WIN Leaderboard</h2><p style="color:#aaa;margin:0 0 28px;">ยืนยันอีเมลสำหรับบัญชี <strong style="color:#fff;">${username}</strong></p><div style="background:#0d0d1f;border:2px solid rgba(254,44,85,0.4);border-radius:16px;padding:28px 20px;margin-bottom:24px;"><p style="color:#888;font-size:14px;margin:0 0 16px;">รหัสยืนยัน OTP ของคุณ</p><div style="font-size:42px;font-weight:900;letter-spacing:16px;color:#fff;font-family:'Courier New',monospace;text-shadow:0 0 20px rgba(254,44,85,0.6);">${otp}</div><p style="color:#555;font-size:13px;margin:16px 0 0;">รหัสนี้จะหมดอายุใน <strong style="color:#ffd700;">10 นาที</strong></p></div><p style="color:#333;font-size:12px;margin:0;">หากคุณไม่ได้สมัคร กรุณาเพิกเฉยต่ออีเมลนี้</p></div>`,
     });
     console.log(`[mail] verification OTP sent to ${toEmail} for ${username}`);
     return true;
@@ -52,91 +40,249 @@ async function sendVerificationEmail(toEmail, username, otp) {
 async function sendPasswordResetEmail(toEmail, username, resetToken) {
   const transporter = getMailTransporter();
   if (!transporter) { console.warn('[mail] GMAIL_USER or GMAIL_APP_PASSWORD not set, skip email'); return false; }
-  const domain  = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000';
+  const domain   = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000';
   const resetUrl = `${domain}/reset-password?token=${resetToken}`;
   try {
     await transporter.sendMail({
       from: `"WIN Leaderboard" <${process.env.GMAIL_USER}>`,
       to: toEmail,
       subject: '🔑 WIN Leaderboard — รีเซ็ตรหัสผ่าน',
-      html: `
-<div style="font-family:'Segoe UI',Arial,sans-serif;background:#060612;color:#fff;padding:40px 20px;text-align:center;max-width:480px;margin:0 auto;border-radius:16px;">
-  <div style="font-size:48px;margin-bottom:12px;">🏆</div>
-  <h2 style="color:#ffd700;margin:0 0 8px;">WIN Leaderboard</h2>
-  <p style="color:#aaa;margin-bottom:28px;">มีคนขอรีเซ็ตรหัสผ่านสำหรับบัญชี <strong style="color:#fff;">${username}</strong></p>
-  <a href="${resetUrl}" style="display:inline-block;background:linear-gradient(135deg,#fe2c55,#c41e3a);color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:16px;font-weight:700;margin-bottom:24px;">
-    🔑 ตั้งรหัสผ่านใหม่
-  </a>
-  <p style="color:#555;font-size:13px;margin:0 0 8px;">ลิงก์นี้จะหมดอายุใน <strong style="color:#ffd700;">1 ชั่วโมง</strong></p>
-  <p style="color:#333;font-size:12px;margin:0;">หากคุณไม่ได้ขอรีเซ็ต กรุณาเพิกเฉยต่ออีเมลนี้</p>
-</div>`,
+      html: `<div style="font-family:'Segoe UI',Arial,sans-serif;background:#060612;color:#fff;padding:40px 20px;text-align:center;max-width:480px;margin:0 auto;border-radius:16px;"><div style="font-size:48px;margin-bottom:12px;">🏆</div><h2 style="color:#ffd700;margin:0 0 8px;">WIN Leaderboard</h2><p style="color:#aaa;margin-bottom:28px;">มีคนขอรีเซ็ตรหัสผ่านสำหรับบัญชี <strong style="color:#fff;">${username}</strong></p><a href="${resetUrl}" style="display:inline-block;background:linear-gradient(135deg,#fe2c55,#c41e3a);color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:16px;font-weight:700;margin-bottom:24px;">🔑 ตั้งรหัสผ่านใหม่</a><p style="color:#555;font-size:13px;margin:0 0 8px;">ลิงก์นี้จะหมดอายุใน <strong style="color:#ffd700;">1 ชั่วโมง</strong></p><p style="color:#333;font-size:12px;margin:0;">หากคุณไม่ได้ขอรีเซ็ต กรุณาเพิกเฉยต่ออีเมลนี้</p></div>`,
     });
     console.log(`[mail] reset email sent to ${toEmail} for ${username}`);
     return true;
   } catch (e) { console.error('[mail] send failed:', e.message); return false; }
 }
 
-/* ── Dirs ── */
+/* ── Dirs (still needed for avatar files) ── */
 const CACHE_DIR  = path.join(__dirname, '../cache');
 const AVATAR_DIR = path.join(__dirname, '../cache/avatars');
 const USERS_DIR  = path.join(__dirname, '../cache/users');
 [CACHE_DIR, AVATAR_DIR, USERS_DIR].forEach(d => { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); });
 
-/* ── JWT secret (persisted in _auth.json) ── */
-const AUTH_FILE = path.join(CACHE_DIR, '_auth.json');
-function loadAuthMeta() {
-  try { if (fs.existsSync(AUTH_FILE)) return JSON.parse(fs.readFileSync(AUTH_FILE, 'utf8')); } catch (_) {}
-  return {};
+/* ── DB init: create tables ── */
+async function initDb() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS auth_meta (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      jwt_secret TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS app_users (
+      username TEXT PRIMARY KEY,
+      password_hash TEXT NOT NULL,
+      email TEXT,
+      role TEXT NOT NULL DEFAULT 'user',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS players (
+      owner TEXT NOT NULL,
+      id TEXT NOT NULL,
+      username TEXT NOT NULL,
+      display_name TEXT,
+      profile_pic_url TEXT,
+      win INTEGER NOT NULL DEFAULT 0,
+      joined_at BIGINT,
+      PRIMARY KEY (owner, id)
+    );
+    CREATE TABLE IF NOT EXISTS profile_cache (
+      unique_id TEXT PRIMARY KEY,
+      display_name TEXT,
+      profile_pic_url TEXT,
+      updated_at BIGINT
+    );
+    CREATE TABLE IF NOT EXISTS pending_registrations (
+      email TEXT PRIMARY KEY,
+      username TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
+      otp TEXT NOT NULL,
+      expiry BIGINT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS reset_tokens (
+      token TEXT PRIMARY KEY,
+      username TEXT NOT NULL,
+      email TEXT NOT NULL,
+      expiry BIGINT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS reset_requests (
+      username TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      requested_at BIGINT NOT NULL
+    );
+  `);
+  console.log('[db] tables ready');
 }
-function saveAuthMeta(d) { fs.writeFileSync(AUTH_FILE, JSON.stringify(d, null, 2)); }
-let _meta = loadAuthMeta();
-if (!_meta.secret) { _meta.secret = crypto.randomBytes(32).toString('hex'); saveAuthMeta(_meta); }
-const JWT_SECRET = _meta.secret;
 
-/* ── Multi-user store (_users.json) ── */
-const USERS_FILE = path.join(CACHE_DIR, '_users.json');
-function loadUsers() {
-  try { if (fs.existsSync(USERS_FILE)) return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); } catch (_) {}
-  return [];
+/* ── JWT secret (stored in DB) ── */
+let JWT_SECRET = '';
+async function getOrCreateJwtSecret() {
+  const res = await pool.query('SELECT jwt_secret FROM auth_meta WHERE id = 1');
+  if (res.rows.length > 0) return res.rows[0].jwt_secret;
+  const secret = crypto.randomBytes(32).toString('hex');
+  await pool.query('INSERT INTO auth_meta (id, jwt_secret) VALUES (1, $1) ON CONFLICT (id) DO NOTHING', [secret]);
+  return secret;
 }
-function saveUsers(u) { fs.writeFileSync(USERS_FILE, JSON.stringify(u, null, 2)); }
-function findUser(username) { return loadUsers().find(u => u.username === username); }
 
-/* Migrate single-admin _auth.json → _users.json */
-(function migrate() {
-  const meta = loadAuthMeta();
-  if (meta.username && meta.passwordHash) {
-    const users = loadUsers();
-    if (!users.find(u => u.username === meta.username)) {
-      users.push({ username: meta.username, passwordHash: meta.passwordHash });
-      saveUsers(users);
-      console.log(`[auth] migrated user: ${meta.username}`);
+/* ── DB: Users ── */
+async function loadUsers() {
+  const res = await pool.query('SELECT username, password_hash, email, role FROM app_users ORDER BY username');
+  return res.rows.map(r => ({ username: r.username, passwordHash: r.password_hash, email: r.email, role: r.role || 'user' }));
+}
+async function findUser(username) {
+  const res = await pool.query('SELECT username, password_hash, email, role FROM app_users WHERE username = $1', [username]);
+  if (res.rows.length === 0) return null;
+  const r = res.rows[0];
+  return { username: r.username, passwordHash: r.password_hash, email: r.email, role: r.role || 'user' };
+}
+async function saveUser(user) {
+  await pool.query(
+    'INSERT INTO app_users (username, password_hash, email, role) VALUES ($1,$2,$3,$4) ON CONFLICT (username) DO UPDATE SET password_hash=$2, email=$3, role=$4',
+    [user.username, user.passwordHash, user.email || null, user.role || 'user']
+  );
+}
+async function deleteUserFromDb(username) {
+  await pool.query('DELETE FROM app_users WHERE username = $1', [username]);
+  await pool.query('DELETE FROM players WHERE owner = $1', [username]);
+}
+
+/* ── DB: Players ── */
+async function loadUserPlayersFromDb(owner) {
+  const res = await pool.query(
+    'SELECT id, username, display_name, profile_pic_url, win, joined_at FROM players WHERE owner = $1 ORDER BY win DESC',
+    [owner]
+  );
+  const map = new Map();
+  res.rows.forEach(r => {
+    map.set(r.id, { id: r.id, username: r.username, displayName: r.display_name, profilePicUrl: r.profile_pic_url, win: r.win, joinedAt: Number(r.joined_at) });
+  });
+  return map;
+}
+
+async function saveUserPlayers(owner, players) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('DELETE FROM players WHERE owner = $1', [owner]);
+    for (const p of players.values()) {
+      await client.query(
+        'INSERT INTO players (owner, id, username, display_name, profile_pic_url, win, joined_at) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+        [owner, p.id, p.username, p.displayName || p.username, p.profilePicUrl || null, p.win || 0, p.joinedAt || Date.now()]
+      );
     }
-    const userDir = path.join(USERS_DIR, meta.username);
-    if (!fs.existsSync(userDir)) fs.mkdirSync(userDir, { recursive: true });
-    const oldPlayers = path.join(CACHE_DIR, '_players.json');
-    const newPlayers = path.join(userDir, '_players.json');
-    if (fs.existsSync(oldPlayers) && !fs.existsSync(newPlayers)) {
-      fs.copyFileSync(oldPlayers, newPlayers);
-      console.log(`[auth] migrated players for ${meta.username}`);
-    }
-    delete meta.username; delete meta.passwordHash;
-    saveAuthMeta(meta);
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error(`[db:saveUserPlayers:${owner}]`, e.message);
+  } finally {
+    client.release();
   }
-})();
+}
 
-/* ── Auth middleware ── */
-function authMiddleware(req, res, next) {
-  const header = req.headers['authorization'] || '';
-  const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
-  if (!token) return res.status(401).json({ error: 'กรุณาล็อคอินก่อน' });
-  try { req.admin = jwt.verify(token, JWT_SECRET); next(); }
-  catch (_) { res.status(401).json({ error: 'Token หมดอายุ กรุณาล็อคอินใหม่' }); }
+/* ── DB: Profile cache ── */
+async function saveToCache(uniqueId, data) {
+  try {
+    await pool.query(
+      'INSERT INTO profile_cache (unique_id, display_name, profile_pic_url, updated_at) VALUES ($1,$2,$3,$4) ON CONFLICT (unique_id) DO UPDATE SET display_name=COALESCE($2, profile_cache.display_name), profile_pic_url=COALESCE($3, profile_cache.profile_pic_url), updated_at=$4',
+      [uniqueId, data.displayName || null, data.profilePicUrl || null, Date.now()]
+    );
+  } catch (e) { console.warn('[db:saveToCache]', e.message); }
+}
+async function loadFromCache(uniqueId) {
+  try {
+    const res = await pool.query('SELECT display_name, profile_pic_url FROM profile_cache WHERE unique_id = $1', [uniqueId]);
+    if (res.rows.length > 0) return { displayName: res.rows[0].display_name, profilePicUrl: res.rows[0].profile_pic_url };
+  } catch (e) { console.warn('[db:loadFromCache]', e.message); }
+  return null;
+}
+
+/* ── DB: Pending registrations ── */
+async function loadPending() {
+  const res = await pool.query('SELECT email, username, password_hash, otp, expiry FROM pending_registrations');
+  return res.rows.map(r => ({ email: r.email, username: r.username, passwordHash: r.password_hash, otp: r.otp, expiry: Number(r.expiry) }));
+}
+async function upsertPending(entry) {
+  await pool.query(
+    'INSERT INTO pending_registrations (email, username, password_hash, otp, expiry) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (email) DO UPDATE SET username=$2, password_hash=$3, otp=$4, expiry=$5',
+    [entry.email, entry.username, entry.passwordHash, entry.otp, entry.expiry]
+  );
+}
+async function deletePending(email) {
+  await pool.query('DELETE FROM pending_registrations WHERE email = $1', [email]);
+}
+async function cleanPending() {
+  await pool.query('DELETE FROM pending_registrations WHERE expiry <= $1', [Date.now()]);
+  return loadPending();
+}
+
+/* ── DB: Reset tokens ── */
+async function loadResetTokens() {
+  const res = await pool.query('SELECT token, username, email, expiry FROM reset_tokens WHERE expiry > $1', [Date.now()]);
+  return res.rows.map(r => ({ token: r.token, username: r.username, email: r.email, expiry: Number(r.expiry) }));
+}
+async function saveResetToken(entry) {
+  await pool.query('DELETE FROM reset_tokens WHERE username = $1', [entry.username]);
+  await pool.query(
+    'INSERT INTO reset_tokens (token, username, email, expiry) VALUES ($1,$2,$3,$4) ON CONFLICT (token) DO NOTHING',
+    [entry.token, entry.username, entry.email, entry.expiry]
+  );
+}
+async function deleteResetToken(token) {
+  await pool.query('DELETE FROM reset_tokens WHERE token = $1', [token]);
+}
+
+/* ── DB: Reset requests ── */
+async function loadResetRequests() {
+  const res = await pool.query('SELECT username, email, requested_at FROM reset_requests ORDER BY requested_at DESC');
+  return res.rows.map(r => ({ username: r.username, email: r.email, requestedAt: Number(r.requested_at) }));
+}
+async function saveResetRequest(entry) {
+  await pool.query(
+    'INSERT INTO reset_requests (username, email, requested_at) VALUES ($1,$2,$3) ON CONFLICT (username) DO UPDATE SET email=$2, requested_at=$3',
+    [entry.username, entry.email, entry.requestedAt]
+  );
+}
+async function deleteResetRequest(username) {
+  await pool.query('DELETE FROM reset_requests WHERE username = $1', [username]);
+}
+
+/* ── Migrate old JSON files → DB (one-time) ── */
+async function migrateFromFiles() {
+  try {
+    const { rows } = await pool.query('SELECT COUNT(*) FROM app_users');
+    if (parseInt(rows[0].count) > 0) return; // already migrated
+
+    const usersFile = path.join(CACHE_DIR, '_users.json');
+    if (fs.existsSync(usersFile)) {
+      const users = JSON.parse(fs.readFileSync(usersFile, 'utf8'));
+      for (const u of users) {
+        await pool.query(
+          'INSERT INTO app_users (username, password_hash, email, role) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING',
+          [u.username, u.passwordHash, u.email || null, u.role || 'user']
+        );
+      }
+      console.log(`[migrate] migrated ${users.length} users from files`);
+    }
+
+    if (fs.existsSync(USERS_DIR)) {
+      const userDirs = fs.readdirSync(USERS_DIR);
+      for (const uname of userDirs) {
+        const pf = path.join(USERS_DIR, uname, '_players.json');
+        if (!fs.existsSync(pf)) continue;
+        const players = JSON.parse(fs.readFileSync(pf, 'utf8'));
+        for (const p of players) {
+          if (!p?.id) continue;
+          await pool.query(
+            'INSERT INTO players (owner, id, username, display_name, profile_pic_url, win, joined_at) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING',
+            [uname, p.id, p.username, p.displayName, p.profilePicUrl, p.win || 0, p.joinedAt || Date.now()]
+          );
+        }
+        console.log(`[migrate] migrated ${players.length} players for ${uname}`);
+      }
+    }
+  } catch (e) { console.error('[migrate] error:', e.message); }
 }
 
 /* ── Helpers ── */
 function safeFilename(u) { return u.replace(/[^a-zA-Z0-9_-]/g, '_'); }
-
 function uiAvatar(username) {
   const i = encodeURIComponent((username || '?').slice(0, 2).toUpperCase());
   return `https://ui-avatars.com/api/?name=${i}&background=1a1a2e&color=ffd700&bold=true&size=128`;
@@ -180,7 +326,6 @@ async function fetchFromTikTokPage(username) {
     if (!imgMatch) return null;
     const avatarUrl   = imgMatch[1].replace(/&amp;/g, '&');
     const displayName = titleMatch ? titleMatch[1].replace(/\s*[\|–-]\s*TikTok.*$/i,'').replace(/\s*\(@[^)]+\).*$/,'').replace(/&amp;/g,'&').trim() || null : null;
-    console.log(`[tiktok-page] @${username} → "${displayName}" avatar found`);
     return { avatarUrl, displayName };
   } catch (e) { console.warn(`[tiktok-page] failed for @${username}:`, e.message); return null; }
 }
@@ -195,7 +340,6 @@ async function fetchTikwmUser(username) {
       const avatarUrl   = user.avatarLarger || user.avatarMedium || user.avatarThumb;
       let profilePicUrl = uiAvatar(username);
       if (avatarUrl) { const local = await downloadAvatar(username, avatarUrl); if (local) profilePicUrl = local; }
-      console.log(`[tikwm] @${username} → "${displayName}" pic=${profilePicUrl}`);
       return { displayName, profilePicUrl };
     }
   } catch (e) { console.warn(`[tikwm] failed for @${username}:`, e.message); }
@@ -215,66 +359,47 @@ async function fetchTikwmUser(username) {
   return null;
 }
 
-function saveToCache(uniqueId, data) {
-  try {
-    const file = path.join(CACHE_DIR, `${uniqueId}.json`);
-    const existing = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
-    fs.writeFileSync(file, JSON.stringify({ ...existing, ...data, updatedAt: Date.now() }, null, 2));
-  } catch (_) {}
-}
-function loadFromCache(uniqueId) {
-  try { const file = path.join(CACHE_DIR, `${uniqueId}.json`); if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (_) {}
-  return null;
-}
-
-/* ── Per-user state ── */
-const userStates = new Map();
+/* ── Per-user in-memory state ── */
+const userStates  = new Map();
+const loadedUsers = new Set();
 const MAX_COMMENTERS = 60;
-
-function getUserPlayerFile(username) {
-  const dir = path.join(USERS_DIR, username);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  return path.join(dir, '_players.json');
-}
-
-function saveUserPlayers(username, players) {
-  try { fs.writeFileSync(getUserPlayerFile(username), JSON.stringify(Array.from(players.values()), null, 2)); }
-  catch (e) { console.error(`[persist:${username}] save failed:`, e.message); }
-}
-
-function loadUserPlayers(username) {
-  const players = new Map();
-  try {
-    const file = getUserPlayerFile(username);
-    if (fs.existsSync(file)) {
-      const list = JSON.parse(fs.readFileSync(file, 'utf8'));
-      list.forEach(p => { if (p?.id) players.set(p.id, p); });
-      console.log(`[persist:${username}] loaded ${players.size} players`);
-    }
-  } catch (e) { console.error(`[persist:${username}] load failed:`, e.message); }
-  return players;
-}
 
 function getUserState(username) {
   if (!userStates.has(username)) {
-    const players = loadUserPlayers(username);
-    const sorted  = Array.from(players.values()).sort((a, b) => b.win - a.win);
     userStates.set(username, {
-      players,
-      currentKingId:  sorted.length > 0 ? sorted[0].id : null,
+      players:        new Map(),
+      currentKingId:  null,
       top1Threshold:  null,
       liveConnection: null,
       liveHost:       null,
       liveStatus:     'disconnected',
       liveError:      null,
       commenters:     new Map(),
-      giftTracker:    new Map(),   // uniqueId → { uniqueId, displayName, profilePicUrl, diamonds }
-      watchedGifters: new Map(),   // uniqueId → { uniqueId, displayName, profilePicUrl, profileUrl, giftLog[], totalDiamonds }
+      giftTracker:    new Map(),
+      watchedGifters: new Map(),
       retryTimer:     null,
       retryAttempt:   0,
     });
   }
   return userStates.get(username);
+}
+
+async function ensureUserLoaded(username) {
+  if (loadedUsers.has(username)) return;
+  loadedUsers.add(username);
+  try {
+    const players = await loadUserPlayersFromDb(username);
+    if (players.size > 0) {
+      const st = getUserState(username);
+      st.players = players;
+      const sorted = Array.from(players.values()).sort((a, b) => b.win - a.win);
+      if (sorted.length > 0) st.currentKingId = sorted[0].id;
+      console.log(`[db:${username}] loaded ${players.size} players`);
+    }
+  } catch (e) {
+    loadedUsers.delete(username); // allow retry
+    console.error(`[db:ensureUserLoaded:${username}]`, e.message);
+  }
 }
 
 /* ── Express + Socket.IO ── */
@@ -288,8 +413,16 @@ const io     = new Server(server, { cors: { origin: '*' } });
 app.use(cors());
 app.use(express.json());
 
-/* ── Broadcasts (per-user room) ── */
+/* ── Throttled broadcast (max once per 80ms per user) ── */
+const broadcastTimers = new Map();
 function broadcast(username) {
+  if (broadcastTimers.has(username)) return;
+  broadcastTimers.set(username, setTimeout(() => {
+    broadcastTimers.delete(username);
+    _doBroadcast(username);
+  }, 80));
+}
+function _doBroadcast(username) {
   const st = getUserState(username);
   const sorted = Array.from(st.players.values()).sort((a, b) => b.win - a.win).map((p, i) => ({ ...p, rank: i + 1 }));
   io.to(`room:${username}`).emit('players', sorted);
@@ -318,7 +451,7 @@ function sendInitialState(socket, username) {
   socket.emit('watchedGiftersUpdate', Object.fromEntries([...st.watchedGifters.entries()]));
 }
 
-/* ── TikTok Live (per-user) ── */
+/* ── TikTok Live ── */
 const MAX_RETRIES = 6;
 
 function classifyError(msg) {
@@ -409,22 +542,20 @@ function connectLive(adminUser, tiktokUser, attempt) {
     const picUrl     = proxiedPic(picRaw, uid);
     const displayName = nickname || uid;
     st.commenters.set(uid, { uniqueId: uid, nickname: displayName, profilePicUrl: picUrl, lastSeen: Date.now(), msgCount: (st.commenters.get(uid)?.msgCount || 0) + 1, lastMsg: data?.comment || '' });
-    saveToCache(uid, { uniqueId: uid, displayName, profilePicUrl: picUrl });
+    saveToCache(uid, { displayName, profilePicUrl: picUrl }).catch(() => {});
     io.to(`room:${adminUser}`).emit('chatCapture', { uniqueId: uid, displayName, profilePicUrl: picUrl });
     if (st.commenters.size > MAX_COMMENTERS * 2) {
       const entries = [...st.commenters.entries()].sort((a, b) => b[1].lastSeen - a[1].lastSeen);
-      st.commenters.clear(); entries.slice(0, MAX_COMMENTERS).forEach(([k, v]) => st.commenters.set(k, v));
+      st.commenters = new Map(entries.slice(0, MAX_COMMENTERS));
     }
     broadcastCommenters(adminUser);
   });
 
-  /* ── Gift events → track diamonds per sender ── */
   const giftEvent = WebcastEvent?.GIFT || 'gift';
   conn.on(giftEvent, (data) => {
     const uid      = data?.user?.uniqueId || data?.uniqueId;
     const nickname = data?.user?.nickname  || data?.nickname || uid;
     const picRaw   = data?.user?.profilePictureUrl || data?.user?.avatarUrl || data?.profilePictureUrl;
-    /* only count "streakEnd" or non-streaking gifts to avoid double-count */
     if (data?.giftType === 1 && !data?.repeatEnd) return;
     const diamonds = (data?.diamondCount || data?.gift?.diamondCount || 1) * (data?.repeatCount || 1);
     if (!uid || diamonds <= 0) return;
@@ -433,9 +564,7 @@ function connectLive(adminUser, tiktokUser, attempt) {
     if (nickname) prev.displayName = nickname;
     if (picRaw)   prev.profilePicUrl = proxiedPic(picRaw, uid);
     st.giftTracker.set(uid, prev);
-    console.log(`[gift:${adminUser}] @${uid} total=${prev.diamonds} diamonds`);
 
-    /* ── Watched gifter: record gift if this sender is being tracked ── */
     if (st.watchedGifters.has(uid)) {
       const wg = st.watchedGifters.get(uid);
       if (nickname) wg.displayName = nickname;
@@ -448,7 +577,6 @@ function connectLive(adminUser, tiktokUser, attempt) {
       const snapshot = Object.fromEntries([...st.watchedGifters.entries()]);
       io.to(`room:${adminUser}`).emit('watchedGiftAlert',     { ...wg, latestGift: entry });
       io.to(`room:${adminUser}`).emit('watchedGiftersUpdate', snapshot);
-      console.log(`[watch:${adminUser}] @${uid} → ${giftName} ×${entry.count} (${diamonds}💎)`);
     }
   });
 
@@ -459,127 +587,119 @@ function connectLive(adminUser, tiktokUser, attempt) {
 
 /* ── Socket.IO ── */
 io.on('connection', (socket) => {
-  /* Admin panel: authenticate with JWT → join user room */
-  socket.on('authenticate', ({ token }) => {
+  socket.on('authenticate', async ({ token }) => {
     try {
       const admin = jwt.verify(token, JWT_SECRET);
       socket.username = admin.username;
       socket.join(`room:${admin.username}`);
+      await ensureUserLoaded(admin.username);
       sendInitialState(socket, admin.username);
     } catch (_) { socket.emit('authError', { error: 'invalid token' }); }
   });
 
-  /* Overlays: join room by username (public read-only) */
-  socket.on('joinRoom', ({ username }) => {
+  socket.on('joinRoom', async ({ username }) => {
     if (!username) return;
     socket.join(`room:${username}`);
+    await ensureUserLoaded(username);
     sendInitialState(socket, username);
   });
 });
+
+/* ── Auth middleware ── */
+function authMiddleware(req, res, next) {
+  const header = req.headers['authorization'] || '';
+  const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'กรุณาล็อคอินก่อน' });
+  try { req.admin = jwt.verify(token, JWT_SECRET); next(); }
+  catch (_) { res.status(401).json({ error: 'Token หมดอายุ กรุณาล็อคอินใหม่' }); }
+}
+function superAdminMiddleware(req, res, next) {
+  findUser(req.admin.username).then(user => {
+    if (user?.role !== 'superadmin') return res.status(403).json({ error: 'เฉพาะ Super Admin เท่านั้น' });
+    next();
+  }).catch(() => res.status(403).json({ error: 'เฉพาะ Super Admin เท่านั้น' }));
+}
 
 /* ── Auth routes ── */
 app.post('/api/auth/register', async (req, res) => {
   const u     = (req.body.username || '').trim();
   const p     = (req.body.password || '');
   const email = (req.body.email || '').trim().toLowerCase();
-  if (!u || u.length < 3) return res.status(400).json({ error: 'ชื่อผู้ใช้ต้องมีอย่างน้อย 3 ตัวอักษร' });
+  if (!u || u.length < 3)  return res.status(400).json({ error: 'ชื่อผู้ใช้ต้องมีอย่างน้อย 3 ตัวอักษร' });
   if (!/^[a-zA-Z0-9_.-]+$/.test(u)) return res.status(400).json({ error: 'ชื่อผู้ใช้ใช้ได้เฉพาะ a-z, 0-9, _ . -' });
-  if (p.length < 6)       return res.status(400).json({ error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' });
+  if (p.length < 6)         return res.status(400).json({ error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' });
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'กรุณาระบุอีเมลที่ถูกต้อง' });
 
-  const users   = loadUsers();
-  if (users.find(x => x.username.toLowerCase() === u.toLowerCase())) return res.status(409).json({ error: 'ชื่อผู้ใช้นี้ถูกใช้แล้ว' });
-  if (users.find(x => x.email === email))                             return res.status(409).json({ error: 'อีเมลนี้ถูกใช้แล้ว' });
+  const [existUser, existEmail] = await Promise.all([
+    pool.query('SELECT 1 FROM app_users WHERE LOWER(username) = LOWER($1)', [u]),
+    pool.query('SELECT 1 FROM app_users WHERE email = $1', [email]),
+  ]);
+  if (existUser.rows.length > 0) return res.status(409).json({ error: 'ชื่อผู้ใช้นี้ถูกใช้แล้ว' });
+  if (existEmail.rows.length > 0) return res.status(409).json({ error: 'อีเมลนี้ถูกใช้แล้ว' });
 
-  /* Clean up expired pending and check duplicates */
-  const pending = cleanPending();
-  const dupPending = pending.find(x => x.email === email || x.username.toLowerCase() === u.toLowerCase());
-  if (dupPending) {
-    /* Allow re-register to get a new OTP if pending exists */
-    const filtered = pending.filter(x => x.email !== email && x.username.toLowerCase() !== u.toLowerCase());
-    savePending(filtered);
-  }
-
-  /* Generate OTP */
+  await cleanPending();
   const otp    = String(Math.floor(100000 + Math.random() * 900000));
   const hash   = await bcrypt.hash(p, 12);
-  const expiry = Date.now() + 10 * 60 * 1000; // 10 min
-  const newPending = loadPending();
-  newPending.push({ username: u, passwordHash: hash, email, otp, expiry });
-  savePending(newPending);
+  const expiry = Date.now() + 10 * 60 * 1000;
+  await upsertPending({ email, username: u, passwordHash: hash, otp, expiry });
 
-  /* Send OTP email */
   const sent = await sendVerificationEmail(email, u, otp);
-  console.log(`[auth] register pending: ${u} (${email}) otp=${otp} sent=${sent}`);
+  console.log(`[auth] register pending: ${u} (${email}) sent=${sent}`);
 
-  /* If mail not configured, skip verification for dev convenience */
   if (!sent) {
-    const users2 = loadUsers();
-    users2.push({ username: u, passwordHash: hash, email });
-    saveUsers(users2);
+    await saveUser({ username: u, passwordHash: hash, email, role: 'user' });
+    await deletePending(email);
     const token = jwt.sign({ username: u }, JWT_SECRET, { expiresIn: '30d' });
-    console.log(`[auth] (no mail) registered directly: ${u}`);
     return res.json({ ok: true, token, username: u, role: 'user', verified: true });
   }
-
   res.json({ ok: true, pending: true, email, username: u });
 });
 
-/* POST /api/auth/verify-email — confirm OTP */
 app.post('/api/auth/verify-email', async (req, res) => {
   const email = (req.body.email || '').trim().toLowerCase();
   const otp   = (req.body.otp || '').trim();
   if (!email || !otp) return res.status(400).json({ error: 'ข้อมูลไม่ครบ' });
 
-  const pending = cleanPending();
-  const idx     = pending.findIndex(p => p.email === email);
-  if (idx === -1) return res.status(400).json({ error: 'ไม่พบการสมัคร หรือหมดเวลาแล้ว กรุณาสมัครใหม่' });
-
-  const entry = pending[idx];
+  await cleanPending();
+  const pending = await loadPending();
+  const entry   = pending.find(p => p.email === email);
+  if (!entry) return res.status(400).json({ error: 'ไม่พบการสมัคร หรือหมดเวลาแล้ว กรุณาสมัครใหม่' });
   if (entry.otp !== otp) return res.status(400).json({ error: 'รหัส OTP ไม่ถูกต้อง' });
 
-  /* Create account */
-  const users = loadUsers();
-  if (users.find(x => x.username.toLowerCase() === entry.username.toLowerCase()))
-    return res.status(409).json({ error: 'ชื่อผู้ใช้นี้ถูกใช้แล้ว กรุณาสมัครใหม่' });
-  if (users.find(x => x.email === email))
-    return res.status(409).json({ error: 'อีเมลนี้ถูกใช้แล้ว กรุณาสมัครใหม่' });
+  const [dupeUser, dupeEmail] = await Promise.all([
+    pool.query('SELECT 1 FROM app_users WHERE LOWER(username) = LOWER($1)', [entry.username]),
+    pool.query('SELECT 1 FROM app_users WHERE email = $1', [email]),
+  ]);
+  if (dupeUser.rows.length > 0)  return res.status(409).json({ error: 'ชื่อผู้ใช้นี้ถูกใช้แล้ว กรุณาสมัครใหม่' });
+  if (dupeEmail.rows.length > 0) return res.status(409).json({ error: 'อีเมลนี้ถูกใช้แล้ว กรุณาสมัครใหม่' });
 
-  users.push({ username: entry.username, passwordHash: entry.passwordHash, email });
-  saveUsers(users);
-
-  /* Remove from pending */
-  pending.splice(idx, 1);
-  savePending(pending);
+  await saveUser({ username: entry.username, passwordHash: entry.passwordHash, email, role: 'user' });
+  await deletePending(email);
 
   const token = jwt.sign({ username: entry.username }, JWT_SECRET, { expiresIn: '30d' });
   console.log(`[auth] verified & registered: ${entry.username} (${email})`);
   res.json({ ok: true, token, username: entry.username, role: 'user' });
 });
 
-/* POST /api/auth/resend-verify — resend OTP */
 app.post('/api/auth/resend-verify', async (req, res) => {
   const email = (req.body.email || '').trim().toLowerCase();
   if (!email) return res.status(400).json({ error: 'ต้องระบุอีเมล' });
 
-  const pending = cleanPending();
-  const idx     = pending.findIndex(p => p.email === email);
-  if (idx === -1) return res.status(400).json({ error: 'ไม่พบการสมัคร หรือหมดเวลาแล้ว กรุณาสมัครใหม่' });
+  await cleanPending();
+  const pending = await loadPending();
+  const entry   = pending.find(p => p.email === email);
+  if (!entry) return res.status(400).json({ error: 'ไม่พบการสมัคร หรือหมดเวลาแล้ว กรุณาสมัครใหม่' });
 
-  /* Generate fresh OTP & extend expiry */
   const otp = String(Math.floor(100000 + Math.random() * 900000));
-  pending[idx].otp    = otp;
-  pending[idx].expiry = Date.now() + 10 * 60 * 1000;
-  savePending(pending);
+  await upsertPending({ ...entry, otp, expiry: Date.now() + 10 * 60 * 1000 });
 
-  const sent = await sendVerificationEmail(email, pending[idx].username, otp);
-  console.log(`[auth] resend OTP to ${email} sent=${sent}`);
+  const sent = await sendVerificationEmail(email, entry.username, otp);
   res.json({ ok: true, sent });
 });
 
 app.post('/api/auth/login', async (req, res) => {
   const u    = (req.body.username || '').trim();
-  const user = findUser(u);
+  const user = await findUser(u);
   if (!user) return res.status(401).json({ error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
   const ok = await bcrypt.compare(req.body.password || '', user.passwordHash);
   if (!ok) return res.status(401).json({ error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
@@ -588,232 +708,138 @@ app.post('/api/auth/login', async (req, res) => {
   res.json({ ok: true, token, username: u, role: user.role || 'user' });
 });
 
-app.get('/api/auth/me', authMiddleware, (req, res) => {
-  const user = findUser(req.admin.username);
+app.get('/api/auth/me', authMiddleware, async (req, res) => {
+  const user = await findUser(req.admin.username);
   res.json({ ok: true, username: req.admin.username, role: user?.role || 'user' });
 });
 
-/* ── Super-admin middleware ── */
-function superAdminMiddleware(req, res, next) {
-  const user = findUser(req.admin.username);
-  if (user?.role !== 'superadmin') return res.status(403).json({ error: 'เฉพาะ Super Admin เท่านั้น' });
-  next();
-}
-
-/* ── Super Admin: list all users ── */
-app.get('/api/admin/users', authMiddleware, superAdminMiddleware, (req, res) => {
-  const users = loadUsers().map(u => {
-    const st = userStates.get(u.username);
-    const playerCount = st ? st.players.size : (() => {
-      try {
-        const file = path.join(USERS_DIR, u.username, '_players.json');
-        if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, 'utf8')).length;
-      } catch (_) {}
-      return 0;
-    })();
-    return { username: u.username, role: u.role || 'user', playerCount };
-  });
-  res.json(users);
+app.patch('/api/auth/email', authMiddleware, async (req, res) => {
+  const { email } = req.body;
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+    return res.status(400).json({ error: 'อีเมลไม่ถูกต้อง' });
+  const dup = await pool.query('SELECT 1 FROM app_users WHERE email=$1 AND username!=$2', [email.trim().toLowerCase(), req.admin.username]);
+  if (dup.rows.length > 0) return res.status(409).json({ error: 'อีเมลนี้ถูกใช้แล้ว' });
+  await pool.query('UPDATE app_users SET email=$1 WHERE username=$2', [email.trim().toLowerCase(), req.admin.username]);
+  res.json({ ok: true, email: email.trim().toLowerCase() });
 });
 
-/* ── Super Admin: delete a user ── */
-app.delete('/api/admin/users/:username', authMiddleware, superAdminMiddleware, (req, res) => {
+/* ── Super Admin routes ── */
+app.get('/api/admin/users', authMiddleware, superAdminMiddleware, async (req, res) => {
+  const users = await loadUsers();
+  const result = await Promise.all(users.map(async u => {
+    const { rows } = await pool.query('SELECT COUNT(*) FROM players WHERE owner=$1', [u.username]);
+    return { username: u.username, role: u.role, playerCount: parseInt(rows[0].count) };
+  }));
+  res.json(result);
+});
+
+app.delete('/api/admin/users/:username', authMiddleware, superAdminMiddleware, async (req, res) => {
   const target = req.params.username;
   if (target === req.admin.username) return res.status(400).json({ error: 'ไม่สามารถลบตัวเองได้' });
-  const users = loadUsers();
-  const idx   = users.findIndex(u => u.username === target);
-  if (idx === -1) return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
+  const user = await findUser(target);
+  if (!user) return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
 
-  /* Disconnect live if running */
   if (userStates.has(target)) {
     const st = userStates.get(target);
     if (st.retryTimer) clearTimeout(st.retryTimer);
     if (st.liveConnection) { try { st.liveConnection.disconnect(); } catch (_) {} }
     userStates.delete(target);
+    loadedUsers.delete(target);
   }
 
-  /* Remove user files */
+  await deleteUserFromDb(target);
   try {
     const userDir = path.join(USERS_DIR, target);
     if (fs.existsSync(userDir)) fs.rmSync(userDir, { recursive: true, force: true });
   } catch (_) {}
 
-  users.splice(idx, 1);
-  saveUsers(users);
   console.log(`[superadmin] deleted user: ${target}`);
   res.json({ ok: true });
 });
 
-/* ── Super Admin: reset password ── */
 app.post('/api/admin/users/:username/reset-password', authMiddleware, superAdminMiddleware, async (req, res) => {
-  const target   = req.params.username;
+  const target = req.params.username;
   const { newPassword } = req.body;
   if (!newPassword || newPassword.length < 6) return res.status(400).json({ error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' });
-  const users = loadUsers();
-  const user  = users.find(u => u.username === target);
+  const user = await findUser(target);
   if (!user) return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
   user.passwordHash = await bcrypt.hash(newPassword, 12);
-  saveUsers(users);
-  /* Clear their reset request if any */
-  const reqs = loadResetRequests().filter(r => r.username !== target);
-  saveResetRequests(reqs);
-  console.log(`[superadmin] reset password for: ${target}`);
+  await saveUser(user);
+  await deleteResetRequest(target);
   res.json({ ok: true });
 });
 
-/* ── Pending registrations (email verification) ── */
-const PENDING_FILE = path.join(CACHE_DIR, '_pending_reg.json');
-function loadPending() {
-  try { if (fs.existsSync(PENDING_FILE)) return JSON.parse(fs.readFileSync(PENDING_FILE, 'utf8')); } catch (_) {}
-  return [];
-}
-function savePending(p) { fs.writeFileSync(PENDING_FILE, JSON.stringify(p, null, 2)); }
-function cleanPending() {
-  const alive = loadPending().filter(p => p.expiry > Date.now());
-  savePending(alive);
-  return alive;
-}
+app.patch('/api/admin/users/:username/role', authMiddleware, superAdminMiddleware, async (req, res) => {
+  const target = req.params.username;
+  const { role } = req.body;
+  if (!['user', 'superadmin'].includes(role)) return res.status(400).json({ error: 'role ต้องเป็น user หรือ superadmin' });
+  const user = await findUser(target);
+  if (!user) return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
+  user.role = role;
+  await saveUser(user);
+  res.json({ ok: true, username: target, role });
+});
 
-/* ── Forgot password / Email reset tokens ── */
-const RESET_FILE   = path.join(CACHE_DIR, '_reset_requests.json');
-const TOKENS_FILE  = path.join(CACHE_DIR, '_reset_tokens.json');
+app.patch('/api/admin/users/:username/email', authMiddleware, superAdminMiddleware, async (req, res) => {
+  const target = req.params.username;
+  const { email } = req.body;
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+    return res.status(400).json({ error: 'อีเมลไม่ถูกต้อง' });
+  const dup = await pool.query('SELECT 1 FROM app_users WHERE email=$1 AND username!=$2', [email.trim().toLowerCase(), target]);
+  if (dup.rows.length > 0) return res.status(409).json({ error: 'อีเมลนี้ถูกใช้แล้ว' });
+  await pool.query('UPDATE app_users SET email=$1 WHERE username=$2', [email.trim().toLowerCase(), target]);
+  res.json({ ok: true, email: email.trim().toLowerCase() });
+});
 
-function loadResetRequests() {
-  try { if (fs.existsSync(RESET_FILE)) return JSON.parse(fs.readFileSync(RESET_FILE, 'utf8')); } catch (_) {}
-  return [];
-}
-function saveResetRequests(r) { fs.writeFileSync(RESET_FILE, JSON.stringify(r, null, 2)); }
+app.get('/api/admin/reset-requests', authMiddleware, superAdminMiddleware, async (req, res) => {
+  res.json(await loadResetRequests());
+});
+app.delete('/api/admin/reset-requests/:username', authMiddleware, superAdminMiddleware, async (req, res) => {
+  await deleteResetRequest(req.params.username);
+  res.json({ ok: true });
+});
 
-function loadResetTokens() {
-  try { if (fs.existsSync(TOKENS_FILE)) return JSON.parse(fs.readFileSync(TOKENS_FILE, 'utf8')); } catch (_) {}
-  return [];
-}
-function saveResetTokens(t) { fs.writeFileSync(TOKENS_FILE, JSON.stringify(t, null, 2)); }
-
-/* POST /api/auth/forgot-password  — accepts email or username */
+/* ── Password reset ── */
 app.post('/api/auth/forgot-password', async (req, res) => {
   const raw = (req.body.email || req.body.username || '').trim().toLowerCase();
   if (!raw) return res.status(400).json({ error: 'กรุณาระบุอีเมลหรือชื่อผู้ใช้' });
-
-  const users = loadUsers();
+  const users = await loadUsers();
   const user  = users.find(u => u.email === raw || u.username.toLowerCase() === raw);
+  if (!user || !user.email) { return res.json({ ok: true }); }
 
-  /* Always respond OK to avoid user enumeration */
-  if (!user || !user.email) {
-    console.log(`[auth] forgot-password: not found or no email for "${raw}"`);
-    return res.json({ ok: true });
-  }
-
-  /* Generate token */
-  const token    = crypto.randomBytes(32).toString('hex');
-  const expiry   = Date.now() + 60 * 60 * 1000; // 1 hour
-  const tokens   = loadResetTokens().filter(t => t.username !== user.username && t.expiry > Date.now());
-  tokens.push({ token, username: user.username, email: user.email, expiry });
-  saveResetTokens(tokens);
-
-  /* Also log a reset request for admin panel visibility */
-  const reqs = loadResetRequests().filter(r => r.username !== user.username);
-  reqs.push({ username: user.username, email: user.email, requestedAt: Date.now() });
-  saveResetRequests(reqs);
+  const token  = crypto.randomBytes(32).toString('hex');
+  const expiry = Date.now() + 60 * 60 * 1000;
+  await saveResetToken({ token, username: user.username, email: user.email, expiry });
+  await saveResetRequest({ username: user.username, email: user.email, requestedAt: Date.now() });
 
   const sent = await sendPasswordResetEmail(user.email, user.username, token);
-  console.log(`[auth] forgot-password: ${user.username} → ${user.email} (sent=${sent})`);
   res.json({ ok: true, sent });
 });
 
-/* GET /api/auth/reset-password?token=xxx  — validate token */
-app.get('/api/auth/reset-password', (req, res) => {
+app.get('/api/auth/reset-password', async (req, res) => {
   const { token } = req.query;
   if (!token) return res.status(400).json({ error: 'token required' });
-  const tokens = loadResetTokens();
-  const entry  = tokens.find(t => t.token === token && t.expiry > Date.now());
+  const tokens = await loadResetTokens();
+  const entry  = tokens.find(t => t.token === token);
   if (!entry) return res.status(400).json({ error: 'ลิงก์หมดอายุหรือไม่ถูกต้อง' });
   res.json({ ok: true, username: entry.username });
 });
 
-/* POST /api/auth/reset-password  — set new password via token */
 app.post('/api/auth/reset-password', async (req, res) => {
   const { token, newPassword } = req.body;
   if (!token || !newPassword || newPassword.length < 6)
     return res.status(400).json({ error: 'ข้อมูลไม่ครบหรือรหัสผ่านสั้นเกินไป' });
-
-  const tokens = loadResetTokens();
-  const idx    = tokens.findIndex(t => t.token === token && t.expiry > Date.now());
-  if (idx === -1) return res.status(400).json({ error: 'ลิงก์หมดอายุหรือไม่ถูกต้อง' });
-
-  const { username } = tokens[idx];
-  const users = loadUsers();
-  const user  = users.find(u => u.username === username);
+  const tokens = await loadResetTokens();
+  const entry  = tokens.find(t => t.token === token);
+  if (!entry) return res.status(400).json({ error: 'ลิงก์หมดอายุหรือไม่ถูกต้อง' });
+  const user = await findUser(entry.username);
   if (!user) return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
-
   user.passwordHash = await bcrypt.hash(newPassword, 12);
-  saveUsers(users);
-
-  /* Invalidate token + clear reset request */
-  tokens.splice(idx, 1);
-  saveResetTokens(tokens);
-  const reqs = loadResetRequests().filter(r => r.username !== username);
-  saveResetRequests(reqs);
-
-  console.log(`[auth] password reset OK for: ${username}`);
+  await saveUser(user);
+  await deleteResetToken(token);
+  await deleteResetRequest(entry.username);
+  console.log(`[auth] password reset OK for: ${entry.username}`);
   res.json({ ok: true });
-});
-
-app.get('/api/admin/reset-requests', authMiddleware, superAdminMiddleware, (req, res) => {
-  res.json(loadResetRequests());
-});
-
-app.delete('/api/admin/reset-requests/:username', authMiddleware, superAdminMiddleware, (req, res) => {
-  const reqs = loadResetRequests().filter(r => r.username !== req.params.username);
-  saveResetRequests(reqs);
-  res.json({ ok: true });
-});
-
-/* ── Super Admin: update user email ── */
-app.patch('/api/admin/users/:username/email', authMiddleware, superAdminMiddleware, (req, res) => {
-  const target = req.params.username;
-  const { email } = req.body;
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
-    return res.status(400).json({ error: 'อีเมลไม่ถูกต้อง' });
-  const users = loadUsers();
-  const user  = users.find(u => u.username === target);
-  if (!user) return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
-  const dup = users.find(u => u.username !== target && u.email === email.trim().toLowerCase());
-  if (dup) return res.status(409).json({ error: 'อีเมลนี้ถูกใช้แล้ว' });
-  user.email = email.trim().toLowerCase();
-  saveUsers(users);
-  console.log(`[superadmin] set email for ${target}: ${user.email}`);
-  res.json({ ok: true, email: user.email });
-});
-
-/* ── User: update own email ── */
-app.patch('/api/auth/email', authMiddleware, (req, res) => {
-  const { email } = req.body;
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
-    return res.status(400).json({ error: 'อีเมลไม่ถูกต้อง' });
-  const users = loadUsers();
-  const user  = users.find(u => u.username === req.admin.username);
-  if (!user) return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
-  const dup = users.find(u => u.username !== req.admin.username && u.email === email.trim().toLowerCase());
-  if (dup) return res.status(409).json({ error: 'อีเมลนี้ถูกใช้แล้ว' });
-  user.email = email.trim().toLowerCase();
-  saveUsers(users);
-  console.log(`[auth] ${req.admin.username} updated email: ${user.email}`);
-  res.json({ ok: true, email: user.email });
-});
-
-/* ── Super Admin: promote/demote ── */
-app.patch('/api/admin/users/:username/role', authMiddleware, superAdminMiddleware, (req, res) => {
-  const target = req.params.username;
-  const { role } = req.body;
-  if (!['user', 'superadmin'].includes(role)) return res.status(400).json({ error: 'role ต้องเป็น user หรือ superadmin' });
-  const users = loadUsers();
-  const user  = users.find(u => u.username === target);
-  if (!user) return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
-  user.role = role;
-  saveUsers(users);
-  console.log(`[superadmin] set ${target} role → ${role}`);
-  res.json({ ok: true, username: target, role });
 });
 
 /* ── Image proxy ── */
@@ -830,8 +856,8 @@ app.get('/api/img', async (req, res) => {
 app.get('/api/tiktok-info/:username', async (req, res) => {
   const username = req.params.username.replace('@', '').trim();
   if (!username) return res.status(400).json({ error: 'username required' });
-  const cached = loadFromCache(username);
-  if (cached?.displayName && cached?.profilePicUrl?.startsWith('/api/avatar/'))
+  const cached = await loadFromCache(username);
+  if (cached?.profilePicUrl?.startsWith('/api/avatar/'))
     return res.json({ username, displayName: cached.displayName, profilePicUrl: cached.profilePicUrl });
   const info = await fetchTikwmUser(username);
   const displayName   = info?.displayName || username;
@@ -839,10 +865,10 @@ app.get('/api/tiktok-info/:username', async (req, res) => {
   if (!info) {
     try {
       const oEmbed = await axios.get(`https://www.tiktok.com/oembed?url=https://www.tiktok.com/@${username}`, { timeout: 5000, headers: { 'User-Agent': 'Mozilla/5.0' } });
-      if (oEmbed.data?.author_name) { saveToCache(username, { uniqueId: username, displayName: oEmbed.data.author_name, profilePicUrl }); return res.json({ username, displayName: oEmbed.data.author_name, profilePicUrl }); }
+      if (oEmbed.data?.author_name) { await saveToCache(username, { displayName: oEmbed.data.author_name, profilePicUrl }); return res.json({ username, displayName: oEmbed.data.author_name, profilePicUrl }); }
     } catch (_) {}
   }
-  saveToCache(username, { uniqueId: username, displayName, profilePicUrl });
+  await saveToCache(username, { displayName, profilePicUrl });
   res.json({ username, displayName, profilePicUrl });
 });
 
@@ -853,10 +879,15 @@ app.post('/api/cache-avatar', authMiddleware, async (req, res) => {
   const id    = username.trim().replace('@', '');
   const local = await downloadAvatar(id, imageUrl);
   if (!local) return res.status(502).json({ error: 'ดาวน์โหลดรูปไม่ได้' });
-  const cached = loadFromCache(id);
-  saveToCache(id, { ...(cached || {}), uniqueId: id, profilePicUrl: local });
+  const cached = await loadFromCache(id);
+  await saveToCache(id, { ...(cached || {}), profilePicUrl: local });
+  await ensureUserLoaded(req.admin.username);
   const st = getUserState(req.admin.username);
-  if (st.players.has(id)) { st.players.get(id).profilePicUrl = local; saveUserPlayers(req.admin.username, st.players); broadcast(req.admin.username); }
+  if (st.players.has(id)) {
+    st.players.get(id).profilePicUrl = local;
+    saveUserPlayers(req.admin.username, st.players).catch(() => {});
+    broadcast(req.admin.username);
+  }
   res.json({ ok: true, profilePicUrl: local });
 });
 
@@ -872,32 +903,17 @@ app.get('/api/avatar/:username', (req, res) => {
 });
 
 /* ── Live API ── */
-/* ── Resolve short/full TikTok URL → username ── */
 async function resolveUsername(input) {
   const raw = (input || '').trim();
   if (!raw.startsWith('http')) return raw.replace('@', '');
-
-  // Follow redirects and extract final URL
   let finalUrl = raw;
   try {
-    const resp = await axios.get(raw, {
-      maxRedirects: 10,
-      timeout: 10000,
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36' },
-      validateStatus: () => true,
-    });
+    const resp = await axios.get(raw, { maxRedirects: 10, timeout: 10000, headers: { 'User-Agent': 'Mozilla/5.0' }, validateStatus: () => true });
     finalUrl = resp.request?.res?.responseUrl || resp.config?.url || raw;
-  } catch (e) {
-    finalUrl = raw; // fall through and try parsing as-is
-  }
-
-  // https://www.tiktok.com/@username/live  OR  /@username  patterns
+  } catch (e) { finalUrl = raw; }
   const m = finalUrl.match(/tiktok\.com\/@([^/?#]+)/i) || finalUrl.match(/@([^/?#\s]+)/);
   if (m) return m[1];
-
-  // If no @ found but it was a URL, return as-is and let the library handle it
   if (finalUrl.startsWith('http')) return finalUrl;
-
   throw new Error('ไม่พบ username ในลิงค์นี้ กรุณาตรวจสอบ URL');
 }
 
@@ -906,29 +922,33 @@ app.post('/api/live/connect', authMiddleware, async (req, res) => {
   if (!raw) return res.status(400).json({ error: 'ต้องระบุ username หรือ URL' });
   try {
     const resolved = await resolveUsername(raw);
-    console.log(`[connect] raw="${raw}" → resolved="${resolved}"`);
+    await ensureUserLoaded(req.admin.username);
     connectLive(req.admin.username, resolved);
     res.json({ ok: true, resolved });
-  } catch (e) {
-    res.status(400).json({ error: e.message });
-  }
+  } catch (e) { res.status(400).json({ error: e.message }); }
 });
-app.post('/api/live/disconnect', authMiddleware, (req, res) => {
+
+app.post('/api/live/disconnect', authMiddleware, async (req, res) => {
+  await ensureUserLoaded(req.admin.username);
   disconnectLive(req.admin.username);
   const st = getUserState(req.admin.username);
   st.commenters.clear(); broadcastCommenters(req.admin.username);
   res.json({ ok: true });
 });
-app.get('/api/live/status', authMiddleware, (req, res) => {
+
+app.get('/api/live/status', authMiddleware, async (req, res) => {
+  await ensureUserLoaded(req.admin.username);
   const st = getUserState(req.admin.username);
   res.json({ status: st.liveStatus, host: st.liveHost, error: st.liveError, commenterCount: st.commenters.size });
 });
-app.get('/api/live/commenters', authMiddleware, (req, res) => {
+
+app.get('/api/live/commenters', authMiddleware, async (req, res) => {
+  await ensureUserLoaded(req.admin.username);
   const st = getUserState(req.admin.username);
   res.json(Array.from(st.commenters.values()).sort((a, b) => b.lastSeen - a.lastSeen).slice(0, MAX_COMMENTERS));
 });
 
-/* ── External chat (bookmarklet) — needs ?u=adminUsername ── */
+/* ── External chat (bookmarklet) ── */
 app.post('/api/external-chat', (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   const { uniqueId, nickname, profilePicUrl, adminUser } = req.body;
@@ -958,9 +978,10 @@ app.get('/bookmarklet.js', (req, res) => {
 });
 
 /* ── Player API ── */
-app.get('/api/players', (req, res) => {
+app.get('/api/players', async (req, res) => {
   const u = req.query.u;
   if (!u) return res.status(400).json({ error: 'u required' });
+  await ensureUserLoaded(u);
   const st = getUserState(u);
   res.json(Array.from(st.players.values()).sort((a, b) => b.win - a.win).map((p, i) => ({ ...p, rank: i + 1 })));
 });
@@ -969,50 +990,60 @@ app.post('/api/player', authMiddleware, async (req, res) => {
   const { username, displayName, profilePicUrl } = req.body;
   if (!username) return res.status(400).json({ error: 'username required' });
   const id = username.trim().replace('@', '');
+  await ensureUserLoaded(req.admin.username);
   const st = getUserState(req.admin.username);
   if (st.players.has(id)) return res.status(409).json({ error: 'มีผู้เล่นนี้อยู่แล้ว' });
   let pic = profilePicUrl || '', name = displayName || id;
   if (!pic || pic.includes('ui-avatars.com') || pic.includes('unavatar')) {
-    const cached = loadFromCache(id);
+    const cached = await loadFromCache(id);
     if (cached?.profilePicUrl?.startsWith('/api/avatar/')) {
       pic = cached.profilePicUrl; if (!displayName || displayName === id) name = cached.displayName || id;
     } else {
       const info = await fetchTikwmUser(id);
-      if (info) { pic = info.profilePicUrl; if (!displayName || displayName === id) name = info.displayName; saveToCache(id, { uniqueId: id, displayName: name, profilePicUrl: pic }); }
+      if (info) { pic = info.profilePicUrl; if (!displayName || displayName === id) name = info.displayName; await saveToCache(id, { displayName: name, profilePicUrl: pic }); }
     }
   }
   if (!pic) pic = uiAvatar(id);
   st.players.set(id, { id, username: id, displayName: name, profilePicUrl: pic, win: 0, joinedAt: Date.now() });
-  saveUserPlayers(req.admin.username, st.players);
+  saveUserPlayers(req.admin.username, st.players).catch(() => {});
   broadcast(req.admin.username);
   res.json(st.players.get(id));
 });
 
-app.delete('/api/player/:id', authMiddleware, (req, res) => {
+app.delete('/api/player/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
+  await ensureUserLoaded(req.admin.username);
   const st = getUserState(req.admin.username);
   if (!st.players.has(id)) return res.status(404).json({ error: 'ไม่พบผู้เล่น' });
-  st.players.delete(id); saveUserPlayers(req.admin.username, st.players); broadcast(req.admin.username);
+  st.players.delete(id);
+  saveUserPlayers(req.admin.username, st.players).catch(() => {});
+  broadcast(req.admin.username);
   res.json({ ok: true });
 });
 
-app.patch('/api/player/:id/win', authMiddleware, (req, res) => {
+app.patch('/api/player/:id/win', authMiddleware, async (req, res) => {
   const { id } = req.params;
+  await ensureUserLoaded(req.admin.username);
   const st = getUserState(req.admin.username);
   if (!st.players.has(id)) return res.status(404).json({ error: 'ไม่พบผู้เล่น' });
   const p = st.players.get(id);
   p.win = Math.max(0, p.win + (req.body.delta || 0));
-  saveUserPlayers(req.admin.username, st.players); broadcast(req.admin.username);
+  saveUserPlayers(req.admin.username, st.players).catch(() => {});
+  broadcast(req.admin.username);
   res.json(p);
 });
 
-app.post('/api/reset', authMiddleware, (req, res) => {
+app.post('/api/reset', authMiddleware, async (req, res) => {
+  await ensureUserLoaded(req.admin.username);
   const st = getUserState(req.admin.username);
-  st.players.clear(); saveUserPlayers(req.admin.username, st.players); broadcast(req.admin.username);
+  st.players.clear();
+  saveUserPlayers(req.admin.username, st.players).catch(() => {});
+  broadcast(req.admin.username);
   res.json({ ok: true });
 });
 
-app.post('/api/reset-top1', authMiddleware, (req, res) => {
+app.post('/api/reset-top1', authMiddleware, async (req, res) => {
+  await ensureUserLoaded(req.admin.username);
   const st     = getUserState(req.admin.username);
   const sorted = Array.from(st.players.values()).sort((a, b) => b.win - a.win);
   const top    = sorted[0];
@@ -1022,35 +1053,31 @@ app.post('/api/reset-top1', authMiddleware, (req, res) => {
 });
 
 /* ── Watched gifter endpoints ── */
-app.get('/api/watch-gifters', authMiddleware, (req, res) => {
+app.get('/api/watch-gifters', authMiddleware, async (req, res) => {
+  await ensureUserLoaded(req.admin.username);
   const st = getUserState(req.admin.username);
   res.json(Object.fromEntries([...st.watchedGifters.entries()]));
 });
-
-app.post('/api/watch-gifter', authMiddleware, (req, res) => {
+app.post('/api/watch-gifter', authMiddleware, async (req, res) => {
   const uid = (req.body.uniqueId || '').trim().replace(/^@/, '');
   if (!uid) return res.status(400).json({ error: 'กรุณาระบุ username' });
+  await ensureUserLoaded(req.admin.username);
   const st = getUserState(req.admin.username);
   if (!st.watchedGifters.has(uid)) {
-    st.watchedGifters.set(uid, {
-      uniqueId: uid, displayName: uid, profilePicUrl: null,
-      profileUrl: `https://www.tiktok.com/@${uid}`,
-      giftLog: [], totalDiamonds: 0,
-    });
+    st.watchedGifters.set(uid, { uniqueId: uid, displayName: uid, profilePicUrl: null, profileUrl: `https://www.tiktok.com/@${uid}`, giftLog: [], totalDiamonds: 0 });
   }
   io.to(`room:${req.admin.username}`).emit('watchedGiftersUpdate', Object.fromEntries([...st.watchedGifters.entries()]));
-  console.log(`[watch:${req.admin.username}] tracking @${uid}`);
   res.json({ ok: true });
 });
-
-app.delete('/api/watch-gifter/:uid', authMiddleware, (req, res) => {
+app.delete('/api/watch-gifter/:uid', authMiddleware, async (req, res) => {
+  await ensureUserLoaded(req.admin.username);
   const st = getUserState(req.admin.username);
   st.watchedGifters.delete(req.params.uid);
   io.to(`room:${req.admin.username}`).emit('watchedGiftersUpdate', Object.fromEntries([...st.watchedGifters.entries()]));
   res.json({ ok: true });
 });
-
-app.delete('/api/watch-gifter/:uid/log', authMiddleware, (req, res) => {
+app.delete('/api/watch-gifter/:uid/log', authMiddleware, async (req, res) => {
+  await ensureUserLoaded(req.admin.username);
   const st = getUserState(req.admin.username);
   const wg = st.watchedGifters.get(req.params.uid);
   if (wg) { wg.giftLog = []; wg.totalDiamonds = 0; }
@@ -1058,5 +1085,16 @@ app.delete('/api/watch-gifter/:uid/log', authMiddleware, (req, res) => {
   res.json({ ok: true });
 });
 
+/* ── Start server after DB is ready ── */
 const PORT = 3001;
-server.listen(PORT, () => console.log(`Server on port ${PORT}`));
+(async () => {
+  try {
+    await initDb();
+    JWT_SECRET = await getOrCreateJwtSecret();
+    await migrateFromFiles();
+    server.listen(PORT, () => console.log(`[server] listening on port ${PORT}`));
+  } catch (e) {
+    console.error('[server] startup error:', e.message);
+    process.exit(1);
+  }
+})();

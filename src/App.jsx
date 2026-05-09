@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { io } from 'socket.io-client';
+import socket from './socket.js';
 import Podium from './components/Podium.jsx';
 import PlayerList from './components/PlayerList.jsx';
 import AddPlayer from './components/AddPlayer.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
 import styles from './App.module.css';
 import { apiFetch, getToken } from './auth.js';
-
-const socket = io('/', { transports: ['websocket', 'polling'] });
 
 export default function App({ username, role, onLogout }) {
   const [players, setPlayers]   = useState([]);
@@ -22,19 +20,24 @@ export default function App({ username, role, onLogout }) {
   const isSuperAdmin = role === 'superadmin';
 
   useEffect(() => {
-    const token = getToken();
-    if (token) socket.emit('authenticate', { token });
-    socket.on('connect', () => { if (token) socket.emit('authenticate', { token }); });
+    function authenticate() {
+      const token = getToken();
+      if (token) socket.emit('authenticate', { token });
+    }
+
+    authenticate();
+    socket.on('connect', authenticate);
     socket.on('players', setPlayers);
-    return () => { socket.off('connect'); socket.off('players'); };
+
+    return () => {
+      socket.off('connect', authenticate);
+      socket.off('players', setPlayers);
+    };
   }, []);
 
-  /* close mobile menu when clicking outside */
   useEffect(() => {
     function handleOutside(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setMenuOpen(false);
-      }
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
     }
     if (menuOpen) document.addEventListener('mousedown', handleOutside);
     return () => document.removeEventListener('mousedown', handleOutside);
@@ -93,17 +96,13 @@ export default function App({ username, role, onLogout }) {
   return (
     <div className={styles.app}>
 
-      {/* ══════════ HEADER ══════════ */}
       <header className={styles.header} ref={menuRef}>
-
-        {/* Logo */}
         <div className={styles.logo}>
           <span className={styles.logoTrophy}>🏆</span>
           <span className={styles.logoText}>WIN Leaderboard</span>
           <span className={styles.logoSpark}>✨</span>
         </div>
 
-        {/* Hamburger — mobile only */}
         <button
           className={`${styles.hamburger} ${menuOpen ? styles.hamburgerOpen : ''}`}
           onClick={() => setMenuOpen(o => !o)}
@@ -112,23 +111,17 @@ export default function App({ username, role, onLogout }) {
           <span /><span /><span />
         </button>
 
-        {/* Desktop always visible · Mobile slide-down */}
         <div className={`${styles.headerRight} ${menuOpen ? styles.headerRightOpen : ''}`}>
-
-          {/* ── Group 1: URL copy buttons ── */}
           <div className={styles.btnGroup}>
             <span className={styles.btnGroupLabel}>🔗 Copy URL</span>
             <div className={styles.btnGroupRow}>
-              <button className={`${styles.hBtn} ${styles.hBtnCyan}`}
-                onClick={() => { copyUrl(overlayUrl, setCopied); }}>
+              <button className={`${styles.hBtn} ${styles.hBtnCyan}`} onClick={() => copyUrl(overlayUrl, setCopied)}>
                 {copied   ? '✓ คัดลอก' : '📺 Overlay'}
               </button>
-              <button className={`${styles.hBtn} ${styles.hBtnGold}`}
-                onClick={() => { copyUrl(newkingUrl, setCopiedNK); }}>
+              <button className={`${styles.hBtn} ${styles.hBtnGold}`} onClick={() => copyUrl(newkingUrl, setCopiedNK)}>
                 {copiedNK ? '✓ คัดลอก' : '👑 New King'}
               </button>
-              <button className={`${styles.hBtn} ${styles.hBtnOrange}`}
-                onClick={() => { copyUrl(top1Url, setCopiedT1); }}>
+              <button className={`${styles.hBtn} ${styles.hBtnOrange}`} onClick={() => copyUrl(top1Url, setCopiedT1)}>
                 {copiedT1 ? '✓ คัดลอก' : '🥇 Top 1'}
               </button>
             </div>
@@ -136,16 +129,13 @@ export default function App({ username, role, onLogout }) {
 
           <div className={styles.groupDivider} />
 
-          {/* ── Group 2: Action / reset buttons ── */}
           <div className={styles.btnGroup}>
             <span className={styles.btnGroupLabel}>⚙️ จัดการ</span>
             <div className={styles.btnGroupRow}>
-              <button className={`${styles.hBtn} ${styles.hBtnAmber}`}
-                onClick={handleResetTop1}>
+              <button className={`${styles.hBtn} ${styles.hBtnAmber}`} onClick={handleResetTop1}>
                 🗑 ล้าง Top 1
               </button>
-              <button className={`${styles.hBtn} ${styles.hBtnRed}`}
-                onClick={handleReset}>
+              <button className={`${styles.hBtn} ${styles.hBtnRed}`} onClick={handleReset}>
                 ⚠️ ล้างข้อมูล
               </button>
             </div>
@@ -153,7 +143,6 @@ export default function App({ username, role, onLogout }) {
 
           <div className={styles.groupDivider} />
 
-          {/* ── User badge ── */}
           <div className={styles.btnGroup}>
             <span className={styles.btnGroupLabel}>👤 บัญชี</span>
             <div className={styles.btnGroupRow}>
@@ -173,14 +162,11 @@ export default function App({ username, role, onLogout }) {
               </button>
             </div>
           </div>
-
         </div>
       </header>
 
-      {/* overlay backdrop for mobile menu */}
       {menuOpen && <div className={styles.menuBackdrop} onClick={() => setMenuOpen(false)} />}
 
-      {/* ══════════ BRANDING BAR ══════════ */}
       <div className={styles.brandBar}>
         <span className={styles.brandDeco}>🎵</span>
         <span className={styles.brandDeco}>✨</span>
@@ -192,7 +178,6 @@ export default function App({ username, role, onLogout }) {
         <span className={styles.brandDeco}>🎀</span>
       </div>
 
-      {/* ══════════ MAIN CONTENT ══════════ */}
       <main className={styles.main}>
         <AddPlayer onAdd={handleAdd} />
         {players.length === 0 ? (
@@ -212,7 +197,6 @@ export default function App({ username, role, onLogout }) {
       {toast && <div className={`${styles.toast} ${styles[toast.type]}`}>{toast.msg}</div>}
       {showAdmin && <AdminPanel onClose={() => setShowAdmin(false)} />}
 
-      {/* ══════════ TICKER FOOTER ══════════ */}
       <div className={styles.ticker}>
         <div className={styles.tickerTrack}>
           {[...Array(4)].map((_, i) => (

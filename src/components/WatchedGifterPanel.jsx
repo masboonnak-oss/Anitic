@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import socket from '../socket.js';
 import { apiFetch } from '../auth.js';
 import s from './WatchedGifterPanel.module.css';
 
-export default function WatchedGifterPanel({ socket }) {
+export default function WatchedGifterPanel() {
   const [watched,  setWatched]  = useState({});
   const [input,    setInput]    = useState('');
   const [loading,  setLoading]  = useState(false);
@@ -10,8 +11,10 @@ export default function WatchedGifterPanel({ socket }) {
 
   useEffect(() => {
     apiFetch('/api/watch-gifters').then(r => r.json()).then(setWatched).catch(() => {});
-    socket.on('watchedGiftersUpdate', setWatched);
-    return () => socket.off('watchedGiftersUpdate');
+
+    function onUpdate(data) { setWatched(data); }
+    socket.on('watchedGiftersUpdate', onUpdate);
+    return () => socket.off('watchedGiftersUpdate', onUpdate);
   }, []);
 
   async function handleAdd(e) {

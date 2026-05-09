@@ -4,7 +4,6 @@ import Podium from './components/Podium.jsx';
 import PlayerList from './components/PlayerList.jsx';
 import AddPlayer from './components/AddPlayer.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
-import LiveConnect from './components/LiveConnect.jsx';
 import styles from './App.module.css';
 import { apiFetch, getToken } from './auth.js';
 
@@ -202,8 +201,6 @@ export default function App({ username, role, onLogout }) {
       </div>
 
       <main className={styles.main}>
-
-        <LiveConnect onAddPlayer={handleAddFromCapture} />
 
         <AddPlayer onAdd={handleAdd} />
 

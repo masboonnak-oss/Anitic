@@ -4,6 +4,8 @@
   "main": "server/index.js",
   "scripts": {
     "dev": "concurrently \"node server/index.js\" \"vite --port 5000 --host 0.0.0.0\"",
+    "build": "vite build",
+    "start": "node server/index.js",
     "server": "node server/index.js",
     "client": "vite --port 5000 --host 0.0.0.0"
   },

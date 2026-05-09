@@ -1293,14 +1293,25 @@ app.get('/api/streamdps/status', authMiddleware, async (req, res) => {
   });
 });
 
+/* ── Serve built frontend in production ── */
+const DIST_DIR = path.join(__dirname, '../dist');
+if (require('fs').existsSync(DIST_DIR)) {
+  app.use(express.static(DIST_DIR));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/') || req.path.startsWith('/socket.io')) return next();
+    res.sendFile(path.join(DIST_DIR, 'index.html'));
+  });
+  console.log('[server] serving static files from dist/');
+}
+
 /* ── Start server after DB is ready ── */
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 (async () => {
   try {
     await initDb();
     JWT_SECRET = await getOrCreateJwtSecret();
     await migrateFromFiles();
-    server.listen(PORT, () => console.log(`[server] listening on port ${PORT}`));
+    server.listen(PORT, '0.0.0.0', () => console.log(`[server] listening on port ${PORT}`));
   } catch (e) {
     console.error('[server] startup error:', e.message);
     process.exit(1);

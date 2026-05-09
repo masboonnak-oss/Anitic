@@ -1,0 +1,178 @@
+BUILD A PROFESSIONAL TIKTOK LIVE STREAMING SYSTEM (SAAS LEVEL)
+
+====================================
+SYSTEM NAME:
+"TIKTOK PRO STREAM HUB"
+
+====================================
+TECH STACK:
+====================================
+Frontend:
+- React + Vite
+- TailwindCSS
+- Socket.IO Client
+- Framer Motion animations
+
+Backend:
+- Node.js + Express
+- Socket.IO
+- tiktok-live-connector
+- Axios Proxy Layer
+- JWT Auth
+- SQLite or MongoDB
+
+====================================
+CORE FEATURES:
+====================================
+
+1. ADMIN DASHBOARD (SAAS STYLE)
+------------------------------------
+- Modern gaming UI (glassmorphism + neon)
+- Sidebar navigation
+- Live status indicators
+- User management
+- Stream control panel
+- Copy overlay link button
+
+====================================
+
+2. TIKTOK LIVE CONNECTOR (REALTIME ENGINE)
+------------------------------------
+Use: tiktok-live-connector
+
+Features:
+- Connect using @username
+- Listen to events:
+  - gift
+  - like
+  - follow
+  - comment
+- Emit events via Socket.IO to frontend
+- Auto reconnect if disconnected
+- Retry 3 times before fail state
+
+====================================
+
+3. PROXY SYSTEM (ANTI IP BLOCK)
+------------------------------------
+Create proxy server:
+
+Routes:
+GET /proxy/tiktok/:username
+GET /proxy/streamdps/:username
+
+Rules:
+- Forward requests through server
+- Add headers:
+  - User-Agent: Mozilla
+  - Referer: streamdps.com
+- Prevent IP_BLOCKED errors
+
+====================================
+
+4. STREAM OVERLAY SYSTEM (OBS / TIKTOK LIVE STUDIO)
+------------------------------------
+Create overlay page:
+
+/overlay/:roomId
+
+Features:
+- Transparent background
+- Real-time gift animations
+- Username popups
+- Top donator leaderboard
+- Smooth animations
+- Neon esports style UI
+
+Socket events:
+- gift_received
+- like_received
+- follow_received
+
+====================================
+
+5. STREAMDPS INTEGRATION
+------------------------------------
+Embed widget:
+https://streamdps.com/tiktok-widgets/gifts/?username=INPUT
+
+Wrap inside proxy layer to avoid blocking
+
+====================================
+
+6. REALTIME SOCKET ENGINE
+------------------------------------
+Use Socket.IO:
+
+Events:
+- connect_stream
+- disconnect_stream
+- gift_event
+- update_leaderboard
+
+Broadcast to overlay instantly
+
+====================================
+
+7. AUTH SYSTEM (PRO LEVEL)
+------------------------------------
+- Register / Login
+- JWT authentication
+- Role-based access (admin/user)
+- Secure password hashing (bcrypt)
+
+====================================
+
+8. DATABASE STRUCTURE
+------------------------------------
+Users:
+- id
+- username
+- password
+- role
+
+Streams:
+- id
+- tiktokUsername
+- status
+- connectedAt
+
+Events:
+- id
+- type (gift/like/follow)
+- username
+- value
+- timestamp
+
+====================================
+
+9. AUTO SETUP
+------------------------------------
+- Auto install dependencies
+- Auto create DB
+- Auto seed admin account:
+  username: admin
+  password: admin123
+
+====================================
+
+10. UI STYLE (IMPORTANT)
+------------------------------------
+- Neon purple / pink / red
+- Glassmorphism panels
+- Gaming dashboard like OBS / Streamlabs
+- Smooth animations
+- Floating particles background
+
+====================================
+
+11. FINAL OUTPUT REQUIREMENT
+------------------------------------
+After build:
+- Start server automatically
+- Print:
+  - Admin login
+  - Overlay URL
+  - WebSocket status
+  - Proxy status
+- Ensure FULL WORKING SYSTEM (no placeholders)

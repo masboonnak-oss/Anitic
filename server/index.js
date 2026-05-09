@@ -411,8 +411,15 @@ async function ensureUserLoaded(username) {
 
 /* ── Express + Socket.IO ── */
 let TikTokLiveConnection, WebcastEvent;
-try { const pkg = require('tiktok-live-connector'); TikTokLiveConnection = pkg.TikTokLiveConnection; WebcastEvent = pkg.WebcastEvent; }
-catch (e) { console.log('tiktok-live-connector not available:', e.message); }
+try {
+  const pkg = require('tiktok-live-connector');
+  TikTokLiveConnection = pkg.TikTokLiveConnection;
+  WebcastEvent = pkg.WebcastEvent;
+  if (pkg.SignConfig && process.env.EULER_API_KEY) {
+    pkg.SignConfig.apiKey = process.env.EULER_API_KEY;
+    console.log('[tiktok] Euler Sign API Key loaded ✓');
+  }
+} catch (e) { console.log('tiktok-live-connector not available:', e.message); }
 
 const app    = express();
 const server = http.createServer(app);
@@ -724,6 +731,34 @@ io.on('connection', (socket) => {
       socket._tiktokConn = null;
     }
   });
+});
+
+/* ── StreamDPS proxy (public, no auth) ── */
+app.get('/api/proxy/streamdps', async (req, res) => {
+  const username = String(req.query.username || '').trim().replace(/^@/, '');
+  if (!username) return res.status(400).send('username required');
+  try {
+    const url = `https://streamdps.com/tiktok-widgets/gifts/?username=${encodeURIComponent(username)}`;
+    const resp = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Referer': 'https://streamdps.com/',
+        'Cache-Control': 'no-cache',
+      },
+      signal: AbortSignal.timeout(10000),
+    });
+    let html = await resp.text();
+    html = html.replace(/(<head[^>]*>)/i, '$1<base href="https://streamdps.com/">');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('X-Frame-Options', 'ALLOWALL');
+    res.removeHeader('Content-Security-Policy');
+    res.send(html);
+  } catch (err) {
+    console.error('[proxy:streamdps]', err.message);
+    res.status(502).send(`<html><body style="background:#0a0a15;color:#ff4d6d;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:12px"><div style="font-size:32px">⚠️</div><div>StreamDPS proxy error</div><div style="font-size:12px;color:#666">${err.message}</div></body></html>`);
+  }
 });
 
 /* ── Auth middleware ── */

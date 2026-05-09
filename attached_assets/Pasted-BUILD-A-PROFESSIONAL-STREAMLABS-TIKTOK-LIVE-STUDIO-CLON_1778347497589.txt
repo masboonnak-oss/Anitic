@@ -1,0 +1,206 @@
+BUILD A PROFESSIONAL STREAMLABS + TIKTOK LIVE STUDIO CLONE (SAFE ARCHITECTURE)
+
+====================================
+SYSTEM NAME:
+"STREAM HUB PRO - LIVE STUDIO CLONE"
+
+====================================
+IMPORTANT RULE:
+Do NOT use unsafe scraping or bypass login systems.
+Use only official event-based connectors and proxy-safe embedding.
+
+====================================
+TECH STACK:
+====================================
+Frontend:
+- React + Vite
+- TailwindCSS
+- Framer Motion
+- Socket.IO Client
+
+Backend:
+- Node.js + Express
+- Socket.IO
+- tiktok-live-connector (EVENT BASED ONLY)
+- Axios (safe proxy only)
+- JWT Auth
+- SQLite
+
+====================================
+1. CORE SYSTEM ARCHITECTURE
+====================================
+
+Create modular system:
+
+/server
+/client
+/overlay
+/proxy
+/socket
+/services
+
+Everything must communicate via Socket.IO events.
+
+====================================
+2. STREAMING ENGINE (CORE)
+====================================
+
+Use TikTok Live Connector ONLY:
+
+Events:
+- onGift
+- onLike
+- onFollow
+- onComment
+
+When event triggers:
+- Send to Socket.IO server
+- Broadcast to overlay instantly
+
+DO NOT SCRAPE HTML OR LOGIN DATA.
+
+====================================
+3. PROXY SYSTEM (SAFE MODE)
+====================================
+
+Proxy ONLY for public widgets:
+
+StreamDPS:
+https://streamdps.com/tiktok-widgets/gifts/
+
+Rules:
+- cache requests
+- add rate limit
+- add user-agent headers
+- NO login bypass
+
+====================================
+4. OVERLAY SYSTEM (STREAMLABS STYLE)
+====================================
+
+Create /overlay route:
+
+Features:
+- Transparent background
+- Animated alerts:
+  - Gift alert popup
+  - Follow alert
+  - Like burst animation
+- Top donor leaderboard
+- Chat overlay mode
+- Smooth transitions (Framer Motion)
+
+====================================
+5. DASHBOARD (TIKTOK STUDIO STYLE)
+====================================
+
+Create professional UI:
+
+Panels:
+- Live status
+- Stream connect panel
+- Overlay generator link
+- Event log console
+- Gift counter
+- Viewer counter
+
+====================================
+6. CONNECTION SYSTEM
+====================================
+
+Input:
+@username
+
+Button:
+CONNECT STREAM
+
+Flow:
+- Connect via TikTok Live Connector
+- Show status:
+  CONNECTING → LIVE → OFFLINE
+- Auto reconnect if dropped
+
+====================================
+7. SOCKET ENGINE
+====================================
+
+Socket events:
+
+client -> server:
+- connect_stream
+- disconnect_stream
+
+server -> client:
+- gift_event
+- follow_event
+- like_event
+- chat_event
+
+====================================
+8. ALERT SYSTEM (STREAMLABS STYLE)
+====================================
+
+Create alert queue system:
+- queue events
+- show 1 by 1
+- animation delay
+- sound trigger support
+
+====================================
+9. DATABASE
+====================================
+
+Tables:
+
+Users:
+- id
+- username
+- password
+- role
+
+Streams:
+- id
+- tiktokUsername
+- status
+
+Events:
+- id
+- type
+- username
+- value
+- time
+
+====================================
+10. SECURITY (IMPORTANT)
+====================================
+
+- JWT auth required
+- rate limit API
+- no credential scraping
+- safe headers only
+- disconnect invalid sessions
+
+====================================
+11. UI STYLE (STREAMLABS LEVEL)
+====================================
+
+Design:
+- Dark mode default
+- Neon green / purple accents
+- Glass panels
+- Smooth blur background
+- Animated cards
+- OBS-friendly layout
+
+====================================
+12. FINAL OUTPUT
+====================================
+
+After setup:
+- Start backend + frontend
+- Print:
+  - Dashboard URL
+  - Overlay URL
+  - Socket status
+  - Stream status
+- Ensure FULL RUNNING SYSTEM

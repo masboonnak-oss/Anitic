@@ -115,8 +115,43 @@ async function initDb() {
       connected_at BIGINT,
       last_ping BIGINT
     );
+    CREATE TABLE IF NOT EXISTS room_visitors (
+      id SERIAL PRIMARY KEY,
+      room_username TEXT NOT NULL,
+      unique_id TEXT NOT NULL,
+      display_name TEXT,
+      profile_pic_url TEXT,
+      level INTEGER DEFAULT 0,
+      total_likes INTEGER DEFAULT 0,
+      total_diamonds INTEGER DEFAULT 0,
+      visit_count INTEGER DEFAULT 1,
+      first_seen TIMESTAMPTZ DEFAULT NOW(),
+      last_seen TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(room_username, unique_id)
+    );
   `);
   console.log('[db] tables ready');
+}
+
+/* ── Room Visitor upsert helper ── */
+async function upsertRoomVisitor({ roomUsername, uniqueId, displayName, profilePicUrl, level = 0, likes = 0, diamonds = 0 }) {
+  if (!roomUsername || !uniqueId) return;
+  try {
+    await pool.query(`
+      INSERT INTO room_visitors (room_username, unique_id, display_name, profile_pic_url, level, total_likes, total_diamonds, visit_count, first_seen, last_seen)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, 1, NOW(), NOW())
+      ON CONFLICT (room_username, unique_id) DO UPDATE SET
+        display_name    = COALESCE(EXCLUDED.display_name, room_visitors.display_name),
+        profile_pic_url = COALESCE(EXCLUDED.profile_pic_url, room_visitors.profile_pic_url),
+        level           = GREATEST(room_visitors.level, EXCLUDED.level),
+        total_likes     = room_visitors.total_likes + EXCLUDED.total_likes,
+        total_diamonds  = room_visitors.total_diamonds + EXCLUDED.total_diamonds,
+        visit_count     = CASE WHEN $6 = 0 AND $7 = 0 THEN room_visitors.visit_count + 1 ELSE room_visitors.visit_count END,
+        last_seen       = NOW()
+    `, [roomUsername.toLowerCase(), uniqueId, displayName, profilePicUrl, level, likes, diamonds]);
+  } catch (e) {
+    console.error('[db] upsertRoomVisitor error:', e.message);
+  }
 }
 
 /* ── JWT secret (stored in DB) ── */
@@ -711,10 +746,19 @@ io.on('connection', (socket) => {
         socket.emit('gift', giftPayload);
         /* broadcast to overlay(s) listening on this room */
         io.to(`room:${uniqueId}`).emit('tiktokGift', giftPayload);
+        if (uid) upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: uid,
+          displayName: giftPayload.displayName, profilePicUrl: giftPayload.profilePicUrl,
+          level: data?.user?.fansClub?.memberLevel || data?.user?.level || 0, diamonds });
       });
 
       conn.on(WebcastEvent?.LIKE || 'like', (data) => {
         socket.emit('like', { totalLikeCount: data?.totalLikeCount, likeCount: data?.likeCount });
+        const lUid = data?.user?.uniqueId;
+        if (lUid) upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: lUid,
+          displayName: data?.user?.nickname || lUid,
+          profilePicUrl: data?.user?.profilePictureUrl ? proxiedPic(data.user.profilePictureUrl, lUid) : null,
+          level: data?.user?.fansClub?.memberLevel || data?.user?.level || 0,
+          likes: data?.likeCount || 1 });
       });
 
       conn.on('roomUser', (data) => {
@@ -734,6 +778,8 @@ io.on('connection', (socket) => {
         socket.emit('member', memberPayload);
         /* broadcast to overlay(s) listening on this room */
         io.to(`room:${uniqueId}`).emit('tiktokMember', memberPayload);
+        if (mUid) upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: mUid,
+          displayName: mNick, profilePicUrl: memberPayload.profilePicUrl, level });
       });
 
       conn.on('disconnected', () => {
@@ -1318,6 +1364,33 @@ app.get('/api/streamdps/status', authMiddleware, async (req, res) => {
     connectedAt: r.connected_at ? Number(r.connected_at) : null,
     lastPing:    r.last_ping    ? Number(r.last_ping)    : null,
   });
+});
+
+/* ── Room Visitors API ── */
+app.get('/api/room-visitors/:username', async (req, res) => {
+  const uname = String(req.params.username || '').toLowerCase().trim().replace(/^@/, '');
+  if (!uname) return res.status(400).json({ error: 'username required' });
+  const validSorts = { last_seen:'last_seen DESC', diamonds:'total_diamonds DESC', likes:'total_likes DESC', level:'level DESC', first_seen:'first_seen ASC' };
+  const orderBy = validSorts[req.query.sort] || 'last_seen DESC';
+  const limit = Math.min(parseInt(req.query.limit) || 200, 500);
+  try {
+    const result = await pool.query(
+      `SELECT unique_id, display_name, profile_pic_url, level, total_likes, total_diamonds, visit_count,
+              first_seen, last_seen
+       FROM room_visitors WHERE room_username = $1 ORDER BY ${orderBy} LIMIT $2`,
+      [uname, limit]
+    );
+    res.json({ visitors: result.rows, total: result.rows.length });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/room-visitors/:username', async (req, res) => {
+  const uname = String(req.params.username || '').toLowerCase().trim().replace(/^@/, '');
+  if (!uname) return res.status(400).json({ error: 'username required' });
+  try {
+    const result = await pool.query('DELETE FROM room_visitors WHERE room_username = $1', [uname]);
+    res.json({ deleted: result.rowCount });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 /* ── Serve built frontend in production ── */

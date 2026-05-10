@@ -32,10 +32,26 @@ function DashboardView() {
   const [overlayUser, setOverlayUser] = useState(() => localStorage.getItem('re_overlayUser') || '');
   const [navTab,      setNavTab]      = useState('dashboard');
   const [eventFilter, setEventFilter] = useState('all');
+  const [visitors,    setVisitors]    = useState([]);
+  const [visSort,     setVisSort]     = useState('last_seen');
+  const [visLoading,  setVisLoading]  = useState(false);
 
   const feedRef  = useRef(null);
   const autoRef  = useRef(true);
   const [events, setEvents]   = useState([]);
+
+  /* ── fetch visitors when tab opens or sort changes ── */
+  useEffect(() => {
+    if (navTab !== 'visitors') return;
+    const u = username.trim().replace(/^@/, '');
+    if (!u) return;
+    setVisLoading(true);
+    fetch(`/api/room-visitors/${encodeURIComponent(u)}?sort=${visSort}`)
+      .then(r => r.json())
+      .then(d => { setVisitors(d.visitors || []); })
+      .catch(() => {})
+      .finally(() => setVisLoading(false));
+  }, [navTab, visSort, username]);
   const uidRef   = useRef(0);
   const mkid     = () => `${Date.now()}-${++uidRef.current}`;
 
@@ -175,6 +191,7 @@ function DashboardView() {
           <nav style={{ flex:1, padding:'12px 8px' }}>
             {[
               { id:'dashboard', icon:'⊞', label:'แดชบอร์ด' },
+              { id:'visitors',  icon:'👥', label:'ผู้เยี่ยมชม' },
               { id:'settings',  icon:'⚙', label:'การตั้งค่า' },
             ].map(item => (
               <button key={item.id} onClick={() => setNavTab(item.id)}
@@ -211,10 +228,10 @@ function DashboardView() {
           {/* ─ page header ─ */}
           <div className="re-page-header">
             <div style={{ fontSize:24, fontWeight:900, letterSpacing:'0.06em', color:'#f0eeff' }}>
-              {navTab === 'dashboard' ? 'DASHBOARD' : 'การตั้งค่า'}
+              {navTab === 'dashboard' ? 'DASHBOARD' : navTab === 'visitors' ? 'ผู้เยี่ยมชม' : 'การตั้งค่า'}
             </div>
             <div style={{ fontSize:12, color:'rgba(160,150,200,.5)', marginTop:2 }}>
-              {navTab === 'dashboard' ? 'ควบคุม TikTok LIVE แบบเรียลไทม์' : 'ตั้งค่า Overlay สำหรับ OBS / TikTok Live Studio'}
+              {navTab === 'dashboard' ? 'ควบคุม TikTok LIVE แบบเรียลไทม์' : navTab === 'visitors' ? 'บันทึกชื่อ รูป เลเวล ใจ และเพชรของผู้ชม' : 'ตั้งค่า Overlay สำหรับ OBS / TikTok Live Studio'}
             </div>
           </div>
 
@@ -329,6 +346,140 @@ function DashboardView() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ─ VISITORS TAB ─ */}
+          {navTab === 'visitors' && (
+            <div className="re-dash-content" style={{ display:'flex', flexDirection:'column', gap:14, height:'100%', overflow:'hidden' }}>
+              {/* controls row */}
+              <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', flexShrink:0 }}>
+                {/* sort pills */}
+                {[
+                  { key:'last_seen',  label:'ล่าสุด' },
+                  { key:'diamonds',   label:'💎 เพชร' },
+                  { key:'likes',      label:'❤️ ใจ' },
+                  { key:'level',      label:'⭐ เลเวล' },
+                  { key:'first_seen', label:'แรกสุด' },
+                ].map(s => (
+                  <button key={s.key} onClick={() => setVisSort(s.key)}
+                    style={{ background: visSort===s.key ? 'rgba(139,92,246,.22)' : 'rgba(139,92,246,.06)',
+                      border:`1px solid ${visSort===s.key?'rgba(139,92,246,.5)':'rgba(139,92,246,.12)'}`,
+                      borderRadius:20, color: visSort===s.key?'#c4b5fd':'rgba(160,150,200,.5)',
+                      fontSize:12, fontWeight:600, padding:'5px 13px', cursor:'pointer', transition:'all .15s', whiteSpace:'nowrap' }}>
+                    {s.label}
+                  </button>
+                ))}
+                <div style={{ flex:1 }} />
+                <span style={{ fontSize:12, color:'rgba(160,150,200,.4)' }}>
+                  {visitors.length} คน
+                </span>
+                <button onClick={async () => {
+                  const u = username.trim().replace(/^@/,'');
+                  if (!u || !window.confirm(`ลบข้อมูลผู้เยี่ยมชมทั้งหมดของ @${u}?`)) return;
+                  await fetch(`/api/room-visitors/${encodeURIComponent(u)}`, { method:'DELETE' });
+                  setVisitors([]);
+                }} style={{ background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.3)', borderRadius:8,
+                  color:'rgba(239,68,68,.8)', fontSize:12, fontWeight:600, padding:'5px 12px', cursor:'pointer' }}>
+                  🗑 ล้างทั้งหมด
+                </button>
+              </div>
+
+              {/* table */}
+              <div style={{ flex:1, minHeight:0, background:'#16152a', border:'1px solid rgba(139,92,246,.14)', borderRadius:14, overflow:'hidden', display:'flex', flexDirection:'column' }}>
+                {/* header row */}
+                <div style={{ display:'grid', gridTemplateColumns:'2.8fr 0.6fr 0.8fr 0.8fr 0.8fr', gap:0, padding:'10px 16px', borderBottom:'1px solid rgba(139,92,246,.1)', flexShrink:0 }}>
+                  {['ชื่อ / username','เลเวล','❤️ ใจ','💎 เพชร','เข้าล่าสุด'].map((h,i) => (
+                    <span key={i} style={{ fontSize:11, fontWeight:700, color:'rgba(160,150,200,.45)', letterSpacing:'.05em', textAlign: i===0?'left':'right' }}>{h}</span>
+                  ))}
+                </div>
+
+                {/* rows */}
+                <div style={{ flex:1, overflowY:'auto', padding:'4px 0' }}>
+                  {visLoading ? (
+                    <div style={{ padding:'48px 0', textAlign:'center', color:'rgba(160,150,200,.35)', fontSize:13 }}>
+                      <div style={{ fontSize:28, marginBottom:10, opacity:.3 }}>👥</div>กำลังโหลด...
+                    </div>
+                  ) : !username.trim() ? (
+                    <div style={{ padding:'48px 0', textAlign:'center', color:'rgba(160,150,200,.3)', fontSize:13 }}>
+                      <div style={{ fontSize:28, marginBottom:10, opacity:.25 }}>👥</div>ใส่ TikTok Username ในแดชบอร์ดก่อน
+                    </div>
+                  ) : visitors.length === 0 ? (
+                    <div style={{ padding:'48px 0', textAlign:'center', color:'rgba(160,150,200,.3)', fontSize:13 }}>
+                      <div style={{ fontSize:28, marginBottom:10, opacity:.25 }}>👥</div>ยังไม่มีข้อมูล — เปิด TikTok LIVE แล้วเชื่อมต่อก่อน
+                    </div>
+                  ) : visitors.map((v, idx) => {
+                    const lastSeen = v.last_seen ? new Date(v.last_seen) : null;
+                    const timeStr  = lastSeen ? lastSeen.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' }) : '—';
+                    const isKing   = (v.level || 0) >= 20;
+                    return (
+                      <div key={v.unique_id}
+                        style={{ display:'grid', gridTemplateColumns:'2.8fr 0.6fr 0.8fr 0.8fr 0.8fr', gap:0,
+                          padding:'7px 16px', borderBottom:'1px solid rgba(139,92,246,.05)', transition:'background .1s',
+                          background: idx%2===0 ? 'transparent' : 'rgba(139,92,246,.025)' }}
+                        onMouseEnter={e=>e.currentTarget.style.background='rgba(139,92,246,.07)'}
+                        onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?'transparent':'rgba(139,92,246,.025)'}>
+
+                        {/* avatar + name */}
+                        <div style={{ display:'flex', alignItems:'center', gap:9, minWidth:0 }}>
+                          <div style={{ position:'relative', flexShrink:0 }}>
+                            {v.profile_pic_url
+                              ? <img src={v.profile_pic_url} alt="" style={{ width:34, height:34, borderRadius:'50%', objectFit:'cover',
+                                  border:`2px solid ${isKing?'rgba(255,200,50,.7)':'rgba(139,92,246,.4)'}` }}
+                                  onError={e=>{e.target.style.display='none'; e.target.nextSibling.style.display='flex';}} />
+                              : null
+                            }
+                            <div style={{ width:34, height:34, borderRadius:'50%', display: v.profile_pic_url ? 'none' : 'flex',
+                              alignItems:'center', justifyContent:'center', flexShrink:0,
+                              background: isKing ? 'linear-gradient(135deg,rgba(200,120,20,.5),rgba(180,40,180,.4))' : 'rgba(139,92,246,.2)',
+                              border:`2px solid ${isKing?'rgba(255,200,50,.5)':'rgba(139,92,246,.3)'}`,
+                              color: isKing ? '#ffd700' : '#a78bfa', fontWeight:900, fontSize:14 }}>
+                              {(v.display_name||v.unique_id||'?')[0].toUpperCase()}
+                            </div>
+                            {isKing && <div style={{ position:'absolute', top:-6, left:'50%', transform:'translateX(-50%)', fontSize:10 }}>👑</div>}
+                          </div>
+                          <div style={{ minWidth:0 }}>
+                            <div style={{ fontWeight:700, fontSize:13, color: isKing ? 'rgba(255,210,80,.95)' : 'rgba(200,190,255,.85)',
+                              overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                              {v.display_name || v.unique_id}
+                            </div>
+                            <div style={{ fontSize:10, color:'rgba(160,150,200,.4)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                              @{v.unique_id}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* level */}
+                        <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end' }}>
+                          <span style={{ padding:'2px 8px', borderRadius:99, fontSize:12, fontWeight:700,
+                            background: isKing ? 'linear-gradient(135deg,rgba(255,180,30,.25),rgba(220,80,255,.2))' : 'rgba(139,92,246,.15)',
+                            color: isKing ? 'rgba(255,210,80,.9)' : 'rgba(167,139,250,.8)',
+                            border: `1px solid ${isKing?'rgba(255,200,50,.3)':'rgba(139,92,246,.2)'}` }}>
+                            {v.level||0}
+                          </span>
+                        </div>
+
+                        {/* likes */}
+                        <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', fontSize:13, fontWeight:700,
+                          color: v.total_likes > 0 ? 'rgba(239,68,68,.8)' : 'rgba(160,150,200,.3)' }}>
+                          {v.total_likes > 0 ? `❤️ ${v.total_likes.toLocaleString()}` : '—'}
+                        </div>
+
+                        {/* diamonds */}
+                        <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', fontSize:13, fontWeight:700,
+                          color: v.total_diamonds > 0 ? 'rgba(167,139,250,.9)' : 'rgba(160,150,200,.3)' }}>
+                          {v.total_diamonds > 0 ? `💎 ${v.total_diamonds.toLocaleString()}` : '—'}
+                        </div>
+
+                        {/* last seen */}
+                        <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', fontSize:11, color:'rgba(160,150,200,.4)' }}>
+                          {timeStr}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>

@@ -21,30 +21,25 @@ export default function RoomEffectsPage() {
    ██████  DASHBOARD VIEW
 ══════════════════════════════════════════════════════════ */
 function DashboardView() {
-  const sockRef    = useRef(null);
-  const [username, setUsername]   = useState(() => localStorage.getItem('re_lastUser') || '');
-  const [status,   setStatus]     = useState('idle'); // idle | connecting | live | error
-  const [errMsg,   setErrMsg]     = useState('');
-  const [viewers,  setViewers]    = useState(0);
-  const [likes,    setLikes]      = useState(0);
-  const [diamonds, setDiamonds]   = useState(0);
-  const [copied,   setCopied]     = useState(false);
-  const [overlayUser, setOverlayUser] = useState(() => localStorage.getItem('re_lastUser') || '');
+  const sockRef = useRef(null);
+  const [username,    setUsername]    = useState(() => localStorage.getItem('re_lastUser') || '');
+  const [status,      setStatus]      = useState('idle');
+  const [errMsg,      setErrMsg]      = useState('');
+  const [viewers,     setViewers]     = useState(0);
+  const [likes,       setLikes]       = useState(0);
+  const [diamonds,    setDiamonds]    = useState(0);
+  const [copied,      setCopied]      = useState(false);
+  const [overlayUser, setOverlayUser] = useState(() => localStorage.getItem('re_overlayUser') || '');
+  const [navTab,      setNavTab]      = useState('dashboard');
+  const [eventFilter, setEventFilter] = useState('all');
 
-  const chatRef = useRef(null);
-  const giftRef = useRef(null);
-  const [chatItems, setChatItems] = useState([]);
-  const [giftItems, setGiftItems] = useState([]);
+  const feedRef  = useRef(null);
+  const autoRef  = useRef(true);
+  const [events, setEvents]   = useState([]);
+  const uidRef   = useRef(0);
+  const mkid     = () => `${Date.now()}-${++uidRef.current}`;
 
-  const chatAutoRef = useRef(true);
-  const giftAutoRef = useRef(true);
-  const [chatAuto, setChatAutoS]  = useState(true);
-  const [giftAuto, setGiftAutoS]  = useState(true);
-
-  const uidRef = useRef(0);
-  const mkid   = () => `${Date.now()}-${++uidRef.current}`;
-
-  /* ── connect ── */
+  /* ── connect / disconnect ── */
   function connect() {
     const u = username.trim().replace(/^@/, '');
     if (!u) return;
@@ -52,94 +47,49 @@ function DashboardView() {
       sockRef.current = io('/', { transports: ['websocket', 'polling'] });
       wireSocket(sockRef.current);
     }
-    setStatus('connecting');
-    setErrMsg('');
+    setStatus('connecting'); setErrMsg('');
     localStorage.setItem('re_lastUser', u);
     sockRef.current.emit('setUniqueId', u, {});
   }
-
   function disconnect() {
-    if (sockRef.current) {
-      sockRef.current.emit('disconnect_tiktok');
-    }
-    setStatus('idle');
-    setViewers(0); setLikes(0); setDiamonds(0);
+    sockRef.current?.emit('disconnect_tiktok');
+    setStatus('idle'); setViewers(0); setLikes(0); setDiamonds(0);
   }
 
+  /* ── socket wiring ── */
   function wireSocket(sock) {
     sock.on('tiktokConnected',    ()    => setStatus('live'));
     sock.on('tiktokDisconnected', (msg) => { setStatus('error'); setErrMsg(msg || 'ตัดการเชื่อมต่อ'); });
-    sock.on('roomUser',  d => { if (typeof d?.viewerCount === 'number') setViewers(d.viewerCount); });
-    sock.on('like',      d => { if (typeof d?.totalLikeCount === 'number') setLikes(d.totalLikeCount); });
+    sock.on('roomUser', d => { if (typeof d?.viewerCount === 'number') setViewers(d.viewerCount); });
+    sock.on('like',     d => { if (typeof d?.totalLikeCount === 'number') setLikes(d.totalLikeCount); });
 
-    sock.on('member', d => pushChat({
-      id: mkid(), type: 'join',
-      uniqueId: d.uniqueId || '?', displayName: d.displayName || d.uniqueId || '?',
-      profilePicUrl: null, text: 'เข้าร่วมห้อง',
-    }));
-
-    sock.on('chat', d => pushChat({
-      id: mkid(), type: 'chat',
-      uniqueId: d.uniqueId, displayName: d.displayName,
-      profilePicUrl: d.profilePicUrl, text: d.comment,
-    }));
-
-    sock.on('like', d => {
-      if (typeof d?.likeCount === 'number' && d.likeCount > 0) pushChat({
-        id: mkid(), type: 'like',
-        uniqueId: d.uniqueId || '?', displayName: d.displayName || d.uniqueId || '?',
-        profilePicUrl: d.profilePicUrl || null, text: `❤️ ${d.likeCount} likes`,
-      });
+    const push = item => setEvents(prev => {
+      const next = [...prev, item];
+      return next.length > 500 ? next.slice(next.length - 500) : next;
     });
 
-    sock.on('follow', d => pushChat({
-      id: mkid(), type: 'follow',
-      uniqueId: d.uniqueId, displayName: d.displayName,
-      profilePicUrl: d.profilePicUrl, text: 'กดติดตาม',
-    }));
-
-    sock.on('share', d => pushChat({
-      id: mkid(), type: 'share',
-      uniqueId: d.uniqueId, displayName: d.displayName,
-      profilePicUrl: d.profilePicUrl, text: 'แชร์ไลฟ์',
-    }));
-
-    sock.on('gift', d => {
+    sock.on('member', d => push({ id:mkid(), type:'join',   uniqueId:d.uniqueId||'?', displayName:d.displayName||d.uniqueId||'?', profilePicUrl:d.profilePicUrl||null, text:'เข้าร่วมห้อง', level:d.level||0 }));
+    sock.on('chat',   d => push({ id:mkid(), type:'chat',   uniqueId:d.uniqueId,      displayName:d.displayName,                   profilePicUrl:d.profilePicUrl,        text:d.comment }));
+    sock.on('follow', d => push({ id:mkid(), type:'follow', uniqueId:d.uniqueId,      displayName:d.displayName,                   profilePicUrl:d.profilePicUrl,        text:'กดติดตาม' }));
+    sock.on('share',  d => push({ id:mkid(), type:'share',  uniqueId:d.uniqueId,      displayName:d.displayName,                   profilePicUrl:d.profilePicUrl,        text:'แชร์ไลฟ์' }));
+    sock.on('like',   d => { if (d?.likeCount > 0) push({ id:mkid(), type:'like', uniqueId:d.uniqueId||'?', displayName:d.displayName||'?', profilePicUrl:d.profilePicUrl||null, text:`ไลค์ ${d.likeCount} ครั้ง` }); });
+    sock.on('gift',   d => {
       setDiamonds(prev => prev + (d.diamonds || 0));
-      pushGift({ id: mkid(), ...d });
-    });
-  }
-
-  function pushChat(item) {
-    setChatItems(prev => {
-      const next = [...prev, item];
-      return next.length > 300 ? next.slice(next.length - 300) : next;
-    });
-  }
-  function pushGift(item) {
-    setGiftItems(prev => {
-      const next = [...prev, item];
-      return next.length > 200 ? next.slice(next.length - 200) : next;
+      push({ id:mkid(), type:'gift', uniqueId:d.uniqueId, displayName:d.displayName, profilePicUrl:d.profilePicUrl||null, text:`🎁 ${d.giftName||'ของขวัญ'}${d.repeatCount>1?' ×'+d.repeatCount:''}`, diamonds:d.diamonds||0 });
     });
   }
 
   /* auto-scroll */
   useEffect(() => {
-    if (chatAutoRef.current && chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
-  }, [chatItems]);
-  useEffect(() => {
-    if (giftAutoRef.current && giftRef.current) giftRef.current.scrollTop = giftRef.current.scrollHeight;
-  }, [giftItems]);
+    if (autoRef.current && feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
+  }, [events]);
 
-  function toggleChatAuto() { chatAutoRef.current = !chatAutoRef.current; setChatAutoS(chatAutoRef.current); }
-  function toggleGiftAuto() { giftAutoRef.current = !giftAutoRef.current; setGiftAutoS(giftAutoRef.current); }
-
-  /* overlay URL — uses its own overlayUser field */
+  /* overlay URL */
   const overlayUrlUser = overlayUser.trim().replace(/^@/, '');
-  const overlayUrl = `${window.location.origin}/roomeffects?u=${overlayUrlUser}`;
+  const overlayUrl     = `${window.location.origin}/roomeffects?u=${overlayUrlUser}`;
   function copyOverlay() {
     if (!overlayUrlUser) return;
-    navigator.clipboard.writeText(overlayUrl).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+    navigator.clipboard.writeText(overlayUrl).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2500); });
   }
   function saveOverlayUser(val) {
     const clean = val.replace(/^@/, '');
@@ -147,218 +97,250 @@ function DashboardView() {
     localStorage.setItem('re_overlayUser', clean);
   }
 
-  const statusColor = { idle: '#666', connecting: '#f5a623', live: '#22c55e', error: '#ef4444' }[status];
-  const statusLabel = { idle: '⚫ ไม่ได้เชื่อมต่อ', connecting: '🟡 กำลังเชื่อมต่อ...', live: '🟢 LIVE', error: '🔴 ผิดพลาด' }[status];
+  const isLive   = status === 'live';
+  const statDot  = { idle:'#444', connecting:'#f5a623', live:'#22c55e', error:'#ef4444' }[status];
+  const statTxt  = { idle:'ไม่ได้เชื่อมต่อ', connecting:'กำลังเชื่อมต่อ...', live:'LIVE', error:'เชื่อมต่อไม่ได้' }[status];
 
-  const EVENT_COLOR  = { join: '#21b2c2', chat: '#e0e0ff', like: '#f472b6', follow: '#fbbf24', share: '#4ade80' };
-  const EVENT_LABEL  = { join: '🚪', chat: '💬', like: '❤️', follow: '👑', share: '📢' };
+  const FILTERS = [
+    { key:'all',    label:'ทั้งหมด' },
+    { key:'join',   label:'🚪 เข้าห้อง' },
+    { key:'chat',   label:'💬 แชท' },
+    { key:'gift',   label:'🎁 ของขวัญ' },
+    { key:'like',   label:'❤️ ไลค์' },
+    { key:'follow', label:'👑 ติดตาม' },
+    { key:'share',  label:'📢 แชร์' },
+  ];
+  const TYPE_COLOR = { join:'#22d3ee', chat:'#c4b5fd', like:'#f472b6', follow:'#fbbf24', share:'#4ade80', gift:'#fb923c' };
+
+  const filteredEvents = eventFilter === 'all' ? events : events.filter(e => e.type === eventFilter);
+
+  /* ── stat cards data ── */
+  const statCards = [
+    { icon:'⚡', label:'เหตุการณ์',  value: events.length,                    color:'#8b5cf6' },
+    { icon:'🎁', label:'ของขวัญ',    value: events.filter(e=>e.type==='gift').length, color:'#f472b6' },
+    { icon:'⚡', label:'Level สูง',  value: Math.max(0, ...events.filter(e=>e.level>0).map(e=>e.level)), color:'#fbbf24' },
+  ];
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;900&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { height: 100%; background: #06030f; color: #e0e0f0; font-family: 'Noto Sans Thai', 'Segoe UI', sans-serif; }
-        ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(155,81,224,.35); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(155,81,224,.6); }
-        @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.85)} }
+        *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+        html, body { height:100%; background:#0b0b14; color:#e2e0f0; font-family:'Noto Sans Thai','Segoe UI',sans-serif; }
+        ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-track{background:transparent}
+        ::-webkit-scrollbar-thumb{background:rgba(139,92,246,.3);border-radius:4px}
+        ::-webkit-scrollbar-thumb:hover{background:rgba(139,92,246,.55)}
+        @keyframes pulse-live{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+        input::placeholder{color:rgba(180,160,230,.35)}
+        input:focus{outline:none}
       `}</style>
 
-      <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden' }}>
+      <div style={{ display:'flex', height:'100vh', overflow:'hidden' }}>
 
-        {/* ─── HEADER ─── */}
-        <div style={{ background:'rgba(10,5,25,.98)', borderBottom:'1px solid rgba(155,81,224,.2)', padding:'10px 20px', display:'flex', alignItems:'center', gap:16, flexShrink:0 }}>
-          <div>
-            <div style={{ fontSize:18, fontWeight:900, background:'linear-gradient(135deg,#c060ff,#fe2c55)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', letterSpacing:'0.05em' }}>
-              🚪 คนเข้าห้องเท่ๆ
+        {/* ══ SIDEBAR ══ */}
+        <aside style={{ width:156, flexShrink:0, background:'#0f0e1a', borderRight:'1px solid rgba(139,92,246,.14)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+          {/* logo */}
+          <div style={{ padding:'20px 16px 16px', borderBottom:'1px solid rgba(139,92,246,.1)' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <div style={{ width:30, height:30, borderRadius:8, background:'linear-gradient(135deg,#7c3aed,#4f46e5)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>🎮</div>
+              <span style={{ fontWeight:900, fontSize:14, letterSpacing:'0.1em', color:'#e2e0ff' }}>ROOM FX</span>
             </div>
-            <div style={{ fontSize:11, color:'rgba(155,81,224,.6)', marginTop:1 }}>TikTok Live Chat Capture + OBS Overlay</div>
           </div>
-          <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:8 }}>
-            <div style={{ width:8, height:8, borderRadius:'50%', background: statusColor, animation: status==='live'?'pulse-dot 1.5s infinite':undefined }} />
-            <span style={{ fontSize:12, color: statusColor, fontWeight:700 }}>{statusLabel}</span>
-          </div>
-        </div>
-
-        {/* ─── CONNECT PANEL ─── */}
-        <div style={{ background:'rgba(12,5,28,.95)', borderBottom:'1px solid rgba(155,81,224,.15)', padding:'12px 20px', display:'flex', alignItems:'center', gap:10, flexShrink:0, flexWrap:'wrap' }}>
-          <span style={{ fontSize:14, color:'rgba(200,180,255,.6)', whiteSpace:'nowrap' }}>@ username :</span>
-          <div style={{ position:'relative', flex:'1 1 160px', maxWidth:280 }}>
-            <span style={{ position:'absolute', left:11, top:'50%', transform:'translateY(-50%)', color:'rgba(155,81,224,.7)', fontWeight:700, fontSize:14 }}>@</span>
-            <input
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              onKeyDown={e => e.key==='Enter' && status==='idle' && connect()}
-              placeholder="tiktok_username"
-              disabled={status === 'connecting' || status === 'live'}
-              style={{ width:'100%', background:'rgba(30,15,60,.8)', border:'1px solid rgba(155,81,224,.35)', borderRadius:8, color:'#e0e0ff', padding:'7px 12px 7px 28px', fontSize:14, outline:'none', transition:'border-color .15s' }}
-            />
-          </div>
-          {status === 'idle' || status === 'error' ? (
-            <button onClick={connect} disabled={!username.trim()} style={{ background:'linear-gradient(135deg,rgba(138,43,226,.8),rgba(254,44,85,.6))', border:'none', borderRadius:8, color:'#fff', padding:'7px 20px', fontSize:13, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap', opacity: username.trim()?1:.5 }}>
-              ▶ เชื่อมต่อ
-            </button>
-          ) : status === 'connecting' ? (
-            <button disabled style={{ background:'rgba(245,166,35,.15)', border:'1px solid rgba(245,166,35,.4)', borderRadius:8, color:'#f5a623', padding:'7px 20px', fontSize:13, fontWeight:700, cursor:'not-allowed' }}>
-              ⏳ กำลังเชื่อมต่อ...
-            </button>
-          ) : (
-            <button onClick={disconnect} style={{ background:'rgba(239,68,68,.15)', border:'1px solid rgba(239,68,68,.5)', borderRadius:8, color:'#ef4444', padding:'7px 20px', fontSize:13, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
-              ⏹ ตัดการเชื่อมต่อ
-            </button>
-          )}
-          {/* Stats */}
-          <div style={{ marginLeft:'auto', display:'flex', gap:18, fontSize:13 }}>
-            {[['👁', viewers.toLocaleString(), '#60a5fa'],['❤️', likes.toLocaleString(), '#f472b6'],['💎', diamonds.toLocaleString(), '#a78bfa']].map(([e,v,c]) => (
-              <span key={e} style={{ color:'rgba(200,200,220,.5)', display:'flex', gap:4, alignItems:'center' }}>
-                {e} <b style={{ color: c }}>{v}</b>
-              </span>
+          {/* nav */}
+          <nav style={{ flex:1, padding:'12px 8px' }}>
+            {[
+              { id:'dashboard', icon:'⊞', label:'แดชบอร์ด' },
+              { id:'settings',  icon:'⚙', label:'การตั้งค่า' },
+            ].map(item => (
+              <button key={item.id} onClick={() => setNavTab(item.id)}
+                style={{ width:'100%', display:'flex', alignItems:'center', gap:9, padding:'9px 10px', borderRadius:8, border:'none', cursor:'pointer', marginBottom:4, transition:'all .15s',
+                  background: navTab===item.id ? 'rgba(139,92,246,.18)' : 'transparent',
+                  color: navTab===item.id ? '#a78bfa' : 'rgba(160,150,200,.5)',
+                  fontWeight: navTab===item.id ? 700 : 500, fontSize:13 }}>
+                <span style={{ fontSize:14 }}>{item.icon}</span>
+                {item.label}
+                {navTab===item.id && <span style={{ marginLeft:'auto', width:4, height:4, borderRadius:'50%', background:'#a78bfa', flexShrink:0 }} />}
+              </button>
             ))}
+          </nav>
+          {/* server status */}
+          <div style={{ padding:'12px 14px', borderTop:'1px solid rgba(139,92,246,.1)', display:'flex', alignItems:'center', gap:7 }}>
+            <div style={{ width:7, height:7, borderRadius:'50%', background: statDot, flexShrink:0, animation: isLive?'pulse-live 1.8s infinite':undefined }} />
+            <span style={{ fontSize:11, color:'rgba(160,150,200,.55)', lineHeight:1.3 }}>{isLive ? 'เซิร์ฟเวอร์เชื่อมต่อแล้ว' : statTxt}</span>
           </div>
-          {errMsg && <div style={{ width:'100%', fontSize:12, color:'#ef4444', marginTop:2 }}>⚠️ {errMsg}</div>}
-        </div>
+        </aside>
 
-        {/* ─── OVERLAY URL BAR ─── */}
-        <div style={{ background:'rgba(0,40,30,.5)', borderBottom:'1px solid rgba(0,200,140,.15)', padding:'9px 20px', display:'flex', alignItems:'center', gap:10, flexShrink:0, flexWrap:'wrap' }}>
-          <span style={{ fontSize:12, color:'rgba(0,220,150,.7)', fontWeight:700, whiteSpace:'nowrap' }}>🎬 Overlay URL :</span>
-          {/* username input for overlay */}
-          <div style={{ position:'relative', flex:'0 0 auto' }}>
-            <span style={{ position:'absolute', left:9, top:'50%', transform:'translateY(-50%)', color:'rgba(0,200,140,.7)', fontWeight:700, fontSize:13 }}>@</span>
-            <input
-              value={overlayUser}
-              onChange={e => saveOverlayUser(e.target.value)}
-              placeholder="tiktok_username"
-              style={{ background:'rgba(0,30,20,.8)', border:'1px solid rgba(0,200,140,.3)', borderRadius:7, color:'#00dda0', padding:'5px 10px 5px 24px', fontSize:13, outline:'none', width:170 }}
-            />
+        {/* ══ MAIN ══ */}
+        <main style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', overflow:'hidden', background:'#0b0b14' }}>
+
+          {/* ─ page header ─ */}
+          <div style={{ padding:'20px 28px 0', flexShrink:0 }}>
+            <div style={{ fontSize:24, fontWeight:900, letterSpacing:'0.06em', color:'#f0eeff' }}>
+              {navTab === 'dashboard' ? 'DASHBOARD' : 'การตั้งค่า'}
+            </div>
+            <div style={{ fontSize:12, color:'rgba(160,150,200,.5)', marginTop:2 }}>
+              {navTab === 'dashboard' ? 'ควบคุม TikTok LIVE แบบเรียลไทม์' : 'ตั้งค่า Overlay สำหรับ OBS / TikTok Live Studio'}
+            </div>
           </div>
-          {/* generated URL display */}
-          <div style={{ flex:'1 1 180px', background:'rgba(0,0,0,.4)', border:'1px solid rgba(0,200,140,.2)', borderRadius:7, padding:'5px 12px', fontSize:11, color: overlayUrlUser?'#00dda0':'rgba(100,120,100,.4)', fontFamily:'monospace', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-            {overlayUrlUser ? overlayUrl : '← ใส่ username ก่อน'}
-          </div>
-          <button
-            onClick={copyOverlay}
-            disabled={!overlayUrlUser}
-            style={{ background: copied?'rgba(0,200,140,.2)':'rgba(0,180,120,.12)', border:`1px solid ${copied?'rgba(0,200,140,.7)':'rgba(0,200,140,.3)'}`, borderRadius:7, color: copied?'#00ffaa':'#00dda0', padding:'5px 16px', fontSize:12, fontWeight:700, cursor: overlayUrlUser?'pointer':'not-allowed', whiteSpace:'nowrap', transition:'all .2s', opacity: overlayUrlUser?1:.45 }}
-          >
-            {copied ? '✅ คัดลอกแล้ว!' : '📋 คัดลอก URL'}
-          </button>
-          <a
-            href={overlayUrlUser ? `${overlayUrl}&preview` : '#'}
-            target="_blank"
-            rel="noreferrer"
-            onClick={e => !overlayUrlUser && e.preventDefault()}
-            style={{ fontSize:12, color: overlayUrlUser?'rgba(0,200,140,.7)':'rgba(0,120,80,.3)', textDecoration:'none', fontWeight:600, whiteSpace:'nowrap' }}
-          >↗ ดูตัวอย่าง</a>
-        </div>
 
-        {/* ─── CHAT + GIFT SPLIT ─── */}
-        <div style={{ flex:1, minHeight:0, display:'flex', gap:0, overflow:'hidden' }}>
+          {/* ─ DASHBOARD TAB ─ */}
+          {navTab === 'dashboard' && (
+            <div style={{ flex:1, minHeight:0, display:'flex', flexDirection:'column', overflow:'hidden', padding:'16px 28px 20px' }}>
 
-          {/* LEFT — Chat */}
-          <div style={{ flex:'1 1 0', minWidth:0, display:'flex', flexDirection:'column', borderRight:'1px solid rgba(155,81,224,.12)' }}>
-            <div style={{ padding:'8px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid rgba(155,81,224,.12)', background:'rgba(10,5,25,.7)', flexShrink:0 }}>
-              <span style={{ fontSize:11, fontWeight:700, letterSpacing:'0.15em', textTransform:'uppercase', color:'rgba(155,81,224,.7)' }}>💬 แชท &amp; เหตุการณ์</span>
-              <div style={{ display:'flex', gap:6 }}>
-                <SmallBtn onClick={toggleChatAuto} active={chatAuto}>{chatAuto?'Auto ✓':'Auto'}</SmallBtn>
-                <SmallBtn onClick={() => setChatItems([])}>ล้าง</SmallBtn>
+              {/* top row: connect card + stat cards */}
+              <div style={{ display:'flex', gap:14, flexShrink:0, marginBottom:16 }}>
+
+                {/* connect card */}
+                <div style={{ flex:'1 1 0', minWidth:0, background:'#16152a', border:'1px solid rgba(139,92,246,.18)', borderRadius:14, padding:'20px 22px' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:16 }}>
+                    <span style={{ fontSize:15 }}>📡</span>
+                    <span style={{ fontWeight:700, fontSize:14, color:'#c4b5fd' }}>การเชื่อมต่อ TikTok LIVE</span>
+                  </div>
+                  <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+                    <div style={{ position:'relative', flex:'1 1 160px' }}>
+                      <span style={{ position:'absolute', left:13, top:'50%', transform:'translateY(-50%)', color:'rgba(139,92,246,.8)', fontWeight:700, fontSize:15 }}>@</span>
+                      <input
+                        value={username}
+                        onChange={e => setUsername(e.target.value)}
+                        onKeyDown={e => e.key==='Enter' && (status==='idle'||status==='error') && connect()}
+                        placeholder="TikTok Username ของคนที่ไลฟ์..."
+                        disabled={status==='connecting'||status==='live'}
+                        style={{ width:'100%', background:'rgba(139,92,246,.08)', border:'1px solid rgba(139,92,246,.25)', borderRadius:10, color:'#e2e0ff', padding:'11px 14px 11px 32px', fontSize:14 }}
+                      />
+                    </div>
+                    {status==='idle'||status==='error' ? (
+                      <button onClick={connect} disabled={!username.trim()} style={{ background:'linear-gradient(135deg,#7c3aed,#6d28d9)', border:'none', borderRadius:10, color:'#fff', padding:'11px 24px', fontSize:14, fontWeight:700, cursor:'pointer', opacity:username.trim()?1:.45, display:'flex', alignItems:'center', gap:8, whiteSpace:'nowrap' }}>
+                        ▶ &nbsp;เชื่อมต่อ
+                      </button>
+                    ) : status==='connecting' ? (
+                      <button disabled style={{ background:'rgba(245,166,35,.1)', border:'1px solid rgba(245,166,35,.35)', borderRadius:10, color:'#f5a623', padding:'11px 24px', fontSize:14, fontWeight:700, cursor:'not-allowed' }}>
+                        ⏳ กำลังเชื่อมต่อ...
+                      </button>
+                    ) : (
+                      <button onClick={disconnect} style={{ background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.35)', borderRadius:10, color:'#ef4444', padding:'11px 24px', fontSize:14, fontWeight:700, cursor:'pointer' }}>
+                        ⏹ ตัดการเชื่อมต่อ
+                      </button>
+                    )}
+                  </div>
+                  {errMsg && <div style={{ marginTop:8, fontSize:12, color:'#ef4444' }}>⚠️ {errMsg}</div>}
+                </div>
+
+                {/* stat cards */}
+                {statCards.map(s => (
+                  <div key={s.label} style={{ flex:'0 0 130px', background:'#16152a', border:'1px solid rgba(139,92,246,.14)', borderRadius:14, padding:'16px 18px', display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
+                    <div style={{ width:34, height:34, borderRadius:10, background:`${s.color}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:17 }}>{s.icon}</div>
+                    <div>
+                      <div style={{ fontSize:22, fontWeight:900, color:s.color, lineHeight:1, marginBottom:3 }}>{s.value}</div>
+                      <div style={{ fontSize:11, color:'rgba(160,150,200,.5)', fontWeight:600 }}>{s.label}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* event feed */}
+              <div style={{ flex:1, minHeight:0, background:'#16152a', border:'1px solid rgba(139,92,246,.14)', borderRadius:14, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+                {/* feed header */}
+                <div style={{ padding:'12px 18px', borderBottom:'1px solid rgba(139,92,246,.1)', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={{ fontSize:14 }}>⚡</span>
+                    <span style={{ fontWeight:700, fontSize:13, color:'#c4b5fd' }}>เหตุการณ์แบบเรียลไทม์</span>
+                  </div>
+                  <button onClick={() => setEvents([])} style={{ background:'transparent', border:'1px solid rgba(139,92,246,.2)', borderRadius:6, color:'rgba(160,150,200,.5)', fontSize:11, padding:'3px 10px', cursor:'pointer' }}>ล้าง</button>
+                </div>
+                {/* filter tabs */}
+                <div style={{ padding:'10px 14px', borderBottom:'1px solid rgba(139,92,246,.08)', display:'flex', gap:6, flexWrap:'wrap', flexShrink:0 }}>
+                  {FILTERS.map(f => (
+                    <button key={f.key} onClick={() => setEventFilter(f.key)}
+                      style={{ background: eventFilter===f.key ? 'rgba(139,92,246,.22)' : 'rgba(139,92,246,.06)', border:`1px solid ${eventFilter===f.key?'rgba(139,92,246,.5)':'rgba(139,92,246,.12)'}`, borderRadius:20, color: eventFilter===f.key?'#c4b5fd':'rgba(160,150,200,.5)', fontSize:12, fontWeight:600, padding:'4px 12px', cursor:'pointer', transition:'all .15s', whiteSpace:'nowrap' }}>
+                      {f.label}
+                      {f.key !== 'all' && <span style={{ marginLeft:4, opacity:.6 }}>({events.filter(e=>e.type===f.key).length})</span>}
+                    </button>
+                  ))}
+                </div>
+                {/* event list */}
+                <div ref={feedRef} style={{ flex:1, overflowY:'auto', padding:'6px 10px 10px' }}
+                  onScroll={e => { const el = e.target; autoRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60; }}>
+                  {filteredEvents.length === 0 ? (
+                    <div style={{ padding:'48px 16px', textAlign:'center' }}>
+                      <div style={{ fontSize:32, marginBottom:12, opacity:.25 }}>⚡</div>
+                      <div style={{ fontSize:13, color:'rgba(160,150,200,.35)', fontWeight:600 }}>ยังไม่มีเหตุการณ์</div>
+                      <div style={{ fontSize:12, color:'rgba(160,150,200,.25)', marginTop:4 }}>เชื่อมต่อ TikTok LIVE เพื่อเริ่มต้นกัน</div>
+                    </div>
+                  ) : filteredEvents.map(item => (
+                    <div key={item.id} style={{ display:'flex', alignItems:'center', gap:9, padding:'6px 8px', borderRadius:8, marginBottom:2, transition:'background .1s' }}
+                      onMouseEnter={e=>e.currentTarget.style.background='rgba(139,92,246,.06)'}
+                      onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                      {/* avatar */}
+                      {item.profilePicUrl
+                        ? <img src={item.profilePicUrl} alt="" style={{ width:28, height:28, borderRadius:'50%', objectFit:'cover', flexShrink:0, border:`1.5px solid ${TYPE_COLOR[item.type]||'#444'}55` }} onError={e=>e.target.style.display='none'} />
+                        : <div style={{ width:28, height:28, borderRadius:'50%', background:`${TYPE_COLOR[item.type]||'#555'}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, flexShrink:0, color:TYPE_COLOR[item.type]||'#aaa', fontWeight:700 }}>{(item.displayName||'?')[0].toUpperCase()}</div>
+                      }
+                      {/* name + text */}
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <span style={{ fontWeight:700, fontSize:13, color:'rgba(200,190,255,.85)', marginRight:6 }}>{item.displayName||item.uniqueId}</span>
+                        <span style={{ fontSize:13, color: TYPE_COLOR[item.type]||'#aaa' }}>{item.text}</span>
+                        {item.diamonds > 0 && <span style={{ marginLeft:6, fontSize:11, color:'rgba(167,139,250,.7)' }}>💎 {item.diamonds.toLocaleString()}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-            <div ref={chatRef} style={{ flex:1, overflowY:'auto', padding:'4px 8px 8px' }}>
-              {chatItems.length === 0
-                ? <EmptyState icon="💬" text={status==='live'?'รอแชท...':'เชื่อมต่อ TikTok Live เพื่อดูแชทแบบ Real-time'} />
-                : chatItems.map(item => (
-                  <ChatRow key={item.id} item={item} color={EVENT_COLOR[item.type]||'#e0e0ff'} label={EVENT_LABEL[item.type]||'•'} />
-                ))
-              }
-            </div>
-          </div>
+          )}
 
-          {/* RIGHT — Gifts */}
-          <div style={{ flex:'0 0 320px', display:'flex', flexDirection:'column' }}>
-            <div style={{ padding:'8px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid rgba(155,81,224,.12)', background:'rgba(10,5,25,.7)', flexShrink:0 }}>
-              <span style={{ fontSize:11, fontWeight:700, letterSpacing:'0.15em', textTransform:'uppercase', color:'rgba(236,72,153,.7)' }}>🎁 ของขวัญ</span>
-              <div style={{ display:'flex', gap:6 }}>
-                <SmallBtn onClick={toggleGiftAuto} active={giftAuto}>{giftAuto?'Auto ✓':'Auto'}</SmallBtn>
-                <SmallBtn onClick={() => setGiftItems([])}>ล้าง</SmallBtn>
+          {/* ─ SETTINGS TAB ─ */}
+          {navTab === 'settings' && (
+            <div style={{ flex:1, overflow:'auto', padding:'20px 28px' }}>
+              <div style={{ background:'#16152a', border:'1px solid rgba(139,92,246,.18)', borderRadius:14, padding:'22px 24px', maxWidth:640 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:18 }}>
+                  <span style={{ fontSize:17 }}>🎬</span>
+                  <span style={{ fontWeight:700, fontSize:15, color:'#c4b5fd' }}>Overlay URL สำหรับ OBS / TikTok Live Studio</span>
+                </div>
+                <div style={{ fontSize:13, color:'rgba(160,150,200,.55)', marginBottom:16, lineHeight:1.6 }}>
+                  ใส่ TikTok username แล้วก็อปปี้ URL ไปวางใน Browser Source ของ TikTok Live Studio หรือ OBS ได้เลย
+                </div>
+                {/* overlay username input */}
+                <label style={{ fontSize:12, color:'rgba(160,150,200,.6)', fontWeight:600, display:'block', marginBottom:6 }}>TikTok Username สำหรับ Overlay</label>
+                <div style={{ display:'flex', gap:10, marginBottom:14 }}>
+                  <div style={{ position:'relative', flex:1 }}>
+                    <span style={{ position:'absolute', left:13, top:'50%', transform:'translateY(-50%)', color:'rgba(139,92,246,.7)', fontWeight:700, fontSize:15 }}>@</span>
+                    <input
+                      value={overlayUser}
+                      onChange={e => saveOverlayUser(e.target.value)}
+                      placeholder="tiktok_username"
+                      style={{ width:'100%', background:'rgba(139,92,246,.08)', border:'1px solid rgba(139,92,246,.25)', borderRadius:10, color:'#e2e0ff', padding:'10px 14px 10px 32px', fontSize:14 }}
+                    />
+                  </div>
+                </div>
+                {/* URL display */}
+                {overlayUrlUser ? (
+                  <>
+                    <label style={{ fontSize:12, color:'rgba(160,150,200,.6)', fontWeight:600, display:'block', marginBottom:6 }}>Overlay URL</label>
+                    <div style={{ background:'rgba(0,0,0,.35)', border:'1px solid rgba(139,92,246,.2)', borderRadius:10, padding:'10px 14px', fontSize:12, color:'#a78bfa', fontFamily:'monospace', wordBreak:'break-all', marginBottom:14 }}>
+                      {overlayUrl}
+                    </div>
+                    <div style={{ display:'flex', gap:10 }}>
+                      <button onClick={copyOverlay} style={{ background: copied?'rgba(34,197,94,.15)':'rgba(139,92,246,.15)', border:`1px solid ${copied?'rgba(34,197,94,.5)':'rgba(139,92,246,.4)'}`, borderRadius:10, color: copied?'#4ade80':'#a78bfa', padding:'10px 22px', fontSize:13, fontWeight:700, cursor:'pointer', transition:'all .2s' }}>
+                        {copied ? '✅ คัดลอกแล้ว!' : '📋 คัดลอก URL'}
+                      </button>
+                      <a href={`${overlayUrl}&preview`} target="_blank" rel="noreferrer"
+                        style={{ background:'rgba(139,92,246,.08)', border:'1px solid rgba(139,92,246,.2)', borderRadius:10, color:'rgba(160,150,200,.6)', padding:'10px 18px', fontSize:13, fontWeight:600, textDecoration:'none', display:'flex', alignItems:'center' }}>
+                        ↗ ดูตัวอย่าง
+                      </a>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ padding:'16px', background:'rgba(139,92,246,.05)', border:'1px dashed rgba(139,92,246,.2)', borderRadius:10, fontSize:13, color:'rgba(160,150,200,.4)', textAlign:'center' }}>
+                    ← ใส่ username ก่อนเพื่อสร้าง URL
+                  </div>
+                )}
               </div>
             </div>
-            <div ref={giftRef} style={{ flex:1, overflowY:'auto', padding:'4px 8px 8px' }}>
-              {giftItems.length === 0
-                ? <EmptyState icon="🎁" text={status==='live'?'รอของขวัญ...':'ของขวัญจะปรากฏที่นี่'} />
-                : giftItems.map(item => <GiftRow key={item.id} item={item} />)
-              }
-            </div>
-          </div>
-        </div>
+          )}
 
-        {/* ─── FOOTER ─── */}
-        <div style={{ padding:'6px 20px', borderTop:'1px solid rgba(155,81,224,.1)', background:'rgba(8,4,18,.9)', display:'flex', alignItems:'center', gap:16, flexShrink:0 }}>
-          {Object.entries(EVENT_COLOR).map(([type, color]) => (
-            <span key={type} style={{ fontSize:11, display:'flex', alignItems:'center', gap:4 }}>
-              <span style={{ width:8, height:8, borderRadius:'50%', background:color, display:'inline-block' }} />
-              <span style={{ color:'rgba(180,180,200,.5)' }}>{ {join:'เข้าห้อง',chat:'แชท',like:'ไลค์',follow:'ติดตาม',share:'แชร์'}[type] }</span>
-            </span>
-          ))}
-          <span style={{ marginLeft:'auto', fontSize:11, color:'rgba(100,80,140,.5)' }}>WIN Leaderboard · คนเข้าห้องเท่ๆ</span>
-        </div>
+        </main>
       </div>
     </>
-  );
-}
-
-/* ── Small helper button ── */
-function SmallBtn({ onClick, children, active }) {
-  return (
-    <button onClick={onClick} style={{ background: active?'rgba(155,81,224,.18)':'rgba(255,255,255,.04)', border:`1px solid ${active?'rgba(155,81,224,.45)':'rgba(255,255,255,.08)'}`, borderRadius:5, color: active?'rgba(155,81,224,.9)':'rgba(180,180,200,.5)', fontSize:10, fontWeight:600, padding:'2px 9px', cursor:'pointer' }}>
-      {children}
-    </button>
-  );
-}
-
-/* ── Empty state ── */
-function EmptyState({ icon, text }) {
-  return (
-    <div style={{ padding:'32px 16px', textAlign:'center', color:'rgba(120,100,160,.4)' }}>
-      <div style={{ fontSize:28, marginBottom:8 }}>{icon}</div>
-      <div style={{ fontSize:12 }}>{text}</div>
-    </div>
-  );
-}
-
-/* ── Chat row ── */
-function ChatRow({ item, color, label }) {
-  return (
-    <div style={{ display:'flex', alignItems:'flex-start', gap:7, padding:'3px 6px', borderRadius:6, fontSize:13, lineHeight:1.5 }}>
-      {item.profilePicUrl
-        ? <img src={item.profilePicUrl} alt="" style={{ width:20, height:20, borderRadius:'50%', objectFit:'cover', flexShrink:0, marginTop:2 }} onError={e=>e.target.style.display='none'} />
-        : <div style={{ width:20, height:20, borderRadius:'50%', background:'rgba(155,81,224,.25)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, flexShrink:0, marginTop:2, color:'rgba(200,160,255,.8)' }}>{(item.displayName||'?')[0].toUpperCase()}</div>
-      }
-      <span style={{ flex:1, minWidth:0, wordBreak:'break-word' }}>
-        <a href={`https://www.tiktok.com/@${item.uniqueId}`} target="_blank" rel="noreferrer" style={{ color:'rgba(200,160,255,.9)', fontWeight:700, textDecoration:'none', marginRight:4 }}>{item.displayName||item.uniqueId}</a>
-        <span style={{ color }}>{label} {item.text}</span>
-      </span>
-    </div>
-  );
-}
-
-/* ── Gift row ── */
-function GiftRow({ item }) {
-  return (
-    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'6px 8px', borderRadius:8, background:'rgba(236,72,153,.06)', border:'1px solid rgba(236,72,153,.1)', marginBottom:4 }}>
-      {item.profilePicUrl
-        ? <img src={item.profilePicUrl} alt="" style={{ width:36, height:36, borderRadius:'50%', objectFit:'cover', flexShrink:0, border:'1.5px solid rgba(236,72,153,.5)' }} onError={e=>e.target.style.display='none'} />
-        : <div style={{ width:36, height:36, borderRadius:'50%', background:'rgba(180,30,100,.3)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0, color:'#ffaad4' }}>{(item.displayName||'?')[0].toUpperCase()}</div>
-      }
-      <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontSize:13, fontWeight:700, color:'#ffaad4', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.displayName||item.uniqueId}</div>
-        <div style={{ fontSize:12, color:'rgba(255,160,220,.7)', display:'flex', gap:6, flexWrap:'wrap', marginTop:1 }}>
-          <span>🎁 {item.giftName||'ของขวัญ'}</span>
-          {item.repeatCount>1 && <span style={{ color:'rgba(255,200,100,.7)' }}>×{item.repeatCount}</span>}
-          {item.diamonds>0 && <span style={{ color:'rgba(167,139,250,.8)' }}>💎 {item.diamonds.toLocaleString()}</span>}
-        </div>
-      </div>
-    </div>
   );
 }
 

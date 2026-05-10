@@ -334,6 +334,19 @@
   color: #d890ff;
 }
 
+.hBtnRoom {
+  background: linear-gradient(135deg, rgba(0,180,120,0.20), rgba(0,210,255,0.12));
+  border-color: rgba(0,200,140,0.45);
+  color: #00dda0;
+  font-weight: 700;
+}
+.hBtnRoom:hover {
+  background: linear-gradient(135deg, rgba(0,200,140,0.35), rgba(0,210,255,0.22));
+  border-color: #00cc99;
+  box-shadow: 0 0 18px rgba(0,200,140,0.4);
+  color: #40ffcc;
+}
+
 /* ═══════════════════════════════
    USER BADGE
 ═══════════════════════════════ */

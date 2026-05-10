@@ -20,6 +20,7 @@
     "concurrently": "^9.2.1",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "framer-motion": "^12.38.0",
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^8.0.7",
     "pg": "^8.20.0",

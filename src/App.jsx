@@ -146,6 +146,12 @@ export default function App({ username, role, onLogout }) {
               >
                 🎁 Gift Connector
               </button>
+              <button
+                className={`${styles.hBtn} ${styles.hBtnRoom}`}
+                onClick={() => { window.location.href = `/roomeffects?u=${username}&preview`; }}
+              >
+                🚪 คนเข้าห้องเท่ๆ
+              </button>
             </div>
           </div>
 

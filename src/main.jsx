@@ -9,6 +9,7 @@ import AuthPage from './AuthPage.jsx';
 import ResetPasswordPage from './ResetPasswordPage.jsx';
 import GifterLogPage from './GifterLogPage.jsx';
 import GiftConnectorPage from './GiftConnectorPage.jsx';
+import RoomEffectsPage from './RoomEffectsPage.jsx';
 import { getToken, clearToken } from './auth.js';
 
 const path = window.location.pathname;
@@ -57,6 +58,8 @@ if (path === '/overlay') {
   }
 
   ReactDOM.createRoot(document.getElementById('root')).render(<GiftRoot />);
+} else if (path === '/roomeffects') {
+  ReactDOM.createRoot(document.getElementById('root')).render(<RoomEffectsPage />);
 } else {
   function Root() {
     const [authed,   setAuthed]   = useState(false);

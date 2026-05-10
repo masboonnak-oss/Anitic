@@ -618,9 +618,15 @@ function connectLive(adminUser, tiktokUser, attempt) {
 
   // Member join
   conn.on('member', (data) => {
-    const mUid  = data?.user?.uniqueId || data?.uniqueId;
-    const mNick = data?.user?.nickname  || data?.nickname || mUid;
-    if (mUid) io.to(`room:${adminUser}`).emit('tiktokMember', { uniqueId: mUid, displayName: mNick, ts: Date.now() });
+    const mUid   = data?.user?.uniqueId || data?.uniqueId;
+    const mNick  = data?.user?.nickname  || data?.nickname || mUid;
+    const picRaw = data?.user?.profilePictureUrl || data?.user?.avatarUrl;
+    const level  = data?.user?.fansClub?.memberLevel || data?.user?.level || 0;
+    if (mUid) io.to(`room:${adminUser}`).emit('tiktokMember', {
+      uniqueId: mUid, displayName: mNick,
+      profilePicUrl: picRaw ? proxiedPic(picRaw, mUid) : null,
+      level, ts: Date.now(),
+    });
   });
 
   conn.on('disconnected', () => {

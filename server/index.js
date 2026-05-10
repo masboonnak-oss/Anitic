@@ -712,7 +712,15 @@ io.on('connection', (socket) => {
       });
 
       conn.on('member', (data) => {
-        socket.emit('member', { uniqueId: data?.user?.uniqueId, displayName: data?.user?.nickname });
+        const mUid   = data?.user?.uniqueId;
+        const mNick  = data?.user?.nickname || mUid;
+        const picRaw = data?.user?.profilePictureUrl || data?.user?.avatarUrl;
+        const level  = data?.user?.fansClub?.memberLevel || data?.user?.level || 0;
+        socket.emit('member', {
+          uniqueId: mUid, displayName: mNick,
+          profilePicUrl: picRaw ? proxiedPic(picRaw, mUid) : null,
+          level,
+        });
       });
 
       conn.on('disconnected', () => {

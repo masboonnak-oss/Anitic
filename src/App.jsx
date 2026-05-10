@@ -13,8 +13,10 @@ export default function App({ username, role, onLogout }) {
   const [copied,    setCopied]    = useState(false);
   const [copiedNK,  setCopiedNK]  = useState(false);
   const [copiedT1,  setCopiedT1]  = useState(false);
-  const [showAdmin, setShowAdmin] = useState(false);
-  const [menuOpen,  setMenuOpen]  = useState(false);
+  const [showAdmin,    setShowAdmin]    = useState(false);
+  const [menuOpen,     setMenuOpen]     = useState(false);
+  const [showRoomDlg,  setShowRoomDlg]  = useState(false);
+  const [roomUsername, setRoomUsername] = useState(() => localStorage.getItem('re_lastUser') || '');
   const menuRef = useRef(null);
 
   const isSuperAdmin = role === 'superadmin';
@@ -148,7 +150,7 @@ export default function App({ username, role, onLogout }) {
               </button>
               <button
                 className={`${styles.hBtn} ${styles.hBtnRoom}`}
-                onClick={() => { window.location.href = `/roomeffects?u=${username}&preview`; }}
+                onClick={() => setShowRoomDlg(true)}
               >
                 🚪 คนเข้าห้องเท่ๆ
               </button>
@@ -226,6 +228,58 @@ export default function App({ username, role, onLogout }) {
 
       {toast && <div className={`${styles.toast} ${styles[toast.type]}`}>{toast.msg}</div>}
       {showAdmin && <AdminPanel onClose={() => setShowAdmin(false)} />}
+
+      {/* ── Room FX: ถาม TikTok username ก่อนเปิดหน้า ── */}
+      {showRoomDlg && (
+        <div
+          onClick={e => e.target === e.currentTarget && setShowRoomDlg(false)}
+          style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.7)', backdropFilter:'blur(6px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}
+        >
+          <div style={{ background:'linear-gradient(160deg,#110a2a 0%,#0d0520 100%)', border:'1px solid rgba(155,81,224,.35)', borderRadius:18, padding:'28px 28px 24px', width:340, boxShadow:'0 20px 60px rgba(0,0,0,.7)' }}>
+            <div style={{ fontSize:22, fontWeight:900, background:'linear-gradient(135deg,#c060ff,#fe2c55)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', marginBottom:6 }}>
+              🚪 คนเข้าห้องเท่ๆ
+            </div>
+            <div style={{ fontSize:13, color:'rgba(200,180,255,.55)', marginBottom:18 }}>
+              ใส่ TikTok Username ของคนที่กำลังไลฟ์สด
+            </div>
+            <div style={{ position:'relative', marginBottom:16 }}>
+              <span style={{ position:'absolute', left:13, top:'50%', transform:'translateY(-50%)', color:'rgba(155,81,224,.8)', fontWeight:700, fontSize:16 }}>@</span>
+              <input
+                autoFocus
+                value={roomUsername}
+                onChange={e => setRoomUsername(e.target.value.replace(/^@/, ''))}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && roomUsername.trim()) {
+                    localStorage.setItem('re_lastUser', roomUsername.trim());
+                    window.location.href = '/roomeffects';
+                  }
+                  if (e.key === 'Escape') setShowRoomDlg(false);
+                }}
+                placeholder="tiktok_username"
+                style={{ width:'100%', background:'rgba(155,81,224,.1)', border:'1px solid rgba(155,81,224,.4)', borderRadius:10, color:'#e0d8ff', padding:'11px 14px 11px 34px', fontSize:15, outline:'none' }}
+              />
+            </div>
+            <div style={{ display:'flex', gap:10 }}>
+              <button
+                onClick={() => setShowRoomDlg(false)}
+                style={{ flex:1, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.1)', borderRadius:10, color:'rgba(200,180,255,.5)', padding:'10px', fontSize:13, fontWeight:600, cursor:'pointer' }}
+              >
+                ยกเลิก
+              </button>
+              <button
+                disabled={!roomUsername.trim()}
+                onClick={() => {
+                  localStorage.setItem('re_lastUser', roomUsername.trim());
+                  window.location.href = '/roomeffects';
+                }}
+                style={{ flex:2, background: roomUsername.trim() ? 'linear-gradient(135deg,#7c3aed,#fe2c55)' : 'rgba(120,60,200,.2)', border:'none', borderRadius:10, color:'#fff', padding:'10px', fontSize:14, fontWeight:700, cursor: roomUsername.trim() ? 'pointer' : 'not-allowed', opacity: roomUsername.trim() ? 1 : .45, transition:'all .15s' }}
+              >
+                ▶ เปิดหน้า Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className={styles.ticker}>
         <div className={styles.tickerTrack}>

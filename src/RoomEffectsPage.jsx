@@ -176,8 +176,18 @@ function DashboardView() {
               </button>
             ))}
           </nav>
+          {/* back to leaderboard */}
+          <div style={{ padding:'8px 8px 0' }}>
+            <button onClick={() => window.location.href = '/'}
+              style={{ width:'100%', display:'flex', alignItems:'center', gap:7, padding:'8px 10px', borderRadius:8, border:'1px solid rgba(139,92,246,.15)', background:'rgba(139,92,246,.07)', cursor:'pointer', transition:'all .15s', color:'rgba(160,150,200,.6)', fontSize:12, fontWeight:600 }}
+              onMouseEnter={e=>{e.currentTarget.style.background='rgba(139,92,246,.18)';e.currentTarget.style.color='#c4b5fd';}}
+              onMouseLeave={e=>{e.currentTarget.style.background='rgba(139,92,246,.07)';e.currentTarget.style.color='rgba(160,150,200,.6)';}}>
+              <span style={{ fontSize:13 }}>←</span>
+              <span className="re-nav-label">หน้าหลัก</span>
+            </button>
+          </div>
           {/* server status */}
-          <div style={{ padding:'12px 14px', borderTop:'1px solid rgba(139,92,246,.1)', display:'flex', alignItems:'center', gap:7 }}>
+          <div style={{ padding:'10px 14px', borderTop:'1px solid rgba(139,92,246,.1)', marginTop:8, display:'flex', alignItems:'center', gap:7 }}>
             <div style={{ width:7, height:7, borderRadius:'50%', background: statDot, flexShrink:0, animation: isLive?'pulse-live 1.8s infinite':undefined }} />
             <span className="re-status-text" style={{ fontSize:11, color:'rgba(160,150,200,.55)', lineHeight:1.3 }}>{isLive ? 'เซิร์ฟเวอร์เชื่อมต่อแล้ว' : statTxt}</span>
           </div>

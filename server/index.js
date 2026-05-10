@@ -653,6 +653,13 @@ io.on('connection', (socket) => {
     sendInitialState(socket, username);
   });
 
+  socket.on('testVIPEntry', ({ username } = {}) => {
+    if (!username) return;
+    const fake = { uniqueId:'king_test', displayName:'👑 ราชา KING TEST 👑', profilePicUrl:null, level:25 };
+    io.to(`room:${username.toLowerCase()}`).emit('tiktokMember', fake);
+    socket.emit('tiktokMember', fake);
+  });
+
   /* ── Per-socket TikTok connection (standalone / OBS mode) ── */
   socket.on('setUniqueId', async (uniqueId, options) => {
     if (typeof options === 'object' && options) {

@@ -40,7 +40,7 @@ async function sendVerificationEmail(toEmail, username, otp) {
 async function sendPasswordResetEmail(toEmail, username, resetToken) {
   const transporter = getMailTransporter();
   if (!transporter) { console.warn('[mail] GMAIL_USER or GMAIL_APP_PASSWORD not set, skip email'); return false; }
-  const domain   = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000';
+  const domain   = process.env.APP_URL || (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:3001');
   const resetUrl = `${domain}/reset-password?token=${resetToken}`;
   try {
     await transporter.sendMail({

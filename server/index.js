@@ -695,12 +695,15 @@ io.on('connection', (socket) => {
         if (data?.giftType === 1 && !data?.repeatEnd) return;
         const uid = data?.user?.uniqueId || data?.uniqueId;
         const diamonds = (data?.diamondCount || data?.gift?.diamondCount || 1) * (data?.repeatCount || 1);
-        socket.emit('gift', {
+        const giftPayload = {
           uniqueId: uid, displayName: data?.user?.nickname || uid,
           profilePicUrl: proxiedPic(data?.user?.profilePictureUrl, uid),
           giftName: data?.gift?.name || data?.giftName || 'ของขวัญ',
           diamonds, repeatCount: data?.repeatCount || 1, ts: Date.now(),
-        });
+        };
+        socket.emit('gift', giftPayload);
+        /* broadcast to overlay(s) listening on this room */
+        io.to(`room:${uniqueId}`).emit('tiktokGift', giftPayload);
       });
 
       conn.on(WebcastEvent?.LIKE || 'like', (data) => {
@@ -716,11 +719,14 @@ io.on('connection', (socket) => {
         const mNick  = data?.user?.nickname || mUid;
         const picRaw = data?.user?.profilePictureUrl || data?.user?.avatarUrl;
         const level  = data?.user?.fansClub?.memberLevel || data?.user?.level || 0;
-        socket.emit('member', {
+        const memberPayload = {
           uniqueId: mUid, displayName: mNick,
           profilePicUrl: picRaw ? proxiedPic(picRaw, mUid) : null,
           level,
-        });
+        };
+        socket.emit('member', memberPayload);
+        /* broadcast to overlay(s) listening on this room */
+        io.to(`room:${uniqueId}`).emit('tiktokMember', memberPayload);
       });
 
       conn.on('disconnected', () => {

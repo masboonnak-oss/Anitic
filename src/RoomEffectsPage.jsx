@@ -349,8 +349,13 @@ function DashboardView() {
    ██████  OVERLAY VIEW  (OBS / TikTok Live Studio)
 ══════════════════════════════════════════════════════════ */
 
-/* ── standalone socket for overlay ── */
+/* ── passive socket for overlay — joins room, does NOT connect TikTok itself ── */
 const overlaySock = IS_OVERLAY ? io('/', { transports: ['websocket','polling'] }) : null;
+if (overlaySock && OVERLAY_USER) {
+  const joinFn = () => overlaySock.emit('joinRoom', { username: OVERLAY_USER });
+  overlaySock.on('connect', joinFn);
+  if (overlaySock.connected) joinFn();
+}
 
 /* ── demo item ── */
 const DEMO_ITEM = { _uid:'demo-1', variant:'join', uniqueId:'babynoey', displayName:'BabyNoey 👑', profilePicUrl:null, level:30 };
@@ -361,33 +366,13 @@ function addToQueue(prev, item) {
 }
 
 function OverlayView() {
-  const [queue,   setQueue]   = useState(IS_DEMO ? [DEMO_ITEM] : []);
-  const [flash,   setFlash]   = useState(false);
-  const [connSt,  setConnSt]  = useState('connecting'); // connecting | live | error
+  const [queue, setQueue] = useState(IS_DEMO ? [DEMO_ITEM] : []);
+  const [flash, setFlash] = useState(false);
   const uidRef = useRef(0);
   const mkid   = () => `${Date.now()}-${++uidRef.current}`;
 
-  /* connect overlay directly via setUniqueId (standalone, no admin needed) */
-  function doConnect() {
-    if (!overlaySock || !OVERLAY_USER) return;
-    setConnSt('connecting');
-    overlaySock.emit('setUniqueId', OVERLAY_USER, {});
-  }
-
   useEffect(() => {
     if (!overlaySock) return;
-
-    /* (re)connect on socket connect */
-    overlaySock.on('connect', doConnect);
-    if (overlaySock.connected) doConnect();
-
-    /* TikTok connection state */
-    overlaySock.on('tiktokConnected',    ()    => setConnSt('live'));
-    overlaySock.on('tiktokDisconnected', ()    => {
-      setConnSt('error');
-      /* auto-retry after 30s */
-      setTimeout(doConnect, 30000);
-    });
 
     function onMember(data) {
       setFlash(true); setTimeout(() => setFlash(false), 600);
@@ -406,19 +391,10 @@ function OverlayView() {
       }));
     }
 
-    /* listen to events from setUniqueId path */
-    overlaySock.on('member', onMember);
-    overlaySock.on('gift',   onGift);
-    /* also listen to admin-broadcast path (fallback) */
     overlaySock.on('tiktokMember', onMember);
     overlaySock.on('tiktokGift',   onGift);
 
     return () => {
-      overlaySock.off('connect',           doConnect);
-      overlaySock.off('tiktokConnected');
-      overlaySock.off('tiktokDisconnected');
-      overlaySock.off('member',      onMember);
-      overlaySock.off('gift',        onGift);
       overlaySock.off('tiktokMember', onMember);
       overlaySock.off('tiktokGift',   onGift);
     };
@@ -426,9 +402,6 @@ function OverlayView() {
 
   function dismiss(uid) { setQueue(prev => prev.filter(q => q._uid !== uid)); }
   const isPreview = params.has('preview');
-
-  const connLabel = { connecting:'⏳ กำลังเชื่อมต่อ...', live:'🔴 LIVE', error:'⚠️ เชื่อมต่อไม่ได้ — รอสักครู่' }[connSt] || '';
-  const connColor = { connecting:'rgba(245,166,35,.85)', live:'rgba(34,197,94,.9)', error:'rgba(239,68,68,.85)' }[connSt];
 
   return (
     <>
@@ -450,13 +423,12 @@ function OverlayView() {
         )}
       </AnimatePresence>
 
-      {/* ── Status bar (always shown when preview, hidden in pure OBS mode) ── */}
+      {/* ── Preview label (hidden in actual OBS mode) ── */}
       {isPreview && (
         <div style={{ position:'fixed', top:16, left:16, right:16, display:'flex', justifyContent:'space-between', alignItems:'center', gap:8, zIndex:50 }}>
-          <div style={{ background:'rgba(10,0,20,.88)', border:`1px solid ${connSt==='live'?'rgba(34,197,94,.4)':connSt==='error'?'rgba(239,68,68,.4)':'rgba(155,81,224,.35)'}`, borderRadius:10, padding:'7px 14px', backdropFilter:'blur(12px)', display:'flex', alignItems:'center', gap:10 }}>
+          <div style={{ background:'rgba(10,0,20,.88)', border:'1px solid rgba(155,81,224,.35)', borderRadius:10, padding:'7px 14px', backdropFilter:'blur(12px)', display:'flex', alignItems:'center', gap:10 }}>
             <span style={{ fontSize:11, fontWeight:700, color:'rgba(155,81,224,.8)', letterSpacing:'.15em' }}>👁 PREVIEW</span>
             {OVERLAY_USER && <span style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>@{OVERLAY_USER}</span>}
-            <span style={{ fontSize:11, fontWeight:700, color: connColor }}>· {connLabel}</span>
           </div>
           <div style={{ background:'rgba(10,0,20,.82)', border:'1px solid rgba(100,80,150,.2)', borderRadius:9, padding:'6px 12px', fontSize:10, color:'rgba(180,160,220,.4)' }}>
             OBS Browser Source: ลบ ?preview ออกจาก URL
@@ -475,9 +447,8 @@ function OverlayView() {
 
       {isPreview && queue.length === 0 && (
         <div style={{ position:'fixed', bottom:32, left:32, background:'rgba(10,0,20,.75)', border:'1px dashed rgba(155,81,224,.25)', borderRadius:12, padding:'16px 22px', backdropFilter:'blur(12px)', maxWidth:360 }}>
-          <div style={{ fontSize:13, fontWeight:700, color: connColor, marginBottom:4 }}>{connLabel}</div>
           <div style={{ fontSize:12, color:'rgba(155,81,224,.45)' }}>
-            {connSt==='live' ? '✅ เชื่อมต่อแล้ว รอคนเข้าห้อง...' : connSt==='error' ? '⚠️ ต้องไลฟ์ก่อนถึงจะเชื่อมต่อได้ จะลองใหม่ใน 30 วิ' : '⏳ กำลังลองเชื่อมต่อ TikTok Live...'}
+            🎭 รอรับ events จาก Dashboard... (overlay passive mode)
           </div>
         </div>
       )}

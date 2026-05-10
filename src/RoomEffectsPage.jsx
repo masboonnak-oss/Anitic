@@ -29,6 +29,7 @@ function DashboardView() {
   const [likes,    setLikes]      = useState(0);
   const [diamonds, setDiamonds]   = useState(0);
   const [copied,   setCopied]     = useState(false);
+  const [overlayUser, setOverlayUser] = useState(() => localStorage.getItem('re_lastUser') || '');
 
   const chatRef = useRef(null);
   const giftRef = useRef(null);
@@ -133,10 +134,17 @@ function DashboardView() {
   function toggleChatAuto() { chatAutoRef.current = !chatAutoRef.current; setChatAutoS(chatAutoRef.current); }
   function toggleGiftAuto() { giftAutoRef.current = !giftAutoRef.current; setGiftAutoS(giftAutoRef.current); }
 
-  /* overlay URL */
-  const overlayUrl = `${window.location.origin}/roomeffects?u=${username.trim().replace(/^@/,'')}`;
+  /* overlay URL — uses its own overlayUser field */
+  const overlayUrlUser = overlayUser.trim().replace(/^@/, '');
+  const overlayUrl = `${window.location.origin}/roomeffects?u=${overlayUrlUser}`;
   function copyOverlay() {
+    if (!overlayUrlUser) return;
     navigator.clipboard.writeText(overlayUrl).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  }
+  function saveOverlayUser(val) {
+    const clean = val.replace(/^@/, '');
+    setOverlayUser(clean);
+    localStorage.setItem('re_overlayUser', clean);
   }
 
   const statusColor = { idle: '#666', connecting: '#f5a623', live: '#22c55e', error: '#ef4444' }[status];
@@ -213,22 +221,34 @@ function DashboardView() {
 
         {/* ─── OVERLAY URL BAR ─── */}
         <div style={{ background:'rgba(0,40,30,.5)', borderBottom:'1px solid rgba(0,200,140,.15)', padding:'9px 20px', display:'flex', alignItems:'center', gap:10, flexShrink:0, flexWrap:'wrap' }}>
-          <span style={{ fontSize:12, color:'rgba(0,220,150,.7)', fontWeight:700, whiteSpace:'nowrap' }}>🎬 Overlay URL (TikTok Live Studio / OBS) :</span>
-          <div style={{ flex:'1 1 200px', background:'rgba(0,0,0,.4)', border:'1px solid rgba(0,200,140,.25)', borderRadius:7, padding:'5px 12px', fontSize:12, color: username.trim()?'#00dda0':'rgba(100,120,100,.5)', fontFamily:'monospace', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-            {username.trim() ? overlayUrl : 'กรุณาใส่ username ก่อน'}
+          <span style={{ fontSize:12, color:'rgba(0,220,150,.7)', fontWeight:700, whiteSpace:'nowrap' }}>🎬 Overlay URL :</span>
+          {/* username input for overlay */}
+          <div style={{ position:'relative', flex:'0 0 auto' }}>
+            <span style={{ position:'absolute', left:9, top:'50%', transform:'translateY(-50%)', color:'rgba(0,200,140,.7)', fontWeight:700, fontSize:13 }}>@</span>
+            <input
+              value={overlayUser}
+              onChange={e => saveOverlayUser(e.target.value)}
+              placeholder="tiktok_username"
+              style={{ background:'rgba(0,30,20,.8)', border:'1px solid rgba(0,200,140,.3)', borderRadius:7, color:'#00dda0', padding:'5px 10px 5px 24px', fontSize:13, outline:'none', width:170 }}
+            />
+          </div>
+          {/* generated URL display */}
+          <div style={{ flex:'1 1 180px', background:'rgba(0,0,0,.4)', border:'1px solid rgba(0,200,140,.2)', borderRadius:7, padding:'5px 12px', fontSize:11, color: overlayUrlUser?'#00dda0':'rgba(100,120,100,.4)', fontFamily:'monospace', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+            {overlayUrlUser ? overlayUrl : '← ใส่ username ก่อน'}
           </div>
           <button
             onClick={copyOverlay}
-            disabled={!username.trim()}
-            style={{ background: copied?'rgba(0,200,140,.2)':'rgba(0,180,120,.12)', border:`1px solid ${copied?'rgba(0,200,140,.7)':'rgba(0,200,140,.35)'}`, borderRadius:7, color: copied?'#00ffaa':'#00dda0', padding:'5px 16px', fontSize:12, fontWeight:700, cursor: username.trim()?'pointer':'not-allowed', whiteSpace:'nowrap', transition:'all .2s' }}
+            disabled={!overlayUrlUser}
+            style={{ background: copied?'rgba(0,200,140,.2)':'rgba(0,180,120,.12)', border:`1px solid ${copied?'rgba(0,200,140,.7)':'rgba(0,200,140,.3)'}`, borderRadius:7, color: copied?'#00ffaa':'#00dda0', padding:'5px 16px', fontSize:12, fontWeight:700, cursor: overlayUrlUser?'pointer':'not-allowed', whiteSpace:'nowrap', transition:'all .2s', opacity: overlayUrlUser?1:.45 }}
           >
             {copied ? '✅ คัดลอกแล้ว!' : '📋 คัดลอก URL'}
           </button>
           <a
-            href={username.trim() ? `${overlayUrl}&preview` : '#'}
+            href={overlayUrlUser ? `${overlayUrl}&preview` : '#'}
             target="_blank"
             rel="noreferrer"
-            style={{ fontSize:12, color:'rgba(0,200,140,.6)', textDecoration:'none', fontWeight:600, whiteSpace:'nowrap' }}
+            onClick={e => !overlayUrlUser && e.preventDefault()}
+            style={{ fontSize:12, color: overlayUrlUser?'rgba(0,200,140,.7)':'rgba(0,120,80,.3)', textDecoration:'none', fontWeight:600, whiteSpace:'nowrap' }}
           >↗ ดูตัวอย่าง</a>
         </div>
 

@@ -173,3 +173,23 @@
 .minus { background: #ef4444; color: #fff; }
 .plus:hover  { opacity: 0.85; }
 .minus:hover { opacity: 0.85; }
+
+@media (max-width: 520px) {
+  .podium { flex-direction: column; align-items: stretch; }
+  .card {
+    min-width: unset;
+    max-width: 100%;
+    flex-direction: row;
+    align-items: center;
+    padding: 14px 16px;
+    gap: 16px;
+    text-align: left;
+  }
+  .frameWrap { width: 72px; height: 72px; flex-shrink: 0; }
+  .avatarCircle { width: 46px; height: 46px; }
+  .name { text-align: left; font-size: 14px; }
+  .usertag { text-align: left; }
+  .winCount { font-size: 26px; }
+  .controls { margin-top: 0; margin-left: auto; flex-direction: column; gap: 6px; }
+  .btn { width: 38px; height: 38px; font-size: 18px; }
+}

@@ -133,17 +133,30 @@ function DashboardView() {
         @keyframes pulse-live{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
         input::placeholder{color:rgba(180,160,230,.35)}
         input:focus{outline:none}
+        .re-sidebar{width:156px;flex-shrink:0}
+        .re-page-header{padding:20px 28px 0;flex-shrink:0}
+        .re-dash-content{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:16px 28px 20px}
+        .re-settings-content{flex:1;overflow:auto;padding:20px 28px}
+        .re-top-row{display:flex;gap:14px;flex-shrink:0;margin-bottom:16px}
+        @media(max-width:640px){
+          .re-sidebar{width:44px}
+          .re-logo-text,.re-nav-label,.re-status-text{display:none}
+          .re-page-header{padding:12px 12px 0}
+          .re-dash-content{padding:10px 10px 12px}
+          .re-settings-content{padding:12px}
+          .re-top-row{flex-direction:column;gap:10px}
+        }
       `}</style>
 
       <div style={{ display:'flex', height:'100vh', overflow:'hidden' }}>
 
         {/* ══ SIDEBAR ══ */}
-        <aside style={{ width:156, flexShrink:0, background:'#0f0e1a', borderRight:'1px solid rgba(139,92,246,.14)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        <aside className="re-sidebar" style={{ background:'#0f0e1a', borderRight:'1px solid rgba(139,92,246,.14)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
           {/* logo */}
           <div style={{ padding:'20px 16px 16px', borderBottom:'1px solid rgba(139,92,246,.1)' }}>
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
               <div style={{ width:30, height:30, borderRadius:8, background:'linear-gradient(135deg,#7c3aed,#4f46e5)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>🎮</div>
-              <span style={{ fontWeight:900, fontSize:14, letterSpacing:'0.1em', color:'#e2e0ff' }}>ROOM FX</span>
+              <span className="re-logo-text" style={{ fontWeight:900, fontSize:14, letterSpacing:'0.1em', color:'#e2e0ff' }}>ROOM FX</span>
             </div>
           </div>
           {/* nav */}
@@ -158,7 +171,7 @@ function DashboardView() {
                   color: navTab===item.id ? '#a78bfa' : 'rgba(160,150,200,.5)',
                   fontWeight: navTab===item.id ? 700 : 500, fontSize:13 }}>
                 <span style={{ fontSize:14 }}>{item.icon}</span>
-                {item.label}
+                <span className="re-nav-label">{item.label}</span>
                 {navTab===item.id && <span style={{ marginLeft:'auto', width:4, height:4, borderRadius:'50%', background:'#a78bfa', flexShrink:0 }} />}
               </button>
             ))}
@@ -166,7 +179,7 @@ function DashboardView() {
           {/* server status */}
           <div style={{ padding:'12px 14px', borderTop:'1px solid rgba(139,92,246,.1)', display:'flex', alignItems:'center', gap:7 }}>
             <div style={{ width:7, height:7, borderRadius:'50%', background: statDot, flexShrink:0, animation: isLive?'pulse-live 1.8s infinite':undefined }} />
-            <span style={{ fontSize:11, color:'rgba(160,150,200,.55)', lineHeight:1.3 }}>{isLive ? 'เซิร์ฟเวอร์เชื่อมต่อแล้ว' : statTxt}</span>
+            <span className="re-status-text" style={{ fontSize:11, color:'rgba(160,150,200,.55)', lineHeight:1.3 }}>{isLive ? 'เซิร์ฟเวอร์เชื่อมต่อแล้ว' : statTxt}</span>
           </div>
         </aside>
 
@@ -174,7 +187,7 @@ function DashboardView() {
         <main style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', overflow:'hidden', background:'#0b0b14' }}>
 
           {/* ─ page header ─ */}
-          <div style={{ padding:'20px 28px 0', flexShrink:0 }}>
+          <div className="re-page-header">
             <div style={{ fontSize:24, fontWeight:900, letterSpacing:'0.06em', color:'#f0eeff' }}>
               {navTab === 'dashboard' ? 'DASHBOARD' : 'การตั้งค่า'}
             </div>
@@ -185,10 +198,10 @@ function DashboardView() {
 
           {/* ─ DASHBOARD TAB ─ */}
           {navTab === 'dashboard' && (
-            <div style={{ flex:1, minHeight:0, display:'flex', flexDirection:'column', overflow:'hidden', padding:'16px 28px 20px' }}>
+            <div className="re-dash-content">
 
               {/* top row: connect card + stat cards */}
-              <div style={{ display:'flex', gap:14, flexShrink:0, marginBottom:16 }}>
+              <div className="re-top-row">
 
                 {/* connect card */}
                 <div style={{ flex:'1 1 0', minWidth:0, background:'#16152a', border:'1px solid rgba(139,92,246,.18)', borderRadius:14, padding:'20px 22px' }}>
@@ -290,7 +303,7 @@ function DashboardView() {
 
           {/* ─ SETTINGS TAB ─ */}
           {navTab === 'settings' && (
-            <div style={{ flex:1, overflow:'auto', padding:'20px 28px' }}>
+            <div className="re-settings-content">
               <div style={{ background:'#16152a', border:'1px solid rgba(139,92,246,.18)', borderRadius:14, padding:'22px 24px', maxWidth:640 }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:18 }}>
                   <span style={{ fontSize:17 }}>🎬</span>

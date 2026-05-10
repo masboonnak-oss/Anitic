@@ -96,3 +96,9 @@
 .btnDisconnect:hover {
   background: #444;
 }
+
+@media (max-width: 560px) {
+  .panel { flex-direction: column; align-items: stretch; }
+  .left { justify-content: flex-start; }
+  .form { max-width: 100%; }
+}

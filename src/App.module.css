@@ -546,6 +546,10 @@
   .header   { padding: 0 14px; }
 }
 
+@media (max-width: 640px) {
+  .main { padding: 18px 14px 56px; }
+}
+
 /* ═══════════════════════════════
    BRANDING BAR
 ═══════════════════════════════ */

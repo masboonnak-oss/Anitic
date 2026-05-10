@@ -1317,7 +1317,7 @@ app.get('/api/streamdps/status', authMiddleware, async (req, res) => {
 const DIST_DIR = path.join(__dirname, '../dist');
 if (require('fs').existsSync(DIST_DIR)) {
   app.use(express.static(DIST_DIR));
-  app.get('*', (req, res, next) => {
+  app.use((req, res, next) => {
     if (req.path.startsWith('/api/') || req.path.startsWith('/socket.io')) return next();
     res.sendFile(path.join(DIST_DIR, 'index.html'));
   });

@@ -284,3 +284,15 @@
 }
 .confirmResetBtn:hover:not(:disabled) { opacity: 0.85; }
 .confirmResetBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@media (max-width: 520px) {
+  .header { padding: 16px 16px 12px; }
+  .title { font-size: 16px; }
+  .statsBar { padding: 10px 12px; }
+  .statVal { font-size: 16px; }
+  .tabBtn { padding: 9px 10px; font-size: 12px; gap: 4px; }
+  .body { padding: 10px; }
+  .userRow { padding: 8px 10px; gap: 8px; }
+  .roleBtn { padding: 4px 7px; font-size: 10px; }
+  .panel { border-radius: 14px; }
+}

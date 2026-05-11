@@ -576,18 +576,48 @@ function OverlayView() {
   const uidRef = useRef(0);
   const mkid   = () => `${Date.now()}-${++uidRef.current}`;
 
-  // DEMO mode: trigger announcer for tier 4+
+  // ── Self-cleaning timer registry (กัน leak ตอนรันยาวบน VPS) ──
+  const timersRef = useRef(new Set());
+  const setTrackedTimeout = (fn, ms) => {
+    const id = setTimeout(() => { timersRef.current.delete(id); fn(); }, ms);
+    timersRef.current.add(id);
+    return id;
+  };
+
+  // ── Announce queue (serialize tier 4+ จัดเรียงทีละคน) ──
+  const announceQueueRef = useRef([]);
+  const announceBusyRef  = useRef(false);
+  const processAnnounceQueue = () => {
+    if (announceBusyRef.current) return;
+    const next = announceQueueRef.current.shift();
+    if (!next) return;
+    announceBusyRef.current = true;
+    setKingAnnounce({ id: mkid(), displayName: next.displayName, tierId: next.tierId });
+    setTrackedTimeout(() => setQueue(prev => addToQueue(prev, next.item)), 2600);
+    setTrackedTimeout(() => {
+      setKingAnnounce(null);
+      announceBusyRef.current = false;
+      setTrackedTimeout(processAnnounceQueue, 350);
+    }, 3200);
+  };
+  const enqueueAnnounce = (displayName, tierId, item) => {
+    announceQueueRef.current.push({ displayName, tierId, item });
+    processAnnounceQueue();
+  };
+
+  // DEMO mode: trigger announcer for tier 4+ (ผ่าน queue)
   useEffect(() => {
     if (!IS_DEMO) return;
     const demoTier = getTier(DEMO_ITEM.level || 0);
     if (!demoTier.hasAnnounce) return;
-    const fire = () => {
-      setKingAnnounce({ id: mkid(), displayName: DEMO_ITEM.displayName, tierId: demoTier.id });
-      setTimeout(() => setKingAnnounce(null), 3200);
-    };
+    const fire = () => enqueueAnnounce(DEMO_ITEM.displayName, demoTier.id, { ...DEMO_ITEM, _uid: mkid() });
     const t = setTimeout(fire, 600);
-    const iv = setInterval(fire, demoTier.displayMs + 800);
-    return () => { clearTimeout(t); clearInterval(iv); };
+    const iv = setInterval(fire, demoTier.displayMs + 1500);
+    return () => {
+      clearTimeout(t); clearInterval(iv);
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current.clear();
+    };
   }, []);
 
   useEffect(() => {
@@ -597,19 +627,18 @@ function OverlayView() {
       const lv = data.level || 0;
       const tier = getTier(lv);
       // flash เฉพาะ tier 3+ (ELITE ขึ้น)
-      if (tier.id >= 3) { setFlash(true); setTimeout(() => setFlash(false), 800); }
+      if (tier.id >= 3) { setFlash(true); setTrackedTimeout(() => setFlash(false), 800); }
       const item = {
         _uid: mkid(), variant: 'join',
         uniqueId: data.uniqueId, displayName: data.displayName || data.uniqueId || '?',
         profilePicUrl: data.profilePicUrl || null, level: lv,
       };
-      // KING/LEGEND announcement (tier 4+)
+      // KING/LEGEND announcement (tier 4+) — serialize ผ่าน queue, การ์ดตามมา
       if (tier.hasAnnounce) {
-        const aid = mkid();
-        setKingAnnounce({ id: aid, displayName: item.displayName, tierId: tier.id });
-        setTimeout(() => setKingAnnounce(null), 3200);
+        enqueueAnnounce(item.displayName, tier.id, item);
+      } else {
+        setQueue(prev => addToQueue(prev, item));
       }
-      setQueue(prev => addToQueue(prev, item));
     }
     function onGift(data) {
       setQueue(prev => addToQueue(prev, {
@@ -626,13 +655,17 @@ function OverlayView() {
     return () => {
       overlaySock.off('tiktokMember', onMember);
       overlaySock.off('tiktokGift',   onGift);
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current.clear();
+      announceQueueRef.current = [];
+      announceBusyRef.current = false;
     };
   }, []);
 
   function dismiss(uid) {
     setQueue(prev => prev.filter(q => q._uid !== uid));
     // ใน DEMO mode → re-spawn ทันทีเพื่อให้ดูได้ตลอด
-    if (IS_DEMO) setTimeout(() => setQueue([{ ...DEMO_ITEM, _uid: mkid() }]), 400);
+    if (IS_DEMO) setTrackedTimeout(() => setQueue([{ ...DEMO_ITEM, _uid: mkid() }]), 400);
   }
   const isPreview = params.has('preview');
 
@@ -673,7 +706,7 @@ function OverlayView() {
         </div>
       )}
 
-      <div style={{ position:'fixed', bottom:32, left:32, display:'flex', flexDirection:'column', alignItems:'flex-start', gap:16, pointerEvents:'none', zIndex:50, maxWidth:640 }}>
+      <div style={{ position:'fixed', bottom:32, left:32, display:'flex', flexDirection:'column', alignItems:'flex-start', gap:16, pointerEvents:'none', zIndex:50, maxWidth:960, width:'calc(100vw - 64px)' }}>
         <AnimatePresence>
           {queue.map(item => item.variant === 'gift'
             ? <GiftCard  key={item._uid} item={item} onDone={() => dismiss(item._uid)} />
@@ -707,9 +740,9 @@ function KingAnnouncement({ name, tierId = 4 }) {
     >
       {/* cinematic bars */}
       <motion.div initial={{ scaleY:0 }} animate={{ scaleY:[0,1,1,0] }} transition={{ duration:3.2, times:[0,.06,.9,1] }}
-        style={{ position:'absolute', top:0, left:0, right:0, height:80, background:'rgba(0,0,0,.85)', transformOrigin:'top' }} />
+        style={{ position:'absolute', top:0, left:0, right:0, height:60, background:'linear-gradient(to bottom,rgba(0,0,0,.9),rgba(0,0,0,0))', transformOrigin:'top' }} />
       <motion.div initial={{ scaleY:0 }} animate={{ scaleY:[0,1,1,0] }} transition={{ duration:3.2, times:[0,.06,.9,1] }}
-        style={{ position:'absolute', bottom:0, left:0, right:0, height:80, background:'rgba(0,0,0,.85)', transformOrigin:'bottom' }} />
+        style={{ position:'absolute', bottom:0, left:0, right:0, height:60, background:'linear-gradient(to top,rgba(0,0,0,.9),rgba(0,0,0,0))', transformOrigin:'bottom' }} />
 
       {/* shockwave rings */}
       {[0,.15,.3].map((d,i) => (

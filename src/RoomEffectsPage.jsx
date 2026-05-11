@@ -576,6 +576,20 @@ function OverlayView() {
   const uidRef = useRef(0);
   const mkid   = () => `${Date.now()}-${++uidRef.current}`;
 
+  // DEMO mode: trigger announcer for tier 4+
+  useEffect(() => {
+    if (!IS_DEMO) return;
+    const demoTier = getTier(DEMO_ITEM.level || 0);
+    if (!demoTier.hasAnnounce) return;
+    const fire = () => {
+      setKingAnnounce({ id: mkid(), displayName: DEMO_ITEM.displayName, tierId: demoTier.id });
+      setTimeout(() => setKingAnnounce(null), 3200);
+    };
+    const t = setTimeout(fire, 600);
+    const iv = setInterval(fire, demoTier.displayMs + 800);
+    return () => { clearTimeout(t); clearInterval(iv); };
+  }, []);
+
   useEffect(() => {
     if (!overlaySock) return;
 
@@ -713,17 +727,17 @@ function KingAnnouncement({ name, tierId = 4 }) {
         {/* crown drop */}
         <motion.div initial={{ y:-120, opacity:0, scale:3 }} animate={{ y:[-120,0,-12,0], opacity:[0,1,1,1,0] }}
           transition={{ duration:3.2, times:[0,.15,.35,.6,1] }}
-          style={{ fontSize:'clamp(60px,12vw,100px)', lineHeight:1,
+          style={{ fontSize:'clamp(80px,9vw,170px)', lineHeight:1,
             filter: isLegend
-              ? 'drop-shadow(0 0 40px rgba(128,232,255,1)) drop-shadow(0 0 80px rgba(255,128,255,.8))'
-              : 'drop-shadow(0 0 40px rgba(255,200,0,1)) drop-shadow(0 0 80px rgba(255,150,0,.7))' }}>
+              ? 'drop-shadow(0 0 60px rgba(128,232,255,1)) drop-shadow(0 0 110px rgba(255,128,255,.8))'
+              : 'drop-shadow(0 0 60px rgba(255,200,0,1)) drop-shadow(0 0 110px rgba(255,150,0,.7))' }}>
           {crown}
         </motion.div>
 
         {/* TITLE text */}
         <motion.div initial={{ letterSpacing:'0.8em', opacity:0 }} animate={{ letterSpacing:['0.8em','0.08em','0.08em','0.08em','0.3em'], opacity:[0,1,1,1,0] }}
           transition={{ duration:3.2, times:[0,.18,.4,.7,1] }}
-          style={{ fontSize:'clamp(36px,10vw,88px)', fontWeight:900, lineHeight:1,
+          style={{ fontSize:'clamp(50px,8vw,140px)', fontWeight:900, lineHeight:1,
             background: isLegend
               ? 'linear-gradient(135deg,#fff 0%,#80e8ff 25%,#ff80ff 50%,#ffd700 75%,#fff 100%)'
               : 'linear-gradient(135deg,#fff8e0 0%,#ffd700 25%,#ff80ff 60%,#80cfff 80%,#fff 100%)',
@@ -738,15 +752,15 @@ function KingAnnouncement({ name, tierId = 4 }) {
         {/* name */}
         <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:[0,1,1,0], y:[20,0,0,0] }}
           transition={{ duration:3.2, times:[0,.25,.7,1] }}
-          style={{ fontSize:'clamp(18px,5vw,42px)', fontWeight:700, color:'rgba(255,225,100,.95)', marginTop:14,
-            filter:'drop-shadow(0 0 12px rgba(255,200,50,.8))', letterSpacing:'.03em' }}>
+          style={{ fontSize:'clamp(28px,4vw,60px)', fontWeight:800, color: isLegend?'rgba(220,250,255,.98)':'rgba(255,225,100,.98)', marginTop:18,
+            filter: isLegend?'drop-shadow(0 0 18px rgba(128,232,255,.9))':'drop-shadow(0 0 18px rgba(255,200,50,.9))', letterSpacing:'.04em' }}>
           {name}
         </motion.div>
 
         {/* subtitle */}
         <motion.div initial={{ opacity:0 }} animate={{ opacity:[0,.8,.8,0] }} transition={{ duration:3.2, times:[0,.3,.7,1] }}
-          style={{ fontSize:'clamp(13px,3vw,22px)', fontWeight:600, color:'rgba(200,150,255,.8)', marginTop:8, letterSpacing:'.25em', textTransform:'uppercase' }}>
-          ✦ ราชาผู้ยิ่งใหญ่ ✦
+          style={{ fontSize:'clamp(16px,2.2vw,32px)', fontWeight:700, color: isLegend?'rgba(180,230,255,.9)':'rgba(255,200,140,.9)', marginTop:12, letterSpacing:'.28em', textTransform:'uppercase' }}>
+          {isLegend ? '⚜ ตำนานแห่งห้อง ⚜' : '✦ ราชาผู้ยิ่งใหญ่ ✦'}
         </motion.div>
       </motion.div>
 
@@ -773,7 +787,7 @@ function getTier(level) {
   const lv = level || 0;
   if (lv >= 30) return {
     id:5, name:'LEGEND', label:'✦ LEGEND ✦', subtitle:'⚜ ตำนานแห่งห้อง ⚜',
-    avatarSize:114, displayMs:9000, maxWidth:740,
+    avatarSize:148, displayMs:9000, maxWidth:920,
     primary:'#80e8ff', secondary:'#ff80ff', accent:'#ffd700',
     cardBg:'linear-gradient(135deg,rgba(8,30,52,.98) 0%,rgba(48,10,68,.98) 50%,rgba(52,8,30,.98) 100%)',
     border:'2.5px solid rgba(128,232,255,.95)',
@@ -787,7 +801,7 @@ function getTier(level) {
   };
   if (lv >= 20) return {
     id:4, name:'KING', label:'✦ KING VIP ✦', subtitle:'✨ ราชาผู้ยิ่งใหญ่ ✨',
-    avatarSize:108, displayMs:8000, maxWidth:700,
+    avatarSize:140, displayMs:8000, maxWidth:880,
     primary:'#ffd700', secondary:'#ff80ff', accent:'#ffb43c',
     cardBg:'linear-gradient(135deg,rgba(18,5,42,.98) 0%,rgba(48,10,68,.98) 45%,rgba(18,5,35,.98) 100%)',
     border:'2.5px solid rgba(255,190,30,.9)',
@@ -801,7 +815,7 @@ function getTier(level) {
   };
   if (lv >= 15) return {
     id:3, name:'ELITE', label:'★ ELITE ★', subtitle:'นักรบระดับสูง',
-    avatarSize:84, displayMs:6500, maxWidth:580,
+    avatarSize:108, displayMs:6500, maxWidth:720,
     primary:'#c084fc', secondary:'#f472b6', accent:'#a78bfa',
     cardBg:'linear-gradient(135deg,rgba(20,8,40,.97) 0%,rgba(40,12,55,.97) 100%)',
     border:'2px solid rgba(192,132,252,.75)',
@@ -815,7 +829,7 @@ function getTier(level) {
   };
   if (lv >= 5) return {
     id:2, name:'MEMBER', label:'• MEMBER •', subtitle:'สมาชิก',
-    avatarSize:70, displayMs:5000, maxWidth:500,
+    avatarSize:88, displayMs:5000, maxWidth:600,
     primary:'#60a5fa', secondary:'#22d3ee', accent:'#3b82f6',
     cardBg:'linear-gradient(135deg,rgba(8,18,38,.95) 0%,rgba(12,28,52,.95) 100%)',
     border:'1.5px solid rgba(96,165,250,.55)',
@@ -829,7 +843,7 @@ function getTier(level) {
   };
   return {
     id:1, name:'NEWBIE', label:'· เข้าห้อง ·', subtitle:'ผู้มาเยือน',
-    avatarSize:58, displayMs:4000, maxWidth:420,
+    avatarSize:74, displayMs:4000, maxWidth:500,
     primary:'#cbd5e1', secondary:'#94a3b8', accent:'#e2e8f0',
     cardBg:'linear-gradient(135deg,rgba(15,15,28,.92) 0%,rgba(22,22,38,.92) 100%)',
     border:'1px solid rgba(203,213,225,.3)',
@@ -996,9 +1010,9 @@ function VIPCard({ item, onDone }) {
             {/* tier badge */}
             <motion.div initial={{ opacity:0, x:-30 }} animate={{ opacity:1, x:0 }} transition={{ delay:.1 }}
               style={{ marginBottom: isKING?8:tier.id>=2?5:3 }}>
-              <span style={{ fontSize: isKING?11:tier.id>=2?10:9, fontWeight:900,
+              <span style={{ fontSize: isKING?13:tier.id>=3?12:tier.id>=2?11:10, fontWeight:900,
                 letterSpacing: isKING?'.35em':'.22em', textTransform:'uppercase',
-                padding: isKING?'4px 14px':'3px 10px', borderRadius:6,
+                padding: isKING?'5px 16px':tier.id>=2?'4px 12px':'3px 10px', borderRadius:6,
                 background: tier.badgeGradient, color: tier.badgeColor, border: tier.badgeBorder,
                 boxShadow: isKING?`0 0 16px ${tier.primary}80,inset 0 0 12px ${tier.primary}26`:'none' }}>
                 {tier.label}
@@ -1010,7 +1024,7 @@ function VIPCard({ item, onDone }) {
               transition={{ delay:.16, type:'spring', stiffness:220 }}
               style={{ fontWeight:900, letterSpacing:'.02em', lineHeight:1.1,
                 marginBottom: isKING?12:tier.id>=2?8:5,
-                fontSize: isKING ? 'clamp(1.7rem,4.5vw,2.6rem)' : tier.id>=3 ? 'clamp(1.4rem,3.2vw,2rem)' : tier.id>=2 ? 'clamp(1.15rem,2.6vw,1.6rem)' : 'clamp(.95rem,2.1vw,1.25rem)',
+                fontSize: isKING ? 'clamp(2rem,3vw,3.4rem)' : tier.id>=3 ? 'clamp(1.55rem,2.3vw,2.4rem)' : tier.id>=2 ? 'clamp(1.25rem,1.8vw,1.85rem)' : 'clamp(1.05rem,1.4vw,1.45rem)',
                 background: tier.nameGradient,
                 WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text',
                 filter: isKING ? `drop-shadow(0 0 20px ${tier.primary}f0) drop-shadow(0 0 40px ${tier.secondary}99)` : tier.id>=2 ? `drop-shadow(0 0 8px ${tier.primary}c0)` : 'none' }}>
@@ -1020,15 +1034,15 @@ function VIPCard({ item, onDone }) {
             {/* level + subtitle */}
             <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:.28 }}
               style={{ display:'flex', alignItems:'center', gap: isKING?10:7, flexWrap:'wrap' }}>
-              <span style={{ padding: isKING?'5px 16px':tier.id>=2?'4px 12px':'2px 9px',
-                borderRadius:99, fontSize: isKING?15:tier.id>=2?13:11, fontWeight:900,
+              <span style={{ padding: isKING?'6px 18px':tier.id>=2?'5px 14px':'3px 10px',
+                borderRadius:99, fontSize: isKING?18:tier.id>=3?15:tier.id>=2?13:11, fontWeight:900,
                 background: tier.levelGradient, color:'#fff',
                 boxShadow: isKING ? `0 0 20px ${tier.primary}f0,0 0 40px ${tier.secondary}80` : tier.id>=2 ? `0 0 12px ${tier.primary}b0` : 'none',
                 border: isKING ? `1px solid ${tier.accent}80` : 'none' }}>
                 {tier.id>=4?'⭐':tier.id>=2?'🏅':'·'} LV. {item.level||0}
               </span>
               {tier.id >= 3 && (
-                <motion.span style={{ fontSize: isKING?15:13, fontWeight:800, color: tier.badgeColor,
+                <motion.span style={{ fontSize: isKING?18:15, fontWeight:800, color: tier.badgeColor,
                   filter: isKING ? `drop-shadow(0 0 10px ${tier.primary}e0)` : 'none' }}
                   animate={ isKING ? { opacity:[1,.5,1], scale:[1,1.06,1] } : {}}
                   transition={ isKING ? { duration:1.1, repeat:Infinity } : {}}>

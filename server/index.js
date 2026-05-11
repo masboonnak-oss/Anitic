@@ -587,13 +587,16 @@ function connectLive(adminUser, tiktokUser, attempt) {
     const uid        = data?.user?.uniqueId || data?.uniqueId;
     const nickname   = data?.user?.nickname  || data?.nickname || uid;
     const picRaw     = data?.user?.profilePictureUrl || data?.user?.avatarUrl || data?.profilePictureUrl;
+    const level      = data?.user?.fansClub?.memberLevel || data?.user?.level || 0;
     if (!uid) return;
     const picUrl     = proxiedPic(picRaw, uid);
     const displayName = nickname || uid;
-    st.commenters.set(uid, { uniqueId: uid, nickname: displayName, profilePicUrl: picUrl, lastSeen: Date.now(), msgCount: (st.commenters.get(uid)?.msgCount || 0) + 1, lastMsg: data?.comment || '' });
+    st.commenters.set(uid, { uniqueId: uid, nickname: displayName, profilePicUrl: picUrl, level, lastSeen: Date.now(), msgCount: (st.commenters.get(uid)?.msgCount || 0) + 1, lastMsg: data?.comment || '' });
     saveToCache(uid, { displayName, profilePicUrl: picUrl }).catch(() => {});
-    io.to(`room:${adminUser}`).emit('chatCapture', { uniqueId: uid, displayName, profilePicUrl: picUrl });
-    io.to(`room:${adminUser}`).emit('tiktokChat', { uniqueId: uid, displayName, profilePicUrl: picUrl, comment: data?.comment || '', ts: Date.now() });
+    io.to(`room:${adminUser}`).emit('chatCapture', { uniqueId: uid, displayName, profilePicUrl: picUrl, level });
+    io.to(`room:${adminUser}`).emit('tiktokChat', { uniqueId: uid, displayName, profilePicUrl: picUrl, comment: data?.comment || '', level, ts: Date.now() });
+    // upsert ลง room_visitors เพื่อให้เรียงตาม level ได้แม้ user แค่แชท
+    upsertRoomVisitor({ roomUsername: adminUser, uniqueId: uid, displayName, profilePicUrl: picUrl, level });
     if (st.commenters.size > MAX_COMMENTERS * 2) {
       const entries = [...st.commenters.entries()].sort((a, b) => b[1].lastSeen - a[1].lastSeen);
       st.commenters = new Map(entries.slice(0, MAX_COMMENTERS));
@@ -727,10 +730,13 @@ io.on('connection', (socket) => {
         });
 
       conn.on(WebcastEvent?.CHAT || 'chat', (data) => {
-        const uid  = data?.user?.uniqueId || data?.uniqueId;
-        const nick = data?.user?.nickname  || uid;
-        const pic  = proxiedPic(data?.user?.profilePictureUrl, uid);
-        socket.emit('chat', { uniqueId: uid, displayName: nick, profilePicUrl: pic, comment: data?.comment || '', ts: Date.now() });
+        const uid   = data?.user?.uniqueId || data?.uniqueId;
+        const nick  = data?.user?.nickname  || uid;
+        const pic   = proxiedPic(data?.user?.profilePictureUrl, uid);
+        const level = data?.user?.fansClub?.memberLevel || data?.user?.level || 0;
+        socket.emit('chat', { uniqueId: uid, displayName: nick, profilePicUrl: pic, comment: data?.comment || '', level, ts: Date.now() });
+        io.to(`room:${uniqueId}`).emit('tiktokChat', { uniqueId: uid, displayName: nick, profilePicUrl: pic, comment: data?.comment || '', level, ts: Date.now() });
+        if (uid) upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: uid, displayName: nick, profilePicUrl: pic, level });
       });
 
       conn.on(WebcastEvent?.GIFT || 'gift', (data) => {

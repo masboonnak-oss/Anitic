@@ -140,6 +140,7 @@ function getUserCache(roomUsername) {
   if (!roomUserCache.has(k)) roomUserCache.set(k, new Map());
   return roomUserCache.get(k);
 }
+const roomKey = (u) => (u || '').toString().trim().replace(/^@/, '').toLowerCase();
 const MAX_USER_CACHE = 5000; // กัน RAM บวมตอนรัน 24/7 บน VPS
 function rememberUser(roomUsername, uid, partial) {
   if (!uid) return partial || {};
@@ -510,20 +511,20 @@ function broadcast(username) {
 function _doBroadcast(username) {
   const st = getUserState(username);
   const sorted = Array.from(st.players.values()).sort((a, b) => b.win - a.win).map((p, i) => ({ ...p, rank: i + 1 }));
-  io.to(`room:${username}`).emit('players', sorted);
+  io.to(`room:${roomKey(username)}`).emit('players', sorted);
   const top = sorted[0];
   if (top && top.id !== st.currentKingId) {
-    if (st.currentKingId !== null) { io.to(`room:${username}`).emit('newKing', top); console.log(`[newKing:${username}] 👑 ${top.displayName} (${top.win} wins)`); }
+    if (st.currentKingId !== null) { io.to(`room:${roomKey(username)}`).emit('newKing', top); console.log(`[newKing:${username}] 👑 ${top.displayName} (${top.win} wins)`); }
     st.currentKingId = top.id;
   }
 }
 function broadcastLiveStatus(username) {
   const st = getUserState(username);
-  io.to(`room:${username}`).emit('liveStatus', { status: st.liveStatus, host: st.liveHost, error: st.liveError, commenterCount: st.commenters.size });
+  io.to(`room:${roomKey(username)}`).emit('liveStatus', { status: st.liveStatus, host: st.liveHost, error: st.liveError, commenterCount: st.commenters.size });
 }
 function broadcastCommenters(username) {
   const st = getUserState(username);
-  io.to(`room:${username}`).emit('commenters', Array.from(st.commenters.values()).sort((a, b) => b.lastSeen - a.lastSeen).slice(0, MAX_COMMENTERS));
+  io.to(`room:${roomKey(username)}`).emit('commenters', Array.from(st.commenters.values()).sort((a, b) => b.lastSeen - a.lastSeen).slice(0, MAX_COMMENTERS));
 }
 
 function sendInitialState(socket, username) {
@@ -635,8 +636,8 @@ function connectLive(adminUser, tiktokUser, attempt) {
     const displayName = u.displayName;
     st.commenters.set(uid, { uniqueId: uid, nickname: displayName, profilePicUrl: u.profilePicUrl, level: u.level, lastSeen: Date.now(), msgCount: (st.commenters.get(uid)?.msgCount || 0) + 1, lastMsg: data?.comment || '' });
     saveToCache(uid, { displayName, profilePicUrl: u.profilePicUrl }).catch(() => {});
-    io.to(`room:${adminUser}`).emit('chatCapture', { uniqueId: uid, displayName, profilePicUrl: u.profilePicUrl, level: u.level });
-    io.to(`room:${adminUser}`).emit('tiktokChat', { uniqueId: uid, displayName, profilePicUrl: u.profilePicUrl, comment: data?.comment || '', level: u.level, ts: Date.now() });
+    io.to(`room:${roomKey(adminUser)}`).emit('chatCapture', { uniqueId: uid, displayName, profilePicUrl: u.profilePicUrl, level: u.level });
+    io.to(`room:${roomKey(adminUser)}`).emit('tiktokChat', { uniqueId: uid, displayName, profilePicUrl: u.profilePicUrl, comment: data?.comment || '', level: u.level, ts: Date.now() });
     // upsert ลง room_visitors เพื่อให้เรียงตาม level ได้แม้ user แค่แชท
     upsertRoomVisitor({ roomUsername: adminUser, uniqueId: uid, displayName, profilePicUrl: u.profilePicUrl, level: u.level });
     if (st.commenters.size > MAX_COMMENTERS * 2) {
@@ -673,12 +674,12 @@ function connectLive(adminUser, tiktokUser, attempt) {
       if (wg.giftLog.length > 100) wg.giftLog.length = 100;
       wg.totalDiamonds += diamonds;
       const snapshot = Object.fromEntries([...st.watchedGifters.entries()]);
-      io.to(`room:${adminUser}`).emit('watchedGiftAlert',     { ...wg, latestGift: entry });
-      io.to(`room:${adminUser}`).emit('watchedGiftersUpdate', snapshot);
+      io.to(`room:${roomKey(adminUser)}`).emit('watchedGiftAlert',     { ...wg, latestGift: entry });
+      io.to(`room:${roomKey(adminUser)}`).emit('watchedGiftersUpdate', snapshot);
     }
     // Broadcast raw gift event for Gift Connector page
     const giftName = data?.gift?.name || data?.giftName || (data?.giftId ? `Gift #${data.giftId}` : 'ของขวัญ');
-    io.to(`room:${adminUser}`).emit('tiktokGift', {
+    io.to(`room:${roomKey(adminUser)}`).emit('tiktokGift', {
       uniqueId: uid, displayName: prev.displayName, profilePicUrl: prev.profilePicUrl,
       giftName, diamonds, repeatCount: data?.repeatCount || 1, giftId: data?.giftId, ts: Date.now(),
     });
@@ -695,7 +696,7 @@ function connectLive(adminUser, tiktokUser, attempt) {
     const u       = lUid ? rememberUser(adminUser, lUid, { displayName: lNick, profilePicUrl: lPic, level: lLevel }) : {};
     if (typeof data?.totalLikeCount === 'number') {
       getRoomStats(adminUser).totalLikes = data.totalLikeCount;
-      io.to(`room:${adminUser}`).emit('tiktokLike', {
+      io.to(`room:${roomKey(adminUser)}`).emit('tiktokLike', {
         totalLikeCount: data.totalLikeCount, likeCount: data.likeCount || 0,
         uniqueId: lUid, displayName: u.displayName || lNick, profilePicUrl: u.profilePicUrl || lPic, level: u.level || lLevel,
       });
@@ -707,7 +708,7 @@ function connectLive(adminUser, tiktokUser, attempt) {
   conn.on('roomUser', (data) => {
     if (typeof data?.viewerCount === 'number') {
       getRoomStats(adminUser).viewers = data.viewerCount;
-      io.to(`room:${adminUser}`).emit('tiktokViewers', { viewerCount: data.viewerCount });
+      io.to(`room:${roomKey(adminUser)}`).emit('tiktokViewers', { viewerCount: data.viewerCount });
     }
   });
 
@@ -719,7 +720,7 @@ function connectLive(adminUser, tiktokUser, attempt) {
     const level  = data?.user?.fansClub?.memberLevel || data?.user?.level || 0;
     if (!mUid) return;
     const u = rememberUser(adminUser, mUid, { displayName: mNick, profilePicUrl: proxiedPic(picRaw, mUid), level });
-    io.to(`room:${adminUser}`).emit('tiktokMember', {
+    io.to(`room:${roomKey(adminUser)}`).emit('tiktokMember', {
       uniqueId: mUid, displayName: u.displayName,
       profilePicUrl: u.profilePicUrl,
       level: u.level, ts: Date.now(),
@@ -738,23 +739,25 @@ io.on('connection', (socket) => {
     try {
       const admin = jwt.verify(token, JWT_SECRET);
       socket.username = admin.username;
-      socket.join(`room:${admin.username}`);
+      socket.join(`room:${roomKey(admin.username)}`);
       await ensureUserLoaded(admin.username);
       sendInitialState(socket, admin.username);
     } catch (_) { socket.emit('authError', { error: 'invalid token' }); }
   });
 
-  socket.on('joinRoom', async ({ username }) => {
+  socket.on('joinRoom', async (payload) => {
+    const username = typeof payload === 'string' ? payload : payload?.username;
     if (!username) return;
-    socket.join(`room:${username}`);
-    await ensureUserLoaded(username);
-    sendInitialState(socket, username);
+    const key = roomKey(username);
+    socket.join(`room:${key}`);
+    await ensureUserLoaded(key);
+    sendInitialState(socket, key);
   });
 
   socket.on('testVIPEntry', ({ username } = {}) => {
     if (!username) return;
     const fake = { uniqueId:'king_test', displayName:'👑 ราชา KING TEST 👑', profilePicUrl:null, level:25 };
-    io.to(`room:${username.toLowerCase()}`).emit('tiktokMember', fake);
+    io.to(`room:${roomKey(username)}`).emit('tiktokMember', fake);
     socket.emit('tiktokMember', fake);
   });
 
@@ -798,7 +801,7 @@ io.on('connection', (socket) => {
         const u = rememberUser(uniqueId, uid, { displayName: nick, profilePicUrl: pic, level });
         const payload = { uniqueId: uid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, comment: data?.comment || '', level: u.level, ts: Date.now() };
         socket.emit('chat', payload);
-        io.to(`room:${uniqueId}`).emit('tiktokChat', payload);
+        io.to(`room:${roomKey(uniqueId)}`).emit('tiktokChat', payload);
         upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: uid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level });
       });
 
@@ -818,7 +821,7 @@ io.on('connection', (socket) => {
           diamonds, repeatCount: data?.repeatCount || 1, ts: Date.now(),
         };
         socket.emit('gift', giftPayload);
-        io.to(`room:${uniqueId}`).emit('tiktokGift', giftPayload);
+        io.to(`room:${roomKey(uniqueId)}`).emit('tiktokGift', giftPayload);
         upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: uid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level, diamonds });
       });
 
@@ -834,14 +837,14 @@ io.on('connection', (socket) => {
           uniqueId: lUid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level,
         };
         socket.emit('like', payload);
-        io.to(`room:${uniqueId}`).emit('tiktokLike', payload);
+        io.to(`room:${roomKey(uniqueId)}`).emit('tiktokLike', payload);
         if (lUid) upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: lUid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level, likes: data?.likeCount || 1 });
       });
 
       conn.on('roomUser', (data) => {
         if (typeof data?.viewerCount !== 'number') return;
         socket.emit('roomUser', { viewerCount: data.viewerCount });
-        io.to(`room:${uniqueId}`).emit('tiktokViewers', { viewerCount: data.viewerCount });
+        io.to(`room:${roomKey(uniqueId)}`).emit('tiktokViewers', { viewerCount: data.viewerCount });
       });
 
       conn.on('member', (data) => {
@@ -853,7 +856,7 @@ io.on('connection', (socket) => {
         const u = rememberUser(uniqueId, mUid, { displayName: mNick, profilePicUrl: proxiedPic(picRaw, mUid), level });
         const memberPayload = { uniqueId: mUid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level };
         socket.emit('member', memberPayload);
-        io.to(`room:${uniqueId}`).emit('tiktokMember', memberPayload);
+        io.to(`room:${roomKey(uniqueId)}`).emit('tiktokMember', memberPayload);
         upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: mUid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level });
       });
 
@@ -1267,7 +1270,7 @@ app.post('/api/external-chat', (req, res) => {
     lastSeen: Date.now(), msgCount: (existing?.msgCount || 0) + 1, lastMsg: existing?.lastMsg || '', source: 'bookmarklet',
   });
   const entry = st.commenters.get(uid);
-  io.to(`room:${adminUser}`).emit('chatCapture', { uniqueId: entry.uniqueId, displayName: entry.nickname, profilePicUrl: entry.profilePicUrl });
+  io.to(`room:${roomKey(adminUser)}`).emit('chatCapture', { uniqueId: entry.uniqueId, displayName: entry.nickname, profilePicUrl: entry.profilePicUrl });
   broadcastCommenters(adminUser);
   res.json({ ok: true, count: st.commenters.size });
 });
@@ -1352,7 +1355,7 @@ app.post('/api/reset-top1', authMiddleware, async (req, res) => {
   const sorted = Array.from(st.players.values()).sort((a, b) => b.win - a.win);
   const top    = sorted[0];
   st.top1Threshold = top ? { id: top.id, win: top.win } : null;
-  io.to(`room:${req.admin.username}`).emit('top1Reset', st.top1Threshold);
+  io.to(`room:${roomKey(req.admin.username)}`).emit('top1Reset', st.top1Threshold);
   res.json({ ok: true });
 });
 
@@ -1370,14 +1373,14 @@ app.post('/api/watch-gifter', authMiddleware, async (req, res) => {
   if (!st.watchedGifters.has(uid)) {
     st.watchedGifters.set(uid, { uniqueId: uid, displayName: uid, profilePicUrl: null, profileUrl: `https://www.tiktok.com/@${uid}`, giftLog: [], totalDiamonds: 0 });
   }
-  io.to(`room:${req.admin.username}`).emit('watchedGiftersUpdate', Object.fromEntries([...st.watchedGifters.entries()]));
+  io.to(`room:${roomKey(req.admin.username)}`).emit('watchedGiftersUpdate', Object.fromEntries([...st.watchedGifters.entries()]));
   res.json({ ok: true });
 });
 app.delete('/api/watch-gifter/:uid', authMiddleware, async (req, res) => {
   await ensureUserLoaded(req.admin.username);
   const st = getUserState(req.admin.username);
   st.watchedGifters.delete(req.params.uid);
-  io.to(`room:${req.admin.username}`).emit('watchedGiftersUpdate', Object.fromEntries([...st.watchedGifters.entries()]));
+  io.to(`room:${roomKey(req.admin.username)}`).emit('watchedGiftersUpdate', Object.fromEntries([...st.watchedGifters.entries()]));
   res.json({ ok: true });
 });
 app.delete('/api/watch-gifter/:uid/log', authMiddleware, async (req, res) => {
@@ -1385,7 +1388,7 @@ app.delete('/api/watch-gifter/:uid/log', authMiddleware, async (req, res) => {
   const st = getUserState(req.admin.username);
   const wg = st.watchedGifters.get(req.params.uid);
   if (wg) { wg.giftLog = []; wg.totalDiamonds = 0; }
-  io.to(`room:${req.admin.username}`).emit('watchedGiftersUpdate', Object.fromEntries([...st.watchedGifters.entries()]));
+  io.to(`room:${roomKey(req.admin.username)}`).emit('watchedGiftersUpdate', Object.fromEntries([...st.watchedGifters.entries()]));
   res.json({ ok: true });
 });
 
@@ -1401,7 +1404,7 @@ app.post('/api/streamdps/connect', authMiddleware, async (req, res) => {
      ON CONFLICT (owner) DO UPDATE SET username=$2, status='connected', connected_at=$3, last_ping=$3`,
     [req.admin.username, uname, now]
   );
-  io.to(`room:${req.admin.username}`).emit('streamdpsStatus', { status: 'connected', username: uname, connectedAt: now });
+  io.to(`room:${roomKey(req.admin.username)}`).emit('streamdpsStatus', { status: 'connected', username: uname, connectedAt: now });
   console.log(`[streamdps:${req.admin.username}] connected @${uname}`);
   res.json({ ok: true, username: uname, connectedAt: now });
 });
@@ -1411,7 +1414,7 @@ app.post('/api/streamdps/disconnect', authMiddleware, async (req, res) => {
     `UPDATE streamdps_connections SET status='disconnected', last_ping=NULL WHERE owner=$1`,
     [req.admin.username]
   );
-  io.to(`room:${req.admin.username}`).emit('streamdpsStatus', { status: 'disconnected', username: null });
+  io.to(`room:${roomKey(req.admin.username)}`).emit('streamdpsStatus', { status: 'disconnected', username: null });
   console.log(`[streamdps:${req.admin.username}] disconnected`);
   res.json({ ok: true });
 });

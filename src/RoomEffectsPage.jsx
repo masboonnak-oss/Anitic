@@ -565,210 +565,121 @@ const DEMO_ITEM = { _uid:'demo-1', variant:'join', uniqueId:'babynoey',
   displayName: DEMO_LEVEL >= 30 ? 'BabyNoey ⚜️' : DEMO_LEVEL >= 20 ? 'BabyNoey 👑' : DEMO_LEVEL >= 15 ? 'BabyNoey ★' : DEMO_LEVEL >= 5 ? 'BabyNoey' : 'Newbie',
   profilePicUrl:null, level: DEMO_LEVEL };
 
-function addToQueue(prev, item) {
+
+/* ══════════════════════════════════════════════════════════
+   ██████  OVERLAY VIEW  (OBS / TikTok Live Studio)
+   นโยบาย: แค่ "ป้ายชื่อ" สวยๆ ตอนคนเข้าห้อง
+            — ไม่โชว์รูป / ไม่โชว์ level / ไม่เรียง tier
+            — เน้นทอง+รุ้ง อลังการพอดี ไม่ใหญ่เกิน
+            — server ยังจำของขวัญ/เพชร/ไลค์ไว้ที่ DB ตามเดิม
+══════════════════════════════════════════════════════════ */
+
+const NAMEPLATE_LIFE_MS = 4800;        // เวลาโชว์ป้ายชื่อ
+const NAMEPLATE_DEDUPE_MS = 60_000;    // คนเดิมไม่ขึ้นซ้ำใน 60s
+const MAX_VISIBLE = 3;                 // ซ้อนได้สูงสุด 3 ใบ
+
+function pushNameplate(prev, item) {
   const next = [...prev, item];
-  return next.length > 3 ? next.slice(next.length - 3) : next;
+  return next.length > MAX_VISIBLE ? next.slice(next.length - MAX_VISIBLE) : next;
 }
 
 function OverlayView() {
-  const [queue, setQueue] = useState(IS_DEMO ? [DEMO_ITEM] : []);
-  const [flash, setFlash] = useState(false);
-  const [kingAnnounce, setKingAnnounce] = useState(null);
-  const [hudViewers,  setHudViewers]  = useState(0);
-  const [hudLikes,    setHudLikes]    = useState(0);
-  const [hudDiamonds, setHudDiamonds] = useState(0);
-  const uidRef = useRef(0);
-  const mkid   = () => `${Date.now()}-${++uidRef.current}`;
-
-  // ── Self-cleaning timer registry (กัน leak ตอนรันยาวบน VPS) ──
+  const [queue, setQueue] = useState([]);
+  const uidRef  = useRef(0);
+  const seenRef = useRef(new Map()); // uniqueId → lastShown ts
   const timersRef = useRef(new Set());
+  const mkid = () => `${Date.now()}-${++uidRef.current}`;
   const setTrackedTimeout = (fn, ms) => {
     const id = setTimeout(() => { timersRef.current.delete(id); fn(); }, ms);
     timersRef.current.add(id);
     return id;
   };
 
-  // ── Announce queue (serialize tier 4+ จัดเรียงทีละคน) ──
-  const announceQueueRef = useRef([]);
-  const announceBusyRef  = useRef(false);
-  const processAnnounceQueue = () => {
-    if (announceBusyRef.current) return;
-    const next = announceQueueRef.current.shift();
-    if (!next) return;
-    announceBusyRef.current = true;
-    setKingAnnounce({ id: mkid(), displayName: next.displayName, tierId: next.tierId });
-    setTrackedTimeout(() => setQueue(prev => addToQueue(prev, next.item)), 2600);
-    setTrackedTimeout(() => {
-      setKingAnnounce(null);
-      announceBusyRef.current = false;
-      setTrackedTimeout(processAnnounceQueue, 350);
-    }, 3200);
-  };
-  const enqueueAnnounce = (displayName, tierId, item) => {
-    announceQueueRef.current.push({ displayName, tierId, item });
-    processAnnounceQueue();
+  const tryShow = (uid, displayName) => {
+    const name = (displayName || uid || '').trim();
+    if (!name) return;
+    const now = Date.now();
+    const last = uid ? (seenRef.current.get(uid) || 0) : 0;
+    if (uid && now - last < NAMEPLATE_DEDUPE_MS) return;
+    if (uid) seenRef.current.set(uid, now);
+    // gc dedupe map ทุก ~5นาที
+    if (seenRef.current.size > 4000) {
+      const cutoff = now - NAMEPLATE_DEDUPE_MS;
+      for (const [k, t] of seenRef.current) if (t < cutoff) seenRef.current.delete(k);
+    }
+    setQueue(prev => pushNameplate(prev, { _uid: mkid(), name }));
   };
 
-  // DEMO mode: trigger announcer for tier 4+ (ผ่าน queue)
+  // DEMO: ปั๊มชื่อตัวอย่างเป็นระยะ
   useEffect(() => {
     if (!IS_DEMO) return;
-    const demoTier = getTier(DEMO_ITEM.level || 0);
-    if (!demoTier.hasAnnounce) return;
-    const fire = () => enqueueAnnounce(DEMO_ITEM.displayName, demoTier.id, { ...DEMO_ITEM, _uid: mkid() });
-    const t = setTimeout(fire, 600);
-    const iv = setInterval(fire, demoTier.displayMs + 1500);
-    return () => {
-      clearTimeout(t); clearInterval(iv);
-      timersRef.current.forEach(clearTimeout);
-      timersRef.current.clear();
-    };
+    const names = ['BabyNoryy', 'KingArthur', 'StarLight ✦', 'นักรบทองคำ', 'LegendX'];
+    let i = 0;
+    const fire = () => { tryShow(`demo-${i}`, names[i % names.length]); i++; };
+    fire();
+    const iv = setInterval(fire, 3200);
+    return () => clearInterval(iv);
   }, []);
 
   useEffect(() => {
     if (!overlaySock) return;
-
-    function onMember(data) {
-      const lv = data.level || 0;
-      const tier = getTier(lv);
-      // flash เฉพาะ tier 3+ (ELITE ขึ้น)
-      if (tier.id >= 3) { setFlash(true); setTrackedTimeout(() => setFlash(false), 800); }
-      const item = {
-        _uid: mkid(), variant: 'join',
-        uniqueId: data.uniqueId, displayName: data.displayName || data.uniqueId || '?',
-        profilePicUrl: data.profilePicUrl || null, level: lv,
-      };
-      // KING/LEGEND announcement (tier 4+) — serialize ผ่าน queue, การ์ดตามมา
-      if (tier.hasAnnounce) {
-        enqueueAnnounce(item.displayName, tier.id, item);
-      } else {
-        setQueue(prev => addToQueue(prev, item));
-      }
-    }
-    function onGift(data) {
-      setHudDiamonds(prev => prev + (data.diamonds || 0));
-      setQueue(prev => addToQueue(prev, {
-        _uid: mkid(), variant: 'gift',
-        uniqueId: data.uniqueId, displayName: data.displayName || data.uniqueId || '?',
-        profilePicUrl: data.profilePicUrl || null,
-        giftName: data.giftName, repeatCount: data.repeatCount || 1, diamonds: data.diamonds || 0,
-      }));
-    }
-    function onChat(data) {
-      // ใช้ chat สำหรับเลเวลและ trigger entry tag (tier 4+) ของคนที่แค่แชท
-      const lv = data.level || 0;
-      const tier = getTier(lv);
-      if (tier.hasAnnounce) {
-        const item = {
-          _uid: mkid(), variant: 'join',
-          uniqueId: data.uniqueId, displayName: data.displayName || data.uniqueId || '?',
-          profilePicUrl: data.profilePicUrl || null, level: lv,
-        };
-        enqueueAnnounce(item.displayName, tier.id, item);
-      }
-    }
-    function onLike(data)     { if (typeof data?.totalLikeCount === 'number') setHudLikes(data.totalLikeCount); }
-    function onViewers(data)  { if (typeof data?.viewerCount    === 'number') setHudViewers(data.viewerCount); }
-    function onSnapshot(data) { if (typeof data?.totalDiamonds  === 'number') setHudDiamonds(data.totalDiamonds); }
-
-    overlaySock.on('tiktokMember',  onMember);
-    overlaySock.on('tiktokGift',    onGift);
-    overlaySock.on('tiktokChat',    onChat);
-    overlaySock.on('tiktokLike',    onLike);
-    overlaySock.on('tiktokViewers', onViewers);
-    overlaySock.on('hudSnapshot',   onSnapshot);
-
+    const onMember = (d) => tryShow(d?.uniqueId, d?.displayName || d?.uniqueId);
+    const onChat   = (d) => tryShow(d?.uniqueId, d?.displayName || d?.uniqueId);
+    overlaySock.on('tiktokMember', onMember);
+    overlaySock.on('tiktokChat',   onChat);
     return () => {
-      overlaySock.off('tiktokMember',  onMember);
-      overlaySock.off('tiktokGift',    onGift);
-      overlaySock.off('tiktokChat',    onChat);
-      overlaySock.off('tiktokLike',    onLike);
-      overlaySock.off('tiktokViewers', onViewers);
-      overlaySock.off('hudSnapshot',   onSnapshot);
+      overlaySock.off('tiktokMember', onMember);
+      overlaySock.off('tiktokChat',   onChat);
       timersRef.current.forEach(clearTimeout);
       timersRef.current.clear();
-      announceQueueRef.current = [];
-      announceBusyRef.current = false;
     };
   }, []);
 
   function dismiss(uid) {
     setQueue(prev => prev.filter(q => q._uid !== uid));
-    // ใน DEMO mode → re-spawn ทันทีเพื่อให้ดูได้ตลอด
-    if (IS_DEMO) setTrackedTimeout(() => setQueue([{ ...DEMO_ITEM, _uid: mkid() }]), 400);
   }
+
   const isPreview = params.has('preview');
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;700;900&family=Cinzel:wght@700;900&display=swap');
         *{box-sizing:border-box;margin:0;padding:0;font-family:'Noto Sans Thai',sans-serif}
         html,body{width:100%;height:100%;background:${isPreview?'linear-gradient(135deg,#08000e 0%,#140025 40%,#0c0018 100%)':'transparent'};overflow:hidden}
-        @keyframes divineBreath{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
+        @keyframes np-shimmer{0%{background-position:-200% 50%}100%{background-position:200% 50%}}
+        @keyframes np-sweep  {0%{transform:translateX(-120%) skewX(-18deg)}60%,100%{transform:translateX(220%) skewX(-18deg)}}
+        @keyframes np-glow   {0%,100%{filter:drop-shadow(0 0 14px rgba(255,200,60,.55)) drop-shadow(0 0 28px rgba(220,80,255,.35))}50%{filter:drop-shadow(0 0 22px rgba(255,215,80,.85)) drop-shadow(0 0 44px rgba(255,128,255,.55))}}
+        @keyframes np-spark  {0%{opacity:0;transform:translate(0,0) scale(.4)}30%{opacity:1}100%{opacity:0;transform:translate(var(--sx),var(--sy)) scale(.9)}}
       `}</style>
 
-      <AnimatePresence>
-        {flash && (
-          <motion.div key="flash"
-            initial={{ opacity:0 }} animate={{ opacity:[0,.8,.4,0] }}
-            transition={{ duration:.8, times:[0,.08,.4,1] }}
-            style={{ position:'fixed', inset:0, pointerEvents:'none', zIndex:40,
-              background:'radial-gradient(ellipse at center,rgba(255,200,50,0.6) 0%,rgba(200,80,255,0.4) 40%,transparent 70%)' }}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {kingAnnounce && <KingAnnouncement key={kingAnnounce.id} name={kingAnnounce.displayName} tierId={kingAnnounce.tierId} />}
-      </AnimatePresence>
-
-      {/* ── Preview label (hidden in actual OBS mode) ── */}
       {isPreview && (
         <div style={{ position:'fixed', top:16, left:16, right:16, display:'flex', justifyContent:'space-between', alignItems:'center', gap:8, zIndex:50 }}>
           <div style={{ background:'rgba(10,0,20,.88)', border:'1px solid rgba(155,81,224,.35)', borderRadius:10, padding:'7px 14px', backdropFilter:'blur(12px)', display:'flex', alignItems:'center', gap:10 }}>
-            <span style={{ fontSize:11, fontWeight:700, color:'rgba(155,81,224,.8)', letterSpacing:'.15em' }}>👁 PREVIEW</span>
+            <span style={{ fontSize:11, fontWeight:700, color:'rgba(255,200,60,.9)', letterSpacing:'.15em' }}>👁 PREVIEW</span>
             {OVERLAY_USER && <span style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>@{OVERLAY_USER}</span>}
           </div>
           <div style={{ background:'rgba(10,0,20,.82)', border:'1px solid rgba(100,80,150,.2)', borderRadius:9, padding:'6px 12px', fontSize:10, color:'rgba(180,160,220,.4)' }}>
-            OBS Browser Source: ลบ ?preview ออกจาก URL
+            OBS Browser Source: ลบ ?preview ออก
           </div>
         </div>
       )}
 
-      {/* ── HUD: viewers / likes / diamonds (มุมขวาบน) ── */}
-      <div style={{ position:'fixed', top:24, right:24, display:'flex', gap:10, zIndex:60, pointerEvents:'none' }}>
-        {[
-          { icon:'👁', value:hudViewers,  color:'#22d3ee', glow:'rgba(34,211,238,.35)' },
-          { icon:'❤️', value:hudLikes,    color:'#f472b6', glow:'rgba(244,114,182,.35)' },
-          { icon:'💎', value:hudDiamonds, color:'#a78bfa', glow:'rgba(167,139,250,.4)'  },
-        ].map(s => (
-          <div key={s.icon} style={{
-            background:'rgba(10,0,20,.78)', border:`1px solid ${s.glow}`,
-            borderRadius:12, padding:'8px 14px', backdropFilter:'blur(10px)',
-            display:'flex', alignItems:'center', gap:8, minWidth:90,
-            boxShadow:`0 4px 18px ${s.glow}`,
-          }}>
-            <span style={{ fontSize:16 }}>{s.icon}</span>
-            <span style={{ fontSize:18, fontWeight:900, color:s.color, fontVariantNumeric:'tabular-nums' }}>
-              {(s.value || 0).toLocaleString()}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ position:'fixed', bottom:32, left:32, display:'flex', flexDirection:'column', alignItems:'flex-start', gap:16, pointerEvents:'none', zIndex:50, maxWidth:960, width:'calc(100vw - 64px)' }}>
+      <div style={{
+        position:'fixed', bottom:48, left:48, display:'flex', flexDirection:'column',
+        alignItems:'flex-start', gap:14, pointerEvents:'none', zIndex:50,
+      }}>
         <AnimatePresence>
-          {queue.map(item => item.variant === 'gift'
-            ? <GiftCard  key={item._uid} item={item} onDone={() => dismiss(item._uid)} />
-            : <VIPCard   key={item._uid} item={item} onDone={() => dismiss(item._uid)} />
-          )}
+          {queue.map(item => (
+            <NamePlate key={item._uid} name={item.name} onDone={() => dismiss(item._uid)} />
+          ))}
         </AnimatePresence>
       </div>
 
       {isPreview && queue.length === 0 && (
-        <div style={{ position:'fixed', bottom:32, left:32, background:'rgba(10,0,20,.75)', border:'1px dashed rgba(155,81,224,.25)', borderRadius:12, padding:'16px 22px', backdropFilter:'blur(12px)', maxWidth:360 }}>
-          <div style={{ fontSize:12, color:'rgba(155,81,224,.45)' }}>
-            🎭 รอรับ events จาก Dashboard... (overlay passive mode)
+        <div style={{ position:'fixed', bottom:48, left:48, background:'rgba(10,0,20,.7)', border:'1px dashed rgba(255,200,60,.3)', borderRadius:12, padding:'14px 20px', backdropFilter:'blur(10px)' }}>
+          <div style={{ fontSize:12, color:'rgba(255,200,60,.55)', letterSpacing:'.12em' }}>
+            ✦ รอป้ายชื่อจากห้องไลฟ์...
           </div>
         </div>
       )}
@@ -776,515 +687,120 @@ function OverlayView() {
   );
 }
 
-/* ── King/Legend Cinematic Announcement (full-screen) ── */
-function KingAnnouncement({ name, tierId = 4 }) {
-  const isLegend = tierId >= 5;
-  const titleText = isLegend ? 'LEGEND มาแล้ว!' : 'KING เข้าห้อง!';
-  const crown = isLegend ? '⚜️' : '👑';
-  return (
-    <motion.div
-      initial={{ opacity:0 }} animate={{ opacity:[0,1,1,1,0] }}
-      transition={{ duration:3.2, times:[0,.08,.45,.75,1] }}
-      style={{ position:'fixed', inset:0, zIndex:200, pointerEvents:'none', display:'flex', alignItems:'center', justifyContent:'center',
-        background:'radial-gradient(ellipse at center,rgba(255,160,0,.18) 0%,rgba(140,0,220,.12) 50%,transparent 70%)' }}
-    >
-      {/* cinematic bars */}
-      <motion.div initial={{ scaleY:0 }} animate={{ scaleY:[0,1,1,0] }} transition={{ duration:3.2, times:[0,.06,.9,1] }}
-        style={{ position:'absolute', top:0, left:0, right:0, height:60, background:'linear-gradient(to bottom,rgba(0,0,0,.9),rgba(0,0,0,0))', transformOrigin:'top' }} />
-      <motion.div initial={{ scaleY:0 }} animate={{ scaleY:[0,1,1,0] }} transition={{ duration:3.2, times:[0,.06,.9,1] }}
-        style={{ position:'absolute', bottom:0, left:0, right:0, height:60, background:'linear-gradient(to top,rgba(0,0,0,.9),rgba(0,0,0,0))', transformOrigin:'bottom' }} />
+/* ── ป้ายชื่อ: ทอง + รุ้ง compact, light effects ── */
+function NamePlate({ name, onDone }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, NAMEPLATE_LIFE_MS);
+    return () => clearTimeout(t);
+  }, []);
 
-      {/* shockwave rings */}
-      {[0,.15,.3].map((d,i) => (
-        <div key={i} style={{ position:'absolute', top:'50%', left:'50%', width:100, height:100, borderRadius:'50%',
-          border:`2px solid ${i===0?'rgba(255,200,50,.8)':i===1?'rgba(220,80,255,.6)':'rgba(100,200,255,.5)'}`,
-          animation:`ringOut 1.4s ${d}s ease-out forwards`, pointerEvents:'none' }} />
-      ))}
-
-      {/* main content */}
-      <motion.div initial={{ scale:.2, opacity:0, y:30 }}
-        animate={{ scale:[.2,1.15,1,.98,1], opacity:[0,1,1,1,0] }}
-        transition={{ duration:3.2, times:[0,.12,.3,.5,1] }}
-        style={{ textAlign:'center', position:'relative', zIndex:5 }}>
-
-        {/* crown drop */}
-        <motion.div initial={{ y:-120, opacity:0, scale:3 }} animate={{ y:[-120,0,-12,0], opacity:[0,1,1,1,0] }}
-          transition={{ duration:3.2, times:[0,.15,.35,.6,1] }}
-          style={{ fontSize:'clamp(80px,9vw,170px)', lineHeight:1,
-            filter: isLegend
-              ? 'drop-shadow(0 0 60px rgba(128,232,255,1)) drop-shadow(0 0 110px rgba(255,128,255,.8))'
-              : 'drop-shadow(0 0 60px rgba(255,200,0,1)) drop-shadow(0 0 110px rgba(255,150,0,.7))' }}>
-          {crown}
-        </motion.div>
-
-        {/* TITLE text */}
-        <motion.div initial={{ letterSpacing:'0.8em', opacity:0 }} animate={{ letterSpacing:['0.8em','0.08em','0.08em','0.08em','0.3em'], opacity:[0,1,1,1,0] }}
-          transition={{ duration:3.2, times:[0,.18,.4,.7,1] }}
-          style={{ fontSize:'clamp(50px,8vw,140px)', fontWeight:900, lineHeight:1,
-            background: isLegend
-              ? 'linear-gradient(135deg,#fff 0%,#80e8ff 25%,#ff80ff 50%,#ffd700 75%,#fff 100%)'
-              : 'linear-gradient(135deg,#fff8e0 0%,#ffd700 25%,#ff80ff 60%,#80cfff 80%,#fff 100%)',
-            WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text',
-            filter: isLegend
-              ? 'drop-shadow(0 0 30px rgba(128,232,255,1)) drop-shadow(0 0 60px rgba(255,128,255,.8))'
-              : 'drop-shadow(0 0 30px rgba(255,200,50,1)) drop-shadow(0 0 60px rgba(220,80,255,.7))',
-            marginTop:8 }}>
-          {titleText}
-        </motion.div>
-
-        {/* name */}
-        <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:[0,1,1,0], y:[20,0,0,0] }}
-          transition={{ duration:3.2, times:[0,.25,.7,1] }}
-          style={{ fontSize:'clamp(28px,4vw,60px)', fontWeight:800, color: isLegend?'rgba(220,250,255,.98)':'rgba(255,225,100,.98)', marginTop:18,
-            filter: isLegend?'drop-shadow(0 0 18px rgba(128,232,255,.9))':'drop-shadow(0 0 18px rgba(255,200,50,.9))', letterSpacing:'.04em' }}>
-          {name}
-        </motion.div>
-
-        {/* subtitle */}
-        <motion.div initial={{ opacity:0 }} animate={{ opacity:[0,.8,.8,0] }} transition={{ duration:3.2, times:[0,.3,.7,1] }}
-          style={{ fontSize:'clamp(16px,2.2vw,32px)', fontWeight:700, color: isLegend?'rgba(180,230,255,.9)':'rgba(255,200,140,.9)', marginTop:12, letterSpacing:'.28em', textTransform:'uppercase' }}>
-          {isLegend ? '⚜ ตำนานแห่งห้อง ⚜' : '✦ ราชาผู้ยิ่งใหญ่ ✦'}
-        </motion.div>
-      </motion.div>
-
-      {/* side light beams */}
-      {[-1,1].map(dir => (
-        <motion.div key={dir} initial={{ scaleX:0, opacity:0 }} animate={{ scaleX:[0,1,1,0], opacity:[0,.8,.8,0] }}
-          transition={{ duration:3.2, times:[0,.12,.7,1] }}
-          style={{ position:'absolute', top:'50%', [dir>0?'left':'right']:'50%', width:'50%', height:3,
-            background:`linear-gradient(${dir>0?'to right':'to left'},rgba(255,200,50,.9),rgba(220,80,255,.6),transparent)`,
-            transformOrigin: dir>0 ? 'left center' : 'right center' }} />
-      ))}
-    </motion.div>
-  );
-}
-
-/* ── TIER SYSTEM: ทุก effect ผูกกับ level จาก chat ──
-   Tier 1 (0-4)   NEWBIE  : ขาว/เทา card เล็ก minimal 4s
-   Tier 2 (5-14)  MEMBER  : ฟ้าน้ำเงิน glow + small particles 5s
-   Tier 3 (15-19) ELITE   : ม่วง/ชมพู orbit + sparkles 6s
-   Tier 4 (20-29) KING    : ทอง full effect + KING announce 8s
-   Tier 5 (30+)   LEGEND  : rainbow MAX effect + LEGEND announce 9s
-─────────────────────────────────────────────────────────── */
-function getTier(level) {
-  const lv = level || 0;
-  if (lv >= 30) return {
-    id:5, name:'LEGEND', label:'✦ LEGEND ✦', subtitle:'⚜ ตำนานแห่งห้อง ⚜',
-    avatarSize:148, displayMs:9000, maxWidth:920,
-    primary:'#80e8ff', secondary:'#ff80ff', accent:'#ffd700',
-    cardBg:'linear-gradient(135deg,rgba(8,30,52,.98) 0%,rgba(48,10,68,.98) 50%,rgba(52,8,30,.98) 100%)',
-    border:'2.5px solid rgba(128,232,255,.95)',
-    boxShadow:'0 0 70px rgba(128,232,255,.7),0 0 140px rgba(255,128,255,.5),0 0 240px rgba(255,215,0,.3),inset 0 1.5px 0 rgba(255,255,255,.4)',
-    nameGradient:'linear-gradient(135deg,#fff 0%,#80e8ff 25%,#ff80ff 50%,#ffd700 75%,#fff 100%)',
-    badgeGradient:'linear-gradient(135deg,rgba(128,232,255,.4),rgba(255,128,255,.4))',
-    badgeColor:'rgba(220,250,255,1)', badgeBorder:'1.5px solid rgba(128,232,255,.7)',
-    levelGradient:'linear-gradient(135deg,rgba(128,232,255,1),rgba(255,128,255,.95),rgba(255,215,0,.9))',
-    rays:20, hasOrbit:true, hasCrown:true, hasLightning:true, hasParticles:'mega', hasAnnounce:true, hasSpeedTrail:true,
-    avatarBoxShadow:'0 0 32px rgba(128,232,255,1),0 0 64px rgba(255,128,255,.8),0 0 110px rgba(255,215,0,.5)',
-  };
-  if (lv >= 20) return {
-    id:4, name:'KING', label:'✦ KING VIP ✦', subtitle:'✨ ราชาผู้ยิ่งใหญ่ ✨',
-    avatarSize:140, displayMs:8000, maxWidth:880,
-    primary:'#ffd700', secondary:'#ff80ff', accent:'#ffb43c',
-    cardBg:'linear-gradient(135deg,rgba(18,5,42,.98) 0%,rgba(48,10,68,.98) 45%,rgba(18,5,35,.98) 100%)',
-    border:'2.5px solid rgba(255,190,30,.9)',
-    boxShadow:'0 0 60px rgba(255,190,30,.65),0 0 120px rgba(200,80,255,.45),0 0 220px rgba(255,120,0,.2),inset 0 1.5px 0 rgba(255,220,80,.35)',
-    nameGradient:'linear-gradient(135deg,#fff8d0 0%,#ffd700 30%,#ff80ff 60%,#80e8ff 80%,#fffacc 100%)',
-    badgeGradient:'linear-gradient(135deg,rgba(255,180,30,.35),rgba(220,80,255,.35))',
-    badgeColor:'rgba(255,215,80,1)', badgeBorder:'1.5px solid rgba(255,200,50,.6)',
-    levelGradient:'linear-gradient(135deg,rgba(255,180,30,1),rgba(220,80,255,.9))',
-    rays:16, hasOrbit:true, hasCrown:true, hasLightning:true, hasParticles:'king', hasAnnounce:true, hasSpeedTrail:true,
-    avatarBoxShadow:'0 0 30px rgba(255,180,30,1),0 0 60px rgba(255,100,255,.8),0 0 100px rgba(255,180,30,.4)',
-  };
-  if (lv >= 15) return {
-    id:3, name:'ELITE', label:'★ ELITE ★', subtitle:'นักรบระดับสูง',
-    avatarSize:108, displayMs:6500, maxWidth:720,
-    primary:'#c084fc', secondary:'#f472b6', accent:'#a78bfa',
-    cardBg:'linear-gradient(135deg,rgba(20,8,40,.97) 0%,rgba(40,12,55,.97) 100%)',
-    border:'2px solid rgba(192,132,252,.75)',
-    boxShadow:'0 0 40px rgba(192,132,252,.6),0 0 80px rgba(244,114,182,.35),inset 0 1px 0 rgba(192,132,252,.25)',
-    nameGradient:'linear-gradient(135deg,#fff 0%,#f0abfc 50%,#a78bfa 100%)',
-    badgeGradient:'linear-gradient(135deg,rgba(192,132,252,.3),rgba(244,114,182,.3))',
-    badgeColor:'rgba(240,210,255,1)', badgeBorder:'1px solid rgba(192,132,252,.5)',
-    levelGradient:'linear-gradient(135deg,rgba(192,132,252,.95),rgba(244,114,182,.85))',
-    rays:0, hasOrbit:true, hasCrown:false, hasLightning:false, hasParticles:'elite', hasAnnounce:false, hasSpeedTrail:false,
-    avatarBoxShadow:'0 0 22px rgba(192,132,252,.9),0 0 45px rgba(244,114,182,.45)',
-  };
-  if (lv >= 5) return {
-    id:2, name:'MEMBER', label:'• MEMBER •', subtitle:'สมาชิก',
-    avatarSize:88, displayMs:5000, maxWidth:600,
-    primary:'#60a5fa', secondary:'#22d3ee', accent:'#3b82f6',
-    cardBg:'linear-gradient(135deg,rgba(8,18,38,.95) 0%,rgba(12,28,52,.95) 100%)',
-    border:'1.5px solid rgba(96,165,250,.55)',
-    boxShadow:'0 0 24px rgba(96,165,250,.45),0 0 50px rgba(34,211,238,.2),inset 0 1px 0 rgba(96,165,250,.2)',
-    nameGradient:'linear-gradient(135deg,#fff,#bae6fd 60%,#60a5fa)',
-    badgeGradient:'linear-gradient(135deg,rgba(96,165,250,.25),rgba(34,211,238,.25))',
-    badgeColor:'rgba(186,230,253,.95)', badgeBorder:'1px solid rgba(96,165,250,.4)',
-    levelGradient:'linear-gradient(135deg,rgba(96,165,250,.9),rgba(34,211,238,.8))',
-    rays:0, hasOrbit:false, hasCrown:false, hasLightning:false, hasParticles:'soft', hasAnnounce:false, hasSpeedTrail:false,
-    avatarBoxShadow:'0 0 14px rgba(96,165,250,.75),0 0 28px rgba(34,211,238,.3)',
-  };
-  return {
-    id:1, name:'NEWBIE', label:'· เข้าห้อง ·', subtitle:'ผู้มาเยือน',
-    avatarSize:74, displayMs:4000, maxWidth:500,
-    primary:'#cbd5e1', secondary:'#94a3b8', accent:'#e2e8f0',
-    cardBg:'linear-gradient(135deg,rgba(15,15,28,.92) 0%,rgba(22,22,38,.92) 100%)',
-    border:'1px solid rgba(203,213,225,.3)',
-    boxShadow:'0 0 14px rgba(203,213,225,.2),inset 0 1px 0 rgba(203,213,225,.1)',
-    nameGradient:'linear-gradient(135deg,#fff,#cbd5e1)',
-    badgeGradient:'rgba(203,213,225,.15)',
-    badgeColor:'rgba(226,232,240,.85)', badgeBorder:'1px solid rgba(203,213,225,.25)',
-    levelGradient:'linear-gradient(135deg,rgba(148,163,184,.7),rgba(100,116,139,.6))',
-    rays:0, hasOrbit:false, hasCrown:false, hasLightning:false, hasParticles:'none', hasAnnounce:false, hasSpeedTrail:false,
-    avatarBoxShadow:'0 0 8px rgba(203,213,225,.4)',
-  };
-}
-
-/* ── VIP Join Card — TIER-DRIVEN by level from chat ── */
-function VIPCard({ item, onDone }) {
-  const tier   = getTier(item.level || 0);
-  const isKING = tier.id >= 4;
-  useEffect(() => { const t = setTimeout(onDone, tier.displayMs); return () => clearTimeout(t); }, []);
-
-  /* ── TIER-DRIVEN RENDER (ทุกอย่างขึ้นกับ level) ──────────── */
-  const initX = tier.id >= 4 ? -1100 : tier.id >= 2 ? -500 : -300;
-  const spring = tier.id >= 4
-    ? { type:'spring', stiffness:240, damping:18, mass:.65 }
-    : tier.id >= 2
-      ? { type:'spring', stiffness:200, damping:18, mass:.8 }
-      : { type:'spring', stiffness:260, damping:22, mass:.6 };
+  // sparkles ตำแหน่งสุ่มแบบ deterministic จากชื่อ
+  const sparkles = (() => {
+    const arr = [];
+    let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+    for (let i = 0; i < 8; i++) {
+      h = (h * 1664525 + 1013904223) >>> 0;
+      const dx = ((h & 255) - 128) * 0.9;
+      const dy = (((h >> 8) & 255) - 180) * 0.55;
+      arr.push({ left: 8 + ((h >> 16) & 0x7f) * 0.45 + '%', top: 30 + ((h >> 20) & 0x3f) * 0.6 + '%', dx, dy, delay: (i * 0.13).toFixed(2) });
+    }
+    return arr;
+  })();
 
   return (
     <motion.div
-      initial={{ x:initX, opacity:0, scale: isKING ? .5 : .8, skewX: isKING ? 8 : 0 }}
-      animate={{ x:0, opacity:1, scale:1, skewX:0 }}
-      exit={{ x:initX*.85, opacity:0, scale:.7, filter:'blur(12px)', transition:{ duration:.3 } }}
-      transition={spring}
-      style={{ position:'relative', width:'100%', maxWidth:tier.maxWidth, perspective:'1400px' }}
+      initial={{ x: -60, opacity: 0, scale: 0.88, filter: 'blur(6px)' }}
+      animate={{ x: 0, opacity: 1, scale: 1, filter: 'blur(0px)' }}
+      exit={{ x: -40, opacity: 0, scale: 0.9, filter: 'blur(4px)', transition: { duration: 0.35 } }}
+      transition={{ type: 'spring', stiffness: 220, damping: 22, mass: 0.7 }}
+      style={{ position: 'relative', maxWidth: 460, animation: 'np-glow 2.4s ease-in-out infinite' }}
     >
-      {/* speed trail (tier 4+) */}
-      {tier.hasSpeedTrail && (
-        <motion.div initial={{ scaleX:4, opacity:1 }} animate={{ scaleX:0, opacity:0 }}
-          transition={{ duration:.45, ease:'easeOut' }}
-          style={{ position:'absolute', right:'98%', top:'20%', bottom:'20%', width:350,
-            background:`linear-gradient(to left,${tier.primary}aa,${tier.secondary}66,transparent)`,
-            transformOrigin:'right center', borderRadius:'0 6px 6px 0', pointerEvents:'none' }} />
-      )}
+      {/* outer aura */}
+      <div style={{
+        position:'absolute', inset:-14, borderRadius:22, pointerEvents:'none',
+        background:'radial-gradient(ellipse at center, rgba(255,200,60,.35) 0%, rgba(220,80,255,.22) 45%, transparent 75%)',
+        filter:'blur(14px)',
+      }} />
 
-      {/* outer glow (tier 2+) */}
-      {tier.id >= 2 && (
-        <div style={{ position:'absolute', inset: isKING?-48:-18, borderRadius: isKING?32:22, pointerEvents:'none',
-          background:`radial-gradient(ellipse,${tier.primary}${isKING?'80':'48'} 0%,${tier.secondary}${isKING?'59':'33'} 40%,transparent 70%)`,
-          filter:`blur(${isKING?30:16}px)`, animation: isKING?'kingPulse 2s ease-in-out infinite':'divineBreath 2s ease-in-out infinite' }} />
-      )}
+      {/* main plate */}
+      <div style={{
+        position:'relative', overflow:'hidden',
+        padding:'14px 28px 14px 24px',
+        borderRadius:14,
+        background:'linear-gradient(135deg, rgba(20,8,4,.92) 0%, rgba(38,10,28,.92) 50%, rgba(8,8,28,.92) 100%)',
+        border:'1.5px solid transparent',
+        backgroundClip:'padding-box',
+        boxShadow:'0 8px 30px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,220,140,.18)',
+      }}>
+        {/* gold/rainbow border ring */}
+        <div style={{
+          position:'absolute', inset:0, borderRadius:14, padding:1.5, pointerEvents:'none',
+          background:'linear-gradient(120deg, #ffd76b 0%, #ff80d8 25%, #80c8ff 50%, #ffd76b 75%, #fff2a8 100%)',
+          backgroundSize:'250% 100%',
+          animation:'np-shimmer 4s linear infinite',
+          WebkitMask:'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
+          WebkitMaskComposite:'xor', maskComposite:'exclude',
+        }} />
 
-      {/* light rays (tier 4+) */}
-      {tier.rays > 0 && (
-        <div style={{ position:'absolute', inset:0, pointerEvents:'none', overflow:'visible', zIndex:0 }}>
-          {[...Array(tier.rays)].map((_,i) => {
-            const colors = tier.id >= 5
-              ? [`${tier.primary}f0`,`${tier.secondary}cc`,`${tier.accent}b0`,'rgba(255,255,255,.7)']
-              : ['rgba(255,200,50,.95)','rgba(220,80,255,.8)','rgba(255,120,200,.7)','rgba(100,220,255,.6)'];
-            return (
-              <motion.div key={i}
-                style={{ position:'absolute', left:tier.avatarSize/2-8, top:tier.avatarSize/2-2, width:520, height: i%3===0?3:2,
-                  rotate:`${i*(360/tier.rays)}deg`, transformOrigin:'0 50%', borderRadius:99,
-                  background:`linear-gradient(to right,${colors[i%4]},transparent)` }}
-                initial={{ scaleX:0, opacity:0 }}
-                animate={{ scaleX:[0,1,.65,1], opacity:[0,1,.55,.85] }}
-                transition={{ duration:.55+i*.04, delay:.08, repeat:Infinity, repeatType:'reverse', repeatDelay:.2+i*.025 }}
-              />
-            );
-          })}
-        </div>
-      )}
+        {/* left ornament */}
+        <div style={{
+          display:'inline-flex', alignItems:'center', gap:14,
+        }}>
+          <div style={{
+            fontSize:22, lineHeight:1,
+            background:'linear-gradient(135deg, #fff2a8 0%, #ffd76b 35%, #ff80d8 70%, #80c8ff 100%)',
+            WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
+            filter:'drop-shadow(0 0 6px rgba(255,200,60,.7))',
+          }}>✦</div>
 
-      {/* electric sparks (tier 4+) */}
-      {tier.hasLightning && <KingLightning />}
-
-      {/* card body */}
-      <div style={{ position:'relative', overflow:'hidden',
-        borderRadius: isKING ? 22 : tier.id >= 2 ? 16 : 12,
-        border: tier.border, backdropFilter:'blur(24px)',
-        background: tier.cardBg, boxShadow: tier.boxShadow,
-        animation: isKING ? 'kingPulse 2s ease-in-out infinite' : 'none' }}>
-
-        {/* top sweep */}
-        <motion.div style={{ position:'absolute', top:0, left:0, height: isKING?3:2, borderRadius:99,
-          background: isKING
-            ? `linear-gradient(to right,transparent,${tier.primary},${tier.secondary},${tier.accent},${tier.primary},transparent)`
-            : `linear-gradient(to right,transparent,${tier.primary},${tier.secondary},transparent)` }}
-          initial={{ width:'0%', left:'50%' }} animate={{ width:'100%', left:'0%' }}
-          transition={{ duration: isKING?.45:.6, ease:'easeOut' }} />
-
-        {/* shimmer (tier 3+) */}
-        {tier.id >= 3 && (
-          <motion.div style={{ position:'absolute', inset:0, pointerEvents:'none',
-            background:`linear-gradient(110deg,transparent 25%,${tier.primary}11 50%,transparent 75%)` }}
-            animate={{ x:['-120%','220%'] }} transition={{ duration:2.8, repeat:Infinity, repeatDelay:1.2, ease:'linear' }} />
-        )}
-
-        {/* scanlines */}
-        <div style={{ position:'absolute', inset:0, pointerEvents:'none', opacity: isKING?.07:.06,
-          backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.18) 2px,rgba(0,0,0,.18) 4px)' }} />
-
-        {/* corner brackets (tier 2+) */}
-        {tier.id >= 2 && [{t:8,l:8,bt:'top',bl:'left'},{t:8,r:8,bt:'top',bl:'right'},{b:8,l:8,bt:'bottom',bl:'left'},{b:8,r:8,bt:'bottom',bl:'right'}].map((c,i) => {
-          const sz = isKING ? 26 : tier.id >= 3 ? 20 : 16;
-          const w  = isKING ? 3 : 2;
-          return (
-            <div key={i} style={{ position:'absolute', width:sz, height:sz, top:c.t, bottom:c.b, left:c.l, right:c.r,
-              [`border${c.bt[0].toUpperCase()+c.bt.slice(1)}`]:`${w}px solid ${tier.primary}f0`,
-              [`border${c.bl[0].toUpperCase()+c.bl.slice(1)}`]:`${w}px solid ${tier.primary}f0`,
-              borderRadius: c.bt==='top'&&c.bl==='left'?'8px 0 0 0':c.bt==='top'&&c.bl==='right'?'0 8px 0 0':c.bt==='bottom'&&c.bl==='left'?'0 0 0 8px':'0 0 8px 0' }} />
-          );
-        })}
-
-        <div style={{ position:'relative', padding: isKING?'22px':tier.id>=3?'18px':tier.id>=2?'14px':'11px 13px',
-          display:'flex', alignItems:'center', gap: isKING?22:tier.id>=3?16:tier.id>=2?13:11, zIndex:2 }}>
-          {/* avatar block */}
-          <motion.div
-            initial={{ scale:0, rotate: isKING?-240:tier.id>=2?-180:0 }}
-            animate={{ scale:1, rotate:0 }}
-            transition={{ type:'spring', stiffness: isKING?260:300, damping: isKING?17:20, delay: isKING?.1:.15 }}
-            style={{ position:'relative', flexShrink:0 }}>
-
-            {/* floating crown (tier 4+) */}
-            {tier.hasCrown && (
-              <motion.div style={{ position:'absolute', top:-28, left:'50%', transform:'translateX(-50%)', fontSize:30, zIndex:6,
-                filter:`drop-shadow(0 0 16px ${tier.accent}) drop-shadow(0 0 32px ${tier.secondary}b0)` }}
-                initial={{ y:-20, scale:0, opacity:0 }}
-                animate={{ y:[0,-8,0], scale:[0,1.4,1], opacity:[0,1,1] }}
-                transition={{ scale:{ duration:.3, delay:.25 }, opacity:{ duration:.25, delay:.25 }, y:{ duration:2.2, repeat:Infinity, ease:'easeInOut', delay:.3 } }}>
-                {tier.id >= 5 ? '⚜️' : '👑'}
-              </motion.div>
-            )}
-
-            {/* orbit rings (tier 3+) */}
-            {tier.hasOrbit && (
-              <>
-                <motion.div style={{ position:'absolute', inset: isKING?-12:-6, borderRadius:'50%',
-                  border:`2px dashed ${tier.primary}b0`, pointerEvents:'none' }}
-                  animate={{ rotate:360 }} transition={{ duration: isKING?2.5:4, repeat:Infinity, ease:'linear' }} />
-                {isKING && (
-                  <motion.div style={{ position:'absolute', inset:-6, borderRadius:'50%',
-                    border:`1.5px solid ${tier.secondary}80`, pointerEvents:'none' }}
-                    animate={{ rotate:-360 }} transition={{ duration:1.8, repeat:Infinity, ease:'linear' }} />
-                )}
-              </>
-            )}
-
-            {/* avatar — รูปจาก chat */}
-            <div style={{ width:tier.avatarSize, height:tier.avatarSize, borderRadius:'50%', overflow:'hidden',
-              border:`${isKING?4:tier.id>=2?3:2}px solid ${tier.primary}`,
-              boxShadow:tier.avatarBoxShadow, flexShrink:0 }}>
-              {item.profilePicUrl
-                ? <img src={item.profilePicUrl} alt={item.displayName} style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e=>e.target.style.display='none'} />
-                : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center',
-                    background:`linear-gradient(135deg,${tier.primary}66,${tier.secondary}55)` }}>
-                    <span style={{ color: isKING?tier.accent:'#fff', fontWeight:900, fontSize: tier.avatarSize*.36 }}>{(item.displayName||'?')[0].toUpperCase()}</span>
-                  </div>
-              }
+          <div style={{ display:'flex', flexDirection:'column', gap:2, minWidth:0 }}>
+            <div style={{
+              fontSize:10, fontWeight:800, letterSpacing:'.32em',
+              color:'rgba(255,210,110,.85)', textTransform:'uppercase',
+              fontFamily:'Cinzel,serif',
+            }}>
+              welcome
             </div>
-          </motion.div>
-
-          {/* text block */}
-          <div style={{ flex:1, minWidth:0 }}>
-            {/* tier badge */}
-            <motion.div initial={{ opacity:0, x:-30 }} animate={{ opacity:1, x:0 }} transition={{ delay:.1 }}
-              style={{ marginBottom: isKING?8:tier.id>=2?5:3 }}>
-              <span style={{ fontSize: isKING?13:tier.id>=3?12:tier.id>=2?11:10, fontWeight:900,
-                letterSpacing: isKING?'.35em':'.22em', textTransform:'uppercase',
-                padding: isKING?'5px 16px':tier.id>=2?'4px 12px':'3px 10px', borderRadius:6,
-                background: tier.badgeGradient, color: tier.badgeColor, border: tier.badgeBorder,
-                boxShadow: isKING?`0 0 16px ${tier.primary}80,inset 0 0 12px ${tier.primary}26`:'none' }}>
-                {tier.label}
-              </span>
-            </motion.div>
-
-            {/* name */}
-            <motion.h2 initial={{ opacity:0, x:-40 }} animate={{ opacity:1, x:0 }}
-              transition={{ delay:.16, type:'spring', stiffness:220 }}
-              style={{ fontWeight:900, letterSpacing:'.02em', lineHeight:1.1,
-                marginBottom: isKING?12:tier.id>=2?8:5,
-                fontSize: isKING ? 'clamp(2rem,3vw,3.4rem)' : tier.id>=3 ? 'clamp(1.55rem,2.3vw,2.4rem)' : tier.id>=2 ? 'clamp(1.25rem,1.8vw,1.85rem)' : 'clamp(1.05rem,1.4vw,1.45rem)',
-                background: tier.nameGradient,
-                WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text',
-                filter: isKING ? `drop-shadow(0 0 20px ${tier.primary}f0) drop-shadow(0 0 40px ${tier.secondary}99)` : tier.id>=2 ? `drop-shadow(0 0 8px ${tier.primary}c0)` : 'none' }}>
-              {item.displayName}
-            </motion.h2>
-
-            {/* level + subtitle */}
-            <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:.28 }}
-              style={{ display:'flex', alignItems:'center', gap: isKING?10:7, flexWrap:'wrap' }}>
-              <span style={{ padding: isKING?'6px 18px':tier.id>=2?'5px 14px':'3px 10px',
-                borderRadius:99, fontSize: isKING?18:tier.id>=3?15:tier.id>=2?13:11, fontWeight:900,
-                background: tier.levelGradient, color:'#fff',
-                boxShadow: isKING ? `0 0 20px ${tier.primary}f0,0 0 40px ${tier.secondary}80` : tier.id>=2 ? `0 0 12px ${tier.primary}b0` : 'none',
-                border: isKING ? `1px solid ${tier.accent}80` : 'none' }}>
-                {tier.id>=4?'⭐':tier.id>=2?'🏅':'·'} LV. {item.level||0}
-              </span>
-              {tier.id >= 3 && (
-                <motion.span style={{ fontSize: isKING?18:15, fontWeight:800, color: tier.badgeColor,
-                  filter: isKING ? `drop-shadow(0 0 10px ${tier.primary}e0)` : 'none' }}
-                  animate={ isKING ? { opacity:[1,.5,1], scale:[1,1.06,1] } : {}}
-                  transition={ isKING ? { duration:1.1, repeat:Infinity } : {}}>
-                  {tier.subtitle}
-                </motion.span>
-              )}
-            </motion.div>
-          </div>
-        </div>
-
-        {/* bottom pulse */}
-        <motion.div style={{ position:'absolute', bottom:0, left:0, right:0, height: isKING?2:1,
-          background: isKING
-            ? `linear-gradient(to right,transparent,${tier.primary},${tier.secondary},${tier.accent}cc,transparent)`
-            : `linear-gradient(to right,transparent,${tier.primary}99,transparent)` }}
-          animate={{ opacity:[.5,1,.5] }} transition={{ duration: isKING?1.3:2, repeat:Infinity }} />
-      </div>
-
-      {/* particles */}
-      {tier.hasParticles === 'mega'  && <KingParticles tier={tier} mega />}
-      {tier.hasParticles === 'king'  && <KingParticles tier={tier} />}
-      {tier.hasParticles === 'elite' && <NormalParticles tier={tier} dense />}
-      {tier.hasParticles === 'soft'  && <NormalParticles tier={tier} />}
-    </motion.div>
-  );
-}
-
-/* ── King explosion particles ── */
-function KingParticles({ tier, mega = false }) {
-  const emojis = mega
-    ? ['⚜️','👑','✨','💎','⚡','🌟','💥','🔥','🌠','💫']
-    : ['👑','⭐','✨','💫','⚡','🌟','💥','🔥'];
-  const dots = tier && tier.id >= 5
-    ? ['rgba(128,232,255,1)','rgba(255,128,255,1)','rgba(255,215,0,1)','rgba(255,255,255,1)','rgba(180,250,255,1)']
-    : ['rgba(255,200,50,1)','rgba(255,100,255,1)','rgba(200,130,255,1)','rgba(80,220,255,1)','rgba(255,255,150,1)'];
-  const emojiCount = mega ? 12 : 8;
-  const dotCount   = mega ? 28 : 20;
-  const ax = tier ? tier.avatarSize/2-8 : 65;
-  const ay = tier ? tier.avatarSize/2-2 : 55;
-  return (
-    <div style={{ position:'absolute', inset:0, pointerEvents:'none', overflow:'visible', zIndex:3 }}>
-      {/* emoji burst */}
-      {[...Array(emojiCount)].map((_,i) => {
-        const angle = (i/emojiCount)*360;
-        const dist  = (mega?120:100) + (i%3)*40;
-        const dx = Math.cos(angle*Math.PI/180)*dist;
-        const dy = Math.sin(angle*Math.PI/180)*dist;
-        return (
-          <motion.div key={`e${i}`}
-            style={{ position:'absolute', left:ax, top:ay, fontSize:(mega?22:20)+(i%3)*4, zIndex:4 }}
-            initial={{ x:0, y:0, scale:0, opacity:0, rotate:0 }}
-            animate={{ x:[0,dx*.4,dx], y:[0,dy*.4-40,dy-60], scale:[0,1.5,0], opacity:[0,1,0], rotate:(i%2===0?1:-1)*180 }}
-            transition={{ duration:1.8+(i%4)*.3, delay:.15+(i%4)*.1, repeat:Infinity, repeatDelay:(i%3)*.6, ease:'easeOut' }}>
-            {emojis[i%emojis.length]}
-          </motion.div>
-        );
-      })}
-      {/* glowing dot burst */}
-      {[...Array(dotCount)].map((_,i) => {
-        const angle = (i/dotCount)*360, dist = (mega?80:70)+(i%5)*35;
-        const dx = Math.cos(angle*Math.PI/180)*dist, dy = Math.sin(angle*Math.PI/180)*dist;
-        const color = dots[i%dots.length], size = 3+(i%4)*2;
-        return (
-          <motion.div key={`d${i}`}
-            style={{ position:'absolute', left:ax, top:ay, width:size, height:size, borderRadius:'50%',
-              background:color, boxShadow:`0 0 ${size*4}px ${color}` }}
-            initial={{ x:0, y:0, scale:0, opacity:0 }}
-            animate={{ x:[0,dx*.5,dx], y:[0,dy*.5-25,dy-35], scale:[0,2,0], opacity:[0,1,0] }}
-            transition={{ duration:1.6+(i%5)*.22, delay:.12+(i%6)*.09, repeat:Infinity, repeatDelay:(i%4)*.5, ease:'easeOut' }}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-/* ── Normal entry particles (tier 2-3) ── */
-function NormalParticles({ tier, dense = false }) {
-  const colors = tier
-    ? [tier.primary, tier.secondary, tier.accent]
-    : ['rgba(155,81,224,1)','rgba(236,72,153,1)','rgba(200,150,255,1)'];
-  const count = dense ? 14 : 6;
-  const ax = tier ? tier.avatarSize/2-8 : 50;
-  const ay = tier ? tier.avatarSize/2-2 : 40;
-  return (
-    <div style={{ position:'absolute', inset:0, pointerEvents:'none', overflow:'visible', zIndex:3 }}>
-      {[...Array(count)].map((_,i) => {
-        const angle = (i/count)*360, dist = (dense?75:55)+(i%3)*25;
-        const dx = Math.cos(angle*Math.PI/180)*dist, dy = Math.sin(angle*Math.PI/180)*dist;
-        const color = colors[i%colors.length], size = 2+(i%3);
-        return (
-          <motion.div key={i} style={{ position:'absolute', left:ax, top:ay, width:size, height:size, borderRadius:'50%', background:color, boxShadow:`0 0 ${size*3}px ${color}` }}
-            initial={{ x:0, y:0, scale:0, opacity:0 }}
-            animate={{ x:[0,dx*.5,dx], y:[0,dy*.5-20,dy-30], scale:[0,1.5,0], opacity:[0,1,0] }}
-            transition={{ duration:1.4+(i%4)*.2, delay:.2+(i%5)*.1, repeat:Infinity, repeatDelay:(i%3)*.8, ease:'easeOut' }}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-/* ── King lightning sparks ── */
-function KingLightning() {
-  return (
-    <div style={{ position:'absolute', top:-6, left:0, right:0, height:12, overflow:'visible', pointerEvents:'none', zIndex:4 }}>
-      {[...Array(6)].map((_,i) => (
-        <motion.div key={i}
-          style={{ position:'absolute', top:0, left:`${10+i*15}%`, fontSize:16,
-            animation:`lightningFlash ${0.6+i*.15}s ${i*.12}s infinite`,
-            filter:'drop-shadow(0 0 8px rgba(255,220,50,1))' }}>
-          ⚡
-        </motion.div>
-      ))}
-    </div>
-  );
-}
-
-/* ── Gift Card (overlay) ── */
-function GiftCard({ item, onDone }) {
-  useEffect(() => { const t = setTimeout(onDone, 5000); return () => clearTimeout(t); }, []);
-  return (
-    <motion.div initial={{ x:-400, opacity:0, scale:.75 }} animate={{ x:0, opacity:1, scale:1 }} exit={{ x:-400, opacity:0, scale:.8, filter:'blur(8px)' }} transition={{ type:'spring', stiffness:200, damping:22 }} style={{ position:'relative', width:'100%', maxWidth:500 }}>
-      <div style={{ position:'absolute', inset:-16, borderRadius:24, pointerEvents:'none', background:'radial-gradient(ellipse,rgba(236,72,153,.3) 0%,transparent 70%)', filter:'blur(15px)', animation:'divineBreath 1.8s ease-in-out infinite' }} />
-      <div style={{ position:'relative', overflow:'hidden', borderRadius:16, border:'2px solid rgba(236,72,153,.65)', backdropFilter:'blur(24px)', background:'linear-gradient(135deg,rgba(40,5,30,.97) 0%,rgba(60,10,45,.97) 100%)', boxShadow:'0 0 30px rgba(236,72,153,.5),0 0 60px rgba(180,40,120,.25),inset 0 1px 0 rgba(255,100,200,.15)' }}>
-        <motion.div style={{ position:'absolute', top:0, left:0, height:2, borderRadius:99, background:'linear-gradient(to right,transparent,rgba(255,80,180,1),rgba(255,150,255,1),transparent)' }} initial={{ width:'0%', left:'50%' }} animate={{ width:'100%', left:'0%' }} transition={{ duration:.5, ease:'easeOut' }} />
-        <div style={{ position:'absolute', inset:0, pointerEvents:'none', opacity:.1, backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.15) 2px,rgba(0,0,0,.15) 4px)' }} />
-        <div style={{ position:'relative', padding:16, display:'flex', alignItems:'center', gap:16 }}>
-          <div style={{ width:64, height:64, borderRadius:'50%', overflow:'hidden', border:'2px solid rgba(236,72,153,.8)', boxShadow:'0 0 16px rgba(236,72,153,.8),0 0 32px rgba(180,40,120,.4)', flexShrink:0 }}>
-            {item.profilePicUrl ? <img src={item.profilePicUrl} alt={item.displayName} style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e=>e.target.style.display='none'} /> : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(180,30,100,.4)' }}><span style={{ color:'#ffaad4', fontWeight:900, fontSize:22 }}>{(item.displayName||'?')[0].toUpperCase()}</span></div>}
-          </div>
-          <div style={{ flex:1, minWidth:0 }}>
-            <p style={{ fontSize:10, fontWeight:900, letterSpacing:'.25em', textTransform:'uppercase', color:'rgba(236,72,153,.8)', marginBottom:2 }}>🎁 ส่งของขวัญ</p>
-            <h3 style={{ fontWeight:900, fontSize:20, lineHeight:1, marginBottom:8, background:'linear-gradient(135deg,#fff,#ff80d0)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text', filter:'drop-shadow(0 0 8px rgba(255,80,180,.7))' }}>{item.displayName}</h3>
-            <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-              <span style={{ padding:'4px 12px', borderRadius:99, fontSize:14, fontWeight:900, background:'linear-gradient(135deg,rgba(236,72,153,.9),rgba(180,40,120,.9))', boxShadow:'0 0 12px rgba(236,72,153,.7)', color:'#fff' }}>🎁 {item.giftName||'ของขวัญ'}</span>
-              {item.repeatCount>1 && <span style={{ padding:'2px 8px', borderRadius:99, fontSize:12, fontWeight:900, background:'rgba(180,30,100,.5)', color:'#ffaad4', border:'1px solid rgba(236,72,153,.4)' }}>×{item.repeatCount}</span>}
-              {item.diamonds>0 && <span style={{ fontSize:12, fontWeight:700, color:'rgba(255,160,220,.8)' }}>💎 {item.diamonds.toLocaleString()}</span>}
+            <div style={{
+              fontSize:'clamp(22px,2.4vw,30px)', fontWeight:900, lineHeight:1.1, letterSpacing:'.01em',
+              background:'linear-gradient(110deg, #fff8d6 0%, #ffd76b 22%, #ff9ce0 45%, #9ed8ff 65%, #ffe48a 88%, #fff8d6 100%)',
+              backgroundSize:'250% 100%',
+              WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
+              animation:'np-shimmer 3.6s linear infinite',
+              whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:380,
+              filter:'drop-shadow(0 1px 0 rgba(0,0,0,.45)) drop-shadow(0 0 10px rgba(255,200,60,.35))',
+            }}>
+              {name}
             </div>
           </div>
-        </div>
-        <motion.div style={{ position:'absolute', bottom:0, left:0, right:0, height:1, background:'linear-gradient(to right,transparent,rgba(255,80,180,.7),transparent)' }} animate={{ opacity:[.4,1,.4] }} transition={{ duration:1.8, repeat:Infinity }} />
-      </div>
-      <GiftParticles />
-    </motion.div>
-  );
-}
 
-function GiftParticles() {
-  const emojis = ['🎁','💎','✨','⭐','🌟','💫'];
-  return (
-    <div style={{ position:'absolute', inset:0, pointerEvents:'none', overflow:'visible', zIndex:3 }}>
-      {[...Array(8)].map((_,i) => (
-        <motion.div key={i} style={{ position:'absolute', left:40, top:40, fontSize:18 }}
-          initial={{ x:0, y:0, scale:0, opacity:0, rotate:0 }}
-          animate={{ x:(i%2===0?1:-1)*(60+i*12), y:-(60+i*10), scale:[0,1.2,0], opacity:[0,1,0], rotate:(i%2===0?1:-1)*90 }}
-          transition={{ duration:1.2+(i%4)*.2, delay:.1+i*.08, repeat:Infinity, repeatDelay:(i%3)*.8, ease:'easeOut' }}
-        >{emojis[i%emojis.length]}</motion.div>
-      ))}
-    </div>
+          <div style={{
+            fontSize:22, lineHeight:1,
+            background:'linear-gradient(135deg, #80c8ff 0%, #ff80d8 35%, #ffd76b 70%, #fff2a8 100%)',
+            WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
+            filter:'drop-shadow(0 0 6px rgba(220,80,255,.65))',
+            marginLeft:6,
+          }}>✦</div>
+        </div>
+
+        {/* light sweep */}
+        <div style={{
+          position:'absolute', top:0, bottom:0, left:0, width:'45%', pointerEvents:'none',
+          background:'linear-gradient(90deg, transparent, rgba(255,240,180,.35), transparent)',
+          mixBlendMode:'screen', animation:'np-sweep 2.6s ease-in-out infinite',
+        }} />
+
+        {/* sparkles */}
+        {sparkles.map((s, i) => (
+          <span key={i} style={{
+            position:'absolute', left:s.left, top:s.top, width:6, height:6, borderRadius:'50%',
+            background:'radial-gradient(circle, #fff 0%, #ffd76b 40%, transparent 70%)',
+            ['--sx']: `${s.dx}px`, ['--sy']: `${s.dy}px`,
+            animation:`np-spark 1.6s ${s.delay}s ease-out infinite`,
+            pointerEvents:'none',
+          }} />
+        ))}
+      </div>
+    </motion.div>
   );
 }

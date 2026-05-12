@@ -761,7 +761,7 @@ io.on('connection', (socket) => {
     socket.emit('tiktokMember', fake);
   });
 
-  /* ── Per-socket TikTok connection (standalone / OBS mode) ── */
+  /* ── Per-socket TikTok connection (standalone / OBS mode) — มี auto-reconnect ── */
   socket.on('setUniqueId', async (uniqueId, options) => {
     if (typeof options === 'object' && options) {
       delete options.requestOptions;
@@ -769,50 +769,43 @@ io.on('connection', (socket) => {
     } else {
       options = {};
     }
+    // bump generation — invalidates any in-flight callbacks/retries from previous setUniqueId
+    socket._tiktokGen = (socket._tiktokGen || 0) + 1;
+    const myGen = socket._tiktokGen;
+    if (socket._tiktokRetryTimer) { clearTimeout(socket._tiktokRetryTimer); socket._tiktokRetryTimer = null; }
+    // gen ใหม่ → reset in-flight lock ของ gen เก่า (closure เก่ามี isCurrent guard อยู่แล้ว)
+    socket._tiktokInFlight = false;
+    socket._tiktokInFlightGen = null;
     if (socket._tiktokConn) {
       try { socket._tiktokConn.disconnect(); } catch (_) {}
       socket._tiktokConn = null;
     }
+    socket._tiktokStop = false; // user ยังไม่กด disconnect
     if (!TikTokLiveConnection) {
       socket.emit('tiktokDisconnected', 'TikTok connector ไม่พร้อมใช้งาน');
       return;
     }
-    try {
-      const conn = new TikTokLiveConnection(uniqueId, { processInitialData: true, fetchRoomInfoOnConnect: true });
-      socket._tiktokConn = conn;
+    const isCurrent = () => !socket._tiktokStop && socket._tiktokGen === myGen;
 
-      conn.connect()
-        .then(state => {
-          console.log(`[live:${uniqueId}] connected (roomId=${state?.roomId||'?'})`);
-          socket.emit('tiktokConnected', state);
-          // ส่ง snapshot เริ่มต้นของ totals (ถ้ามี cache จาก connection ก่อน) → กัน UI ค้างที่ 0
-          if (liveTotals.viewers)       socket.emit('roomUser', { viewerCount: liveTotals.viewers });
-          if (liveTotals.totalLikes)    socket.emit('like', { totalLikeCount: liveTotals.totalLikes, likeCount: 0 });
-          if (liveTotals.totalDiamonds) socket.emit('gift', { diamonds: liveTotals.totalDiamonds, _snapshot: true, repeatCount: 1, giftName: '(snapshot)', uniqueId: '__snapshot__', displayName: '' });
-        })
-        .catch(err => {
-          let msg = err?.message || String(err);
-          if (Array.isArray(err?.errors) && err.errors.length > 0) {
-            msg += ': ' + err.errors.map(e => e.message || String(e)).filter(Boolean).join(' | ');
-          }
-          socket.emit('tiktokDisconnected', msg);
-          socket._tiktokConn = null;
-        });
+    // ── Per-room running totals (อยู่ scope นอกสุดเพื่อให้ reconnect แล้วยอดไม่หาย) ──
+    const liveTotals = { viewers: 0, totalLikes: 0, totalDiamonds: 0 };
+    const tag = `[live:${uniqueId}]`;
+    let lastViewerLog = 0;
+    const seenEvents = new Set();
+    const signApiKey = process.env.TIKTOK_SIGN_API_KEY;
+    const MAX_RETRIES = 5;
+    const TRANSIENT_RX = /Unexpected server response: 2|signature|rate ?limit|ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|timeout|network|socket hang up/i;
 
-      // ── Per-room running totals สำหรับ dashboard standalone (per-socket flow) ──
-      const liveTotals = { viewers: 0, totalLikes: 0, totalDiamonds: 0 };
-      const tag = `[live:${uniqueId}]`;
-      let lastViewerLog = 0;
+    const num = (...vals) => {
+      for (const v of vals) {
+        if (typeof v === 'number' && Number.isFinite(v)) return v;
+        if (typeof v === 'string' && v.trim() && !Number.isNaN(+v)) return +v;
+      }
+      return 0;
+    };
 
-      // helper: อ่านค่า count แบบ defensive จากหลายชื่อ field (camelCase / snake_case / nested)
-      const num = (...vals) => {
-        for (const v of vals) {
-          if (typeof v === 'number' && Number.isFinite(v)) return v;
-          if (typeof v === 'string' && v.trim() && !Number.isNaN(+v)) return +v;
-        }
-        return 0;
-      };
-
+    // ── attach all event handlers to a fresh conn ──
+    const attachHandlers = (conn) => {
       conn.on(WebcastEvent?.CHAT || 'chat', (data) => {
         const uid   = data?.user?.uniqueId || data?.uniqueId;
         if (!uid) return;
@@ -896,24 +889,101 @@ io.on('connection', (socket) => {
       });
 
       // ── Diagnostic: log ทุก event ที่ lib emit (ครั้งแรกของแต่ละชนิด) ──
-      const seenEvents = new Set();
-      conn.onAny?.((evtName /*, ...args */) => {
+      conn.onAny?.((evtName) => {
         if (seenEvents.has(evtName)) return;
         seenEvents.add(evtName);
         console.log(`${tag} first-seen event: ${evtName}`);
       });
 
       conn.on('disconnected', () => {
-        console.log(`${tag} disconnected`);
-        socket.emit('tiktokDisconnected', 'การเชื่อมต่อถูกตัด');
+        // ignore stale conn (jobเก่าจาก setUniqueId ก่อนหน้า) หรือถูก user กด disconnect
+        if (!isCurrent() || conn !== socket._tiktokConn) {
+          console.log(`${tag} stale disconnect ignored (gen=${myGen})`);
+          return;
+        }
+        console.log(`${tag} disconnected, will retry in 2s…`);
+        socket._tiktokConn = null;
+        socket.emit('tiktokReconnecting', { reason: 'disconnected' });
+        if (socket._tiktokRetryTimer) clearTimeout(socket._tiktokRetryTimer);
+        socket._tiktokRetryTimer = setTimeout(() => {
+          socket._tiktokRetryTimer = null;
+          if (isCurrent()) connectWithRetry(0);
+        }, 2000);
       });
+    };
 
-    } catch (err) {
-      socket.emit('tiktokDisconnected', err?.message || 'เชื่อมต่อไม่ได้');
-    }
+    // ── connect + retry on transient errors (Unexpected server response: 200 ฯลฯ) ──
+    // single-flight: ห้าม attempt คู่ขนานในรุ่นเดียวกัน
+    const connectWithRetry = async (attempt = 0) => {
+      if (!isCurrent()) return;
+      // single-flight ต่อ generation: ถ้า gen เดียวกันมี attempt วิ่งอยู่ → ข้าม
+      // ถ้าเป็น gen ใหม่ → แทนที่ค่าเดิม (gen เก่าจะถูก isCurrent() เช็คทิ้งเอง)
+      if (socket._tiktokInFlight && socket._tiktokInFlightGen === myGen) {
+        console.log(`${tag} skip duplicate connect attempt (same gen)`);
+        return;
+      }
+      socket._tiktokInFlight = true;
+      socket._tiktokInFlightGen = myGen;
+      let conn = null;
+      try {
+        conn = new TikTokLiveConnection(uniqueId, {
+          processInitialData: true,
+          fetchRoomInfoOnConnect: true,
+          ...(signApiKey ? { signApiKey, authenticateWs: true } : {}),
+        });
+        // ถ้ารุ่นเปลี่ยนไประหว่าง await — ทิ้ง conn นี้
+        if (!isCurrent()) { try { conn.disconnect(); } catch(_){} return; }
+        socket._tiktokConn = conn;
+        attachHandlers(conn);
+        const state = await conn.connect();
+        if (!isCurrent() || conn !== socket._tiktokConn) {
+          // รุ่นใหม่เกิดระหว่างเชื่อมต่อ → ทิ้ง state นี้ (อย่าไปแตะ _tiktokConn)
+          try { conn.disconnect(); } catch(_){}
+          return;
+        }
+        console.log(`${tag} connected (roomId=${state?.roomId||'?'}${signApiKey?', signed':''})`);
+        socket.emit('tiktokConnected', state);
+        if (liveTotals.viewers)       socket.emit('roomUser', { viewerCount: liveTotals.viewers });
+        if (liveTotals.totalLikes)    socket.emit('like',     { totalLikeCount: liveTotals.totalLikes, likeCount: 0 });
+        if (liveTotals.totalDiamonds) socket.emit('gift',     { diamonds: liveTotals.totalDiamonds, _snapshot: true, repeatCount: 1, giftName: '(snapshot)', uniqueId: '__snapshot__', displayName: '' });
+      } catch (err) {
+        let msg = err?.message || String(err);
+        if (Array.isArray(err?.errors) && err.errors.length > 0) {
+          msg += ': ' + err.errors.map(e => e.message || String(e)).filter(Boolean).join(' | ');
+        }
+        // เคลียร์ _tiktokConn เฉพาะถ้ายังเป็น conn ของ attempt นี้ (กัน clobber gen ใหม่)
+        if (conn && socket._tiktokConn === conn) socket._tiktokConn = null;
+        if (!isCurrent()) return;
+        const transient = TRANSIENT_RX.test(msg);
+        if (transient && attempt < MAX_RETRIES) {
+          const delay = Math.min(2000 * (attempt + 1), 12000);
+          console.warn(`${tag} connect failed (transient, retry ${attempt+1}/${MAX_RETRIES} in ${delay}ms): ${msg}`);
+          socket.emit('tiktokReconnecting', { attempt: attempt + 1, max: MAX_RETRIES, delayMs: delay, reason: msg });
+          if (socket._tiktokRetryTimer) clearTimeout(socket._tiktokRetryTimer);
+          socket._tiktokRetryTimer = setTimeout(() => {
+            socket._tiktokRetryTimer = null;
+            if (isCurrent()) connectWithRetry(attempt + 1);
+          }, delay);
+        } else {
+          console.error(`${tag} connect failed (giving up): ${msg}`);
+          socket.emit('tiktokDisconnected', msg);
+        }
+      } finally {
+        // ปลดล็อกเฉพาะถ้ายังเป็น gen ของเรา (กันกรณี gen ใหม่ตั้งค่าทับไปแล้ว)
+        if (socket._tiktokInFlightGen === myGen) {
+          socket._tiktokInFlight = false;
+          socket._tiktokInFlightGen = null;
+        }
+      }
+    };
+
+    connectWithRetry(0);
   });
 
   socket.on('disconnect_tiktok', () => {
+    socket._tiktokStop = true;
+    socket._tiktokGen = (socket._tiktokGen || 0) + 1; // ตัดสายเก่าทิ้ง
+    if (socket._tiktokRetryTimer) { clearTimeout(socket._tiktokRetryTimer); socket._tiktokRetryTimer = null; }
     if (socket._tiktokConn) {
       try { socket._tiktokConn.disconnect(); } catch (_) {}
       socket._tiktokConn = null;
@@ -921,6 +991,9 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    socket._tiktokStop = true;
+    socket._tiktokGen = (socket._tiktokGen || 0) + 1;
+    if (socket._tiktokRetryTimer) { clearTimeout(socket._tiktokRetryTimer); socket._tiktokRetryTimer = null; }
     if (socket._tiktokConn) {
       try { socket._tiktokConn.disconnect(); } catch (_) {}
       socket._tiktokConn = null;

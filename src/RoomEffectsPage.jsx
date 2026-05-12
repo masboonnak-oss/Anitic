@@ -83,10 +83,15 @@ function DashboardView() {
 
   /* ── socket wiring ── */
   function wireSocket(sock) {
-    sock.on('tiktokConnected',    ()    => setStatus('live'));
+    sock.on('tiktokConnected',    ()    => { setStatus('live'); setErrMsg(''); });
     sock.on('tiktokDisconnected', (msg) => { setStatus('error'); setErrMsg(msg || 'ตัดการเชื่อมต่อ'); });
+    sock.on('tiktokReconnecting', (info) => {
+      setStatus('connecting');
+      const a = info?.attempt, m = info?.max, ms = info?.delayMs;
+      setErrMsg(a ? `กำลังลองใหม่ ${a}/${m||5} (อีก ${Math.round((ms||2000)/1000)}s)` : 'กำลังเชื่อมต่อใหม่...');
+    });
     sock.on('roomUser', d => { if (typeof d?.viewerCount === 'number') setViewers(d.viewerCount); });
-    sock.on('like',     d => { if (typeof d?.totalLikeCount === 'number') setLikes(d.totalLikeCount); });
+    sock.on('like',     d => { if (typeof d?.totalLikeCount === 'number' && d.totalLikeCount > 0) setLikes(d.totalLikeCount); });
 
     const push = item => setEvents(prev => {
       const next = [...prev, item];
@@ -99,6 +104,11 @@ function DashboardView() {
     sock.on('share',  d => push({ id:mkid(), type:'share',  uniqueId:d.uniqueId,      displayName:d.displayName,                   profilePicUrl:d.profilePicUrl,        text:'แชร์ไลฟ์', level:d.level||0 }));
     sock.on('like',   d => { if (d?.likeCount > 0) push({ id:mkid(), type:'like', uniqueId:d.uniqueId||'?', displayName:d.displayName||'?', profilePicUrl:d.profilePicUrl||null, text:`ไลค์ ${d.likeCount} ครั้ง`, level:d.level||0 }); });
     sock.on('gift',   d => {
+      if (d?._snapshot) {
+        // snapshot จาก server หลัง reconnect — ตั้งยอดรวมตรงๆ ไม่บวกเพิ่ม
+        setDiamonds(d.diamonds || 0);
+        return;
+      }
       setDiamonds(prev => prev + (d.diamonds || 0));
       push({ id:mkid(), type:'gift', uniqueId:d.uniqueId, displayName:d.displayName, profilePicUrl:d.profilePicUrl||null, text:`🎁 ${d.giftName||'ของขวัญ'}${d.repeatCount>1?' ×'+d.repeatCount:''}`, diamonds:d.diamonds||0, level:d.level||0 });
     });
@@ -166,14 +176,32 @@ function DashboardView() {
         .re-page-header{padding:20px 28px 0;flex-shrink:0}
         .re-dash-content{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:16px 28px 20px}
         .re-settings-content{flex:1;overflow:auto;padding:20px 28px}
-        .re-top-row{display:flex;gap:14px;flex-shrink:0;margin-bottom:16px}
-        @media(max-width:640px){
-          .re-sidebar{width:44px}
+        .re-top-row{display:flex;gap:14px;flex-shrink:0;margin-bottom:16px;flex-wrap:wrap}
+        .re-stat-card{flex:0 0 130px}
+        .re-connect-card{flex:1 1 360px;min-width:0}
+        .re-vis-grid{display:grid;grid-template-columns:2.8fr 0.6fr 0.8fr 0.8fr 0.8fr;gap:0}
+        /* iPad / tablet (≤1100px): connect card เต็มแถว, stat cards 4 ใบกางเต็ม */
+        @media(max-width:1100px){
+          .re-sidebar{width:60px}
           .re-logo-text,.re-nav-label,.re-status-text{display:none}
+          .re-page-header{padding:16px 18px 0}
+          .re-dash-content{padding:12px 16px 14px}
+          .re-settings-content{padding:14px 18px}
+          .re-connect-card{flex:1 1 100%}
+          .re-stat-card{flex:1 1 calc(25% - 11px);min-width:120px}
+        }
+        /* มือถือ (≤640px): 2x2 stat cards, ตารางผู้เยี่ยมชมซ่อน column รอง */
+        @media(max-width:640px){
+          .re-sidebar{width:50px}
           .re-page-header{padding:12px 12px 0}
           .re-dash-content{padding:10px 10px 12px}
           .re-settings-content{padding:12px}
-          .re-top-row{flex-direction:column;gap:10px}
+          .re-stat-card{flex:1 1 calc(50% - 7px);min-width:0;padding:12px 14px !important}
+          .re-stat-card .re-stat-val{font-size:18px !important}
+          .re-vis-grid{grid-template-columns:2.4fr 0.7fr 0.9fr !important}
+          .re-vis-hide-sm{display:none !important}
+          .re-podium{flex-direction:column !important}
+          .re-podium > *{width:100% !important}
         }
       `}</style>
 
@@ -244,7 +272,7 @@ function DashboardView() {
               <div className="re-top-row">
 
                 {/* connect card */}
-                <div style={{ flex:'1 1 0', minWidth:0, background:'#16152a', border:'1px solid rgba(139,92,246,.18)', borderRadius:14, padding:'20px 22px' }}>
+                <div className="re-connect-card" style={{ background:'#16152a', border:'1px solid rgba(139,92,246,.18)', borderRadius:14, padding:'20px 22px' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:16 }}>
                     <span style={{ fontSize:15 }}>📡</span>
                     <span style={{ fontWeight:700, fontSize:14, color:'#c4b5fd' }}>การเชื่อมต่อ TikTok LIVE</span>
@@ -291,10 +319,10 @@ function DashboardView() {
 
                 {/* stat cards */}
                 {statCards.map(s => (
-                  <div key={s.label} style={{ flex:'0 0 130px', background:'#16152a', border:'1px solid rgba(139,92,246,.14)', borderRadius:14, padding:'16px 18px', display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
+                  <div key={s.label} className="re-stat-card" style={{ background:'#16152a', border:'1px solid rgba(139,92,246,.14)', borderRadius:14, padding:'16px 18px', display:'flex', flexDirection:'column', justifyContent:'space-between', gap:14, minHeight:120 }}>
                     <div style={{ width:34, height:34, borderRadius:10, background:`${s.color}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:17 }}>{s.icon}</div>
                     <div>
-                      <div style={{ fontSize:22, fontWeight:900, color:s.color, lineHeight:1, marginBottom:3 }}>{s.value}</div>
+                      <div className="re-stat-val" style={{ fontSize:22, fontWeight:900, color:s.color, lineHeight:1, marginBottom:3 }}>{s.value}</div>
                       <div style={{ fontSize:11, color:'rgba(160,150,200,.5)', fontWeight:600 }}>{s.label}</div>
                     </div>
                   </div>
@@ -355,6 +383,45 @@ function DashboardView() {
           {/* ─ VISITORS TAB ─ */}
           {navTab === 'visitors' && (
             <div className="re-dash-content" style={{ display:'flex', flexDirection:'column', gap:14, height:'100%', overflow:'hidden' }}>
+
+              {/* ⭐ Top 3 ผู้ส่งเพชรสูงสุด — เก็บไว้ทำเอฟเฟกต์เข้าห้องในอนาคต */}
+              {(() => {
+                const top3 = [...visitors].filter(v => (v.total_diamonds||0) > 0).sort((a,b) => (b.total_diamonds||0) - (a.total_diamonds||0)).slice(0,3);
+                if (top3.length === 0) return null;
+                const podiumStyle = [
+                  { rank:'#1', emoji:'🥇', g1:'#ffe14a', g2:'#ff9100', glow:'rgba(255,200,50,.5)' },
+                  { rank:'#2', emoji:'🥈', g1:'#e2e8f0', g2:'#94a3b8', glow:'rgba(200,210,235,.4)' },
+                  { rank:'#3', emoji:'🥉', g1:'#fbbf77', g2:'#b45309', glow:'rgba(220,140,60,.4)' },
+                ];
+                return (
+                  <div style={{ background:'linear-gradient(135deg,rgba(40,20,60,.6),rgba(20,10,40,.6))', border:'1px solid rgba(255,200,80,.2)', borderRadius:14, padding:'14px 16px', flexShrink:0 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+                      <span style={{ fontSize:15 }}>👑</span>
+                      <span style={{ fontWeight:800, fontSize:13, color:'rgba(255,210,80,.9)', letterSpacing:'.06em' }}>TOP 3 ผู้ส่งเพชรสูงสุด</span>
+                      <span style={{ fontSize:11, color:'rgba(160,150,200,.45)', marginLeft:6 }}>(จะได้เอฟเฟกต์เข้าห้องพิเศษในอนาคต)</span>
+                    </div>
+                    <div className="re-podium" style={{ display:'flex', gap:10 }}>
+                      {top3.map((v, i) => {
+                        const ps = podiumStyle[i];
+                        return (
+                          <div key={v.unique_id} style={{ flex:1, minWidth:0, display:'flex', alignItems:'center', gap:10, background:'rgba(0,0,0,.28)', border:`1px solid ${ps.glow}`, borderRadius:12, padding:'10px 12px', boxShadow:`0 0 18px -8px ${ps.glow}` }}>
+                            <div style={{ fontSize:20, lineHeight:1, filter:`drop-shadow(0 0 6px ${ps.glow})`, flexShrink:0 }}>{ps.emoji}</div>
+                            {v.profile_pic_url
+                              ? <img src={v.profile_pic_url} alt="" style={{ width:36, height:36, borderRadius:'50%', objectFit:'cover', border:`2px solid ${ps.g1}`, flexShrink:0 }} onError={e=>{e.target.style.display='none'}} />
+                              : <div style={{ width:36, height:36, borderRadius:'50%', background:`linear-gradient(135deg,${ps.g1},${ps.g2})`, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, color:'#1a1030', fontSize:14, flexShrink:0 }}>{(v.display_name||v.unique_id||'?')[0].toUpperCase()}</div>
+                            }
+                            <div style={{ minWidth:0, flex:1 }}>
+                              <div style={{ fontSize:13, fontWeight:800, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{v.display_name || v.unique_id}</div>
+                              <div style={{ fontSize:12, fontWeight:700, color:ps.g1, marginTop:2 }}>💎 {(v.total_diamonds||0).toLocaleString()}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* controls row */}
               <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', flexShrink:0 }}>
                 {/* sort pills */}
@@ -391,9 +458,9 @@ function DashboardView() {
               {/* table */}
               <div style={{ flex:1, minHeight:0, background:'#16152a', border:'1px solid rgba(139,92,246,.14)', borderRadius:14, overflow:'hidden', display:'flex', flexDirection:'column' }}>
                 {/* header row */}
-                <div style={{ display:'grid', gridTemplateColumns:'2.8fr 0.6fr 0.8fr 0.8fr 0.8fr', gap:0, padding:'10px 16px', borderBottom:'1px solid rgba(139,92,246,.1)', flexShrink:0 }}>
+                <div className="re-vis-grid" style={{ padding:'10px 16px', borderBottom:'1px solid rgba(139,92,246,.1)', flexShrink:0 }}>
                   {['ชื่อ / username','เลเวล','❤️ ใจ','💎 เพชร','เข้าล่าสุด'].map((h,i) => (
-                    <span key={i} style={{ fontSize:11, fontWeight:700, color:'rgba(160,150,200,.45)', letterSpacing:'.05em', textAlign: i===0?'left':'right' }}>{h}</span>
+                    <span key={i} className={(i===1||i===4)?'re-vis-hide-sm':''} style={{ fontSize:11, fontWeight:700, color:'rgba(160,150,200,.45)', letterSpacing:'.05em', textAlign: i===0?'left':'right' }}>{h}</span>
                   ))}
                 </div>
 
@@ -416,9 +483,8 @@ function DashboardView() {
                     const timeStr  = lastSeen ? lastSeen.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' }) : '—';
                     const isKing   = (v.level || 0) >= 20;
                     return (
-                      <div key={v.unique_id}
-                        style={{ display:'grid', gridTemplateColumns:'2.8fr 0.6fr 0.8fr 0.8fr 0.8fr', gap:0,
-                          padding:'7px 16px', borderBottom:'1px solid rgba(139,92,246,.05)', transition:'background .1s',
+                      <div key={v.unique_id} className="re-vis-grid"
+                        style={{ padding:'7px 16px', borderBottom:'1px solid rgba(139,92,246,.05)', transition:'background .1s',
                           background: idx%2===0 ? 'transparent' : 'rgba(139,92,246,.025)' }}
                         onMouseEnter={e=>e.currentTarget.style.background='rgba(139,92,246,.07)'}
                         onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?'transparent':'rgba(139,92,246,.025)'}>
@@ -453,7 +519,7 @@ function DashboardView() {
                         </div>
 
                         {/* level */}
-                        <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end' }}>
+                        <div className="re-vis-hide-sm" style={{ display:'flex', alignItems:'center', justifyContent:'flex-end' }}>
                           <span style={{ padding:'2px 8px', borderRadius:99, fontSize:12, fontWeight:700,
                             background: isKing ? 'linear-gradient(135deg,rgba(255,180,30,.25),rgba(220,80,255,.2))' : 'rgba(139,92,246,.15)',
                             color: isKing ? 'rgba(255,210,80,.9)' : 'rgba(167,139,250,.8)',
@@ -475,7 +541,7 @@ function DashboardView() {
                         </div>
 
                         {/* last seen */}
-                        <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', fontSize:11, color:'rgba(160,150,200,.4)' }}>
+                        <div className="re-vis-hide-sm" style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', fontSize:11, color:'rgba(160,150,200,.4)' }}>
                           {timeStr}
                         </div>
                       </div>

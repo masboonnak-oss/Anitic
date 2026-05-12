@@ -917,10 +917,19 @@ io.on('connection', (socket) => {
         console.log(`${tag} like ${u.displayName||'?'} +${lc} total=${liveTotals.totalLikes}`);
       });
 
+      let viewerDebugCount = 0;
       conn.on(WebcastEvent?.ROOM_USER || 'roomUser', (data) => {
-        const v = num(data?.viewerCount, data?.viewer_count, data?.totalUser, data?.total_user, data?.userCount, data?.user_count, data?.total);
-        if (!v) return;
-        liveTotals.viewers = v;
+        if (viewerDebugCount < 3) {
+          viewerDebugCount++;
+          console.log(`${tag} ROOM_USER raw[${viewerDebugCount}]`, JSON.stringify(Object.keys(data || {})), 'sample=', JSON.stringify({
+            viewerCount: data?.viewerCount, total: data?.total, totalUser: data?.totalUser,
+            userCount: data?.userCount, popularity: data?.popularity, memberCount: data?.memberCount,
+          }));
+        }
+        // ใน lib v2: WebcastRoomUserSeqMessage มี total (current) + totalUser (cumulative) เป็น string
+        const v = num(data?.viewerCount, data?.viewer_count, data?.userCount, data?.user_count,
+                      data?.memberCount, data?.member_count, data?.total, data?.totalUser, data?.total_user);
+        liveTotals.viewers = v; // อนุญาต 0 ได้ (ห้องเงียบ)
         socket.emit('roomUser', { viewerCount: v });
         io.to(`room:${roomKey(uniqueId)}`).emit('tiktokViewers', { viewerCount: v });
         const now = Date.now();
@@ -994,8 +1003,19 @@ io.on('connection', (socket) => {
           return;
         }
         console.log(`${tag} connected (roomId=${state?.roomId||'?'}${signApiKey?', signed':''})`);
+        // ดึง viewer count แรกจาก roomInfo (lib v2 บางรุ่นไม่ส่ง roomUser event ทันที)
+        try {
+          const rawV = state?.roomInfo?.userCount ?? state?.roomInfo?.user_count
+                    ?? state?.roomInfo?.viewerCount ?? state?.roomInfo?.stats?.totalUser
+                    ?? state?.roomInfo?.stats?.total_user;
+          const initV = Number(rawV);
+          if (Number.isFinite(initV) && initV >= 0) {
+            liveTotals.viewers = initV;
+            console.log(`${tag} initial viewers from state=${initV}`);
+          }
+        } catch (_) {}
         socket.emit('tiktokConnected', state);
-        if (liveTotals.viewers)       socket.emit('roomUser', { viewerCount: liveTotals.viewers });
+        socket.emit('roomUser', { viewerCount: liveTotals.viewers || 0 });
         if (liveTotals.totalLikes)    socket.emit('like',     { totalLikeCount: liveTotals.totalLikes, likeCount: 0 });
         if (liveTotals.totalDiamonds) socket.emit('gift',     { diamonds: liveTotals.totalDiamonds, _snapshot: true, repeatCount: 1, giftName: '(snapshot)', uniqueId: '__snapshot__', displayName: '' });
         // ส่ง Top-3 ผู้ส่งเพชรทันที (overlay จะใช้กำหนดเอฟเฟกต์พิเศษ)

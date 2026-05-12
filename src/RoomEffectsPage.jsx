@@ -170,21 +170,62 @@ function DashboardView() {
         @keyframes kingPulse{0%{box-shadow:0 0 50px rgba(255,190,30,.7),0 0 100px rgba(220,80,255,.4)}50%{box-shadow:0 0 80px rgba(255,190,30,1),0 0 160px rgba(220,80,255,.7),0 0 240px rgba(255,130,0,.3)}100%{box-shadow:0 0 50px rgba(255,190,30,.7),0 0 100px rgba(220,80,255,.4)}}
         @keyframes lightningFlash{0%,100%{opacity:0}10%,30%{opacity:1}20%,40%{opacity:.3}}
         @keyframes ringOut{0%{transform:translate(-50%,-50%) scale(0);opacity:.8}100%{transform:translate(-50%,-50%) scale(4);opacity:0}}
-        /* ─── Tokyo Gaming aesthetic ─── */
+        /* ─── Tokyo Gaming PRO aesthetic ─── */
         @keyframes tg-grid-pan{0%{background-position:0 0,0 0}100%{background-position:60px 60px,60px 60px}}
         @keyframes tg-scan{0%{transform:translateY(-100%)}100%{transform:translateY(100vh)}}
         @keyframes tg-emoji-rise{0%{transform:translateY(110vh) rotate(0deg);opacity:0}10%{opacity:.55}90%{opacity:.55}100%{transform:translateY(-15vh) rotate(360deg);opacity:0}}
-        @keyframes tg-glow-pulse{0%,100%{box-shadow:0 0 24px -10px var(--gc,#a78bfa),inset 0 0 0 1px rgba(255,255,255,.04)}50%{box-shadow:0 0 36px -6px var(--gc,#a78bfa),inset 0 0 0 1px rgba(255,255,255,.08)}}
-        @keyframes tg-neon-border{0%,100%{border-color:rgba(167,139,250,.35)}50%{border-color:rgba(244,114,182,.55)}}
+        @keyframes tg-glow-pulse{0%,100%{box-shadow:0 0 24px -10px var(--gc,#a78bfa),inset 0 0 0 1px rgba(255,255,255,.04)}50%{box-shadow:0 0 40px -4px var(--gc,#a78bfa),inset 0 0 0 1px rgba(255,255,255,.1)}}
+        @keyframes tg-aurora{0%{transform:translate(0,0) rotate(0deg) scale(1)}33%{transform:translate(8%,-4%) rotate(120deg) scale(1.1)}66%{transform:translate(-6%,6%) rotate(240deg) scale(.95)}100%{transform:translate(0,0) rotate(360deg) scale(1)}}
+        @keyframes tg-holo{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+        @keyframes tg-rainbow-text{0%,100%{filter:hue-rotate(0deg)}50%{filter:hue-rotate(60deg)}}
+        @keyframes tg-ring-pulse{0%{transform:scale(1);opacity:.8}100%{transform:scale(2.4);opacity:0}}
+        @keyframes tg-counter-pop{0%{transform:scale(.6) translateY(8px);opacity:0;filter:blur(4px)}60%{transform:scale(1.18) translateY(-2px);filter:blur(0)}100%{transform:scale(1) translateY(0);opacity:1}}
+        @keyframes tg-tab-glow{0%,100%{box-shadow:0 0 0 0 rgba(167,139,250,0)}50%{box-shadow:0 0 18px -2px rgba(167,139,250,.6)}}
+        @keyframes tg-input-glow{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,0),inset 0 0 0 1px rgba(139,92,246,.25)}50%{box-shadow:0 0 24px -6px rgba(124,58,237,.55),inset 0 0 0 1px rgba(139,92,246,.5)}}
+        @keyframes tg-icon-float{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-3px) rotate(-4deg)}}
+        @keyframes tg-side-glow{0%,100%{box-shadow:inset 4px 0 0 -2px rgba(167,139,250,.4)}50%{box-shadow:inset 4px 0 0 -2px rgba(244,114,182,.7)}}
+        @media (prefers-reduced-motion: reduce){
+          .tg-aurora,.tg-grid,.tg-scanline,.tg-emoji,.re-stat-card,.re-stat-card::before,.re-connect-card::before,.re-page-title,.re-sidebar button.re-nav-active,.re-filter-pill.active,.re-connect-btn::after,.live-ring{animation:none!important}
+          .re-stat-card:hover{transform:none}
+        }
         .tg-bg{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
-        .tg-grid{position:absolute;inset:-2px;background-image:linear-gradient(rgba(167,139,250,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(244,114,182,.06) 1px,transparent 1px);background-size:60px 60px;animation:tg-grid-pan 24s linear infinite;mask-image:radial-gradient(ellipse at center,#000 30%,transparent 80%)}
+        .tg-grid{position:absolute;inset:-2px;background-image:linear-gradient(rgba(167,139,250,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(244,114,182,.07) 1px,transparent 1px);background-size:60px 60px;animation:tg-grid-pan 24s linear infinite;mask-image:radial-gradient(ellipse at center,#000 30%,transparent 80%)}
+        .tg-aurora{position:absolute;inset:-25%;background:conic-gradient(from 0deg at 50% 50%,rgba(244,114,182,.16) 0deg,transparent 60deg,rgba(34,211,238,.16) 120deg,transparent 180deg,rgba(167,139,250,.18) 240deg,transparent 300deg,rgba(244,114,182,.16) 360deg);animation:tg-aurora 32s ease-in-out infinite;filter:blur(60px);opacity:.7}
         .tg-glow1{position:absolute;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(244,114,182,.18),transparent 65%);top:-180px;right:-160px;filter:blur(40px)}
         .tg-glow2{position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(34,211,238,.14),transparent 65%);bottom:-220px;left:-160px;filter:blur(50px)}
         .tg-glow3{position:absolute;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,rgba(167,139,250,.16),transparent 65%);top:40%;left:35%;filter:blur(60px)}
         .tg-scanline{position:absolute;inset:0 0 0 0;background:linear-gradient(180deg,transparent 0,rgba(167,139,250,.07) 50%,transparent 100%);height:120px;animation:tg-scan 8s linear infinite}
         .tg-emoji{position:absolute;font-size:18px;opacity:.55;animation:tg-emoji-rise linear infinite;text-shadow:0 0 12px currentColor;will-change:transform}
-        .re-stat-card{transition:transform .2s,box-shadow .2s;animation:tg-glow-pulse 3.6s ease-in-out infinite}
-        .re-stat-card:hover{transform:translateY(-2px) scale(1.02)}
+        /* ── HOLOGRAPHIC CARDS (stat cards + connect card) ── */
+        .re-stat-card{position:relative;transition:transform .25s cubic-bezier(.2,.8,.3,1.2),box-shadow .25s;animation:tg-glow-pulse 3.6s ease-in-out infinite;overflow:hidden}
+        .re-stat-card::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(120deg,var(--gc,#a78bfa) 0%,#22d3ee 25%,#f472b6 50%,#fbbf24 75%,var(--gc,#a78bfa) 100%);background-size:300% 100%;animation:tg-holo 6s linear infinite;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.55;pointer-events:none}
+        .re-stat-card::after{content:'';position:absolute;inset:0;border-radius:inherit;background:radial-gradient(circle at 30% 20%,rgba(255,255,255,.06),transparent 50%);pointer-events:none}
+        .re-stat-card:hover{transform:translateY(-4px) scale(1.03) rotate(-.5deg)}
+        .re-stat-card:hover::before{opacity:1}
+        .re-stat-card:hover .re-stat-icon{animation:tg-icon-float 1.2s ease-in-out infinite}
+        .re-stat-val{animation:tg-counter-pop .5s cubic-bezier(.2,.8,.3,1.2)}
+        /* ── CONNECT CARD holo border ── */
+        .re-connect-card{position:relative;overflow:hidden}
+        .re-connect-card::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(120deg,#7c3aed 0%,#22d3ee 30%,#f472b6 60%,#fbbf24 100%);background-size:300% 100%;animation:tg-holo 8s linear infinite;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.6;pointer-events:none}
+        .re-connect-card input:focus{animation:tg-input-glow 2s ease-in-out infinite}
+        /* ── PAGE HEADER gradient text ── */
+        .re-page-title{background:linear-gradient(120deg,#fff 0%,#c4b5fd 35%,#f472b6 65%,#fff 100%);background-size:200% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:tg-holo 6s linear infinite;filter:drop-shadow(0 0 24px rgba(167,139,250,.35))}
+        /* ── SIDEBAR active glow ── */
+        .re-sidebar{position:relative}
+        .re-sidebar button.re-nav-active{position:relative;animation:tg-side-glow 2.6s ease-in-out infinite}
+        /* ── EVENT ROW hover lift ── */
+        .re-event-row{transition:background .15s,transform .15s,box-shadow .15s}
+        .re-event-row:hover{background:linear-gradient(90deg,rgba(139,92,246,.12),rgba(244,114,182,.04))!important;transform:translateX(2px);box-shadow:inset 3px 0 0 rgba(244,114,182,.65)}
+        /* ── LIVE indicator multi-ring ── */
+        .live-ring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(34,197,94,.6);animation:tg-ring-pulse 1.6s ease-out infinite}
+        .live-ring.r2{animation-delay:.5s}
+        /* ── Filter pill hover ── */
+        .re-filter-pill{transition:all .15s;position:relative}
+        .re-filter-pill:hover{transform:translateY(-1px);box-shadow:0 4px 14px -6px rgba(167,139,250,.6)}
+        .re-filter-pill.active{animation:tg-tab-glow 2.4s ease-in-out infinite}
+        /* ── Connect button hot ── */
+        .re-connect-btn{position:relative;overflow:hidden}
+        .re-connect-btn::after{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);animation:np-sweep 2.2s ease-in-out infinite}
         input::placeholder{color:rgba(180,160,230,.35)}
         input:focus{outline:none}
         .re-sidebar{width:156px;flex-shrink:0}
@@ -220,8 +261,9 @@ function DashboardView() {
         }
       `}</style>
 
-      {/* ─── Tokyo Gaming animated background ─── */}
+      {/* ─── Tokyo Gaming PRO animated background ─── */}
       <div className="tg-bg" aria-hidden>
+        <div className="tg-aurora" />
         <div className="tg-grid" />
         <div className="tg-glow1" />
         <div className="tg-glow2" />
@@ -246,7 +288,7 @@ function DashboardView() {
       <div style={{ display:'flex', height:'100vh', overflow:'hidden', position:'relative', zIndex:1 }}>
 
         {/* ══ SIDEBAR ══ */}
-        <aside className="re-sidebar" style={{ background:'#0f0e1a', borderRight:'1px solid rgba(139,92,246,.14)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        <aside className="re-sidebar" style={{ background:'rgba(15,14,26,.85)', backdropFilter:'blur(10px)', borderRight:'1px solid rgba(139,92,246,.18)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
           {/* logo */}
           <div style={{ padding:'20px 16px 16px', borderBottom:'1px solid rgba(139,92,246,.1)' }}>
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
@@ -262,10 +304,11 @@ function DashboardView() {
               { id:'settings',  icon:'⚙', label:'การตั้งค่า' },
             ].map(item => (
               <button key={item.id} onClick={() => setNavTab(item.id)}
-                style={{ width:'100%', display:'flex', alignItems:'center', gap:9, padding:'9px 10px', borderRadius:8, border:'none', cursor:'pointer', marginBottom:4, transition:'all .15s',
-                  background: navTab===item.id ? 'rgba(139,92,246,.18)' : 'transparent',
-                  color: navTab===item.id ? '#a78bfa' : 'rgba(160,150,200,.5)',
-                  fontWeight: navTab===item.id ? 700 : 500, fontSize:13 }}>
+                className={navTab===item.id?'re-nav-active':''}
+                style={{ width:'100%', display:'flex', alignItems:'center', gap:9, padding:'10px 12px', borderRadius:10, border:'none', cursor:'pointer', marginBottom:4, transition:'all .2s',
+                  background: navTab===item.id ? 'linear-gradient(90deg,rgba(139,92,246,.28),rgba(244,114,182,.1))' : 'transparent',
+                  color: navTab===item.id ? '#e9d5ff' : 'rgba(160,150,200,.55)',
+                  fontWeight: navTab===item.id ? 800 : 500, fontSize:13 }}>
                 <span style={{ fontSize:14 }}>{item.icon}</span>
                 <span className="re-nav-label">{item.label}</span>
                 {navTab===item.id && <span style={{ marginLeft:'auto', width:4, height:4, borderRadius:'50%', background:'#a78bfa', flexShrink:0 }} />}
@@ -283,21 +326,25 @@ function DashboardView() {
             </button>
           </div>
           {/* server status */}
-          <div style={{ padding:'10px 14px', borderTop:'1px solid rgba(139,92,246,.1)', marginTop:8, display:'flex', alignItems:'center', gap:7 }}>
-            <div style={{ width:7, height:7, borderRadius:'50%', background: statDot, flexShrink:0, animation: isLive?'pulse-live 1.8s infinite':undefined }} />
-            <span className="re-status-text" style={{ fontSize:11, color:'rgba(160,150,200,.55)', lineHeight:1.3 }}>{isLive ? 'เซิร์ฟเวอร์เชื่อมต่อแล้ว' : statTxt}</span>
+          <div style={{ padding:'10px 14px', borderTop:'1px solid rgba(139,92,246,.1)', marginTop:8, display:'flex', alignItems:'center', gap:9 }}>
+            <div style={{ position:'relative', width:9, height:9, flexShrink:0 }}>
+              <div style={{ position:'absolute', inset:0, borderRadius:'50%', background: statDot, boxShadow: isLive?`0 0 12px ${statDot}`:'none', animation: isLive?'pulse-live 1.8s infinite':undefined }} />
+              {isLive && <><div className="live-ring" /><div className="live-ring r2" /></>}
+            </div>
+            <span className="re-status-text" style={{ fontSize:11, color:'rgba(160,150,200,.6)', lineHeight:1.3, fontWeight:600 }}>{isLive ? 'LIVE • เชื่อมต่อแล้ว' : statTxt}</span>
           </div>
         </aside>
 
         {/* ══ MAIN ══ */}
-        <main style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', overflow:'hidden', background:'#0b0b14' }}>
+        <main style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', overflow:'hidden', background:'rgba(11,11,20,.55)' }}>
 
           {/* ─ page header ─ */}
           <div className="re-page-header">
-            <div style={{ fontSize:24, fontWeight:900, letterSpacing:'0.06em', color:'#f0eeff' }}>
+            <div className="re-page-title" style={{ fontSize:28, fontWeight:900, letterSpacing:'0.08em', display:'inline-block' }}>
               {navTab === 'dashboard' ? 'DASHBOARD' : navTab === 'visitors' ? 'ผู้เยี่ยมชม' : 'การตั้งค่า'}
             </div>
-            <div style={{ fontSize:12, color:'rgba(160,150,200,.5)', marginTop:2 }}>
+            <div style={{ fontSize:12, color:'rgba(180,170,220,.6)', marginTop:4, display:'flex', alignItems:'center', gap:8 }}>
+              <span style={{ width:6, height:6, borderRadius:'50%', background: isLive?'#22c55e':'rgba(167,139,250,.5)', boxShadow: isLive?'0 0 8px #22c55e':'none' }} />
               {navTab === 'dashboard' ? 'ควบคุม TikTok LIVE แบบเรียลไทม์' : navTab === 'visitors' ? 'บันทึกชื่อ รูป เลเวล ใจ และเพชรของผู้ชม' : 'ตั้งค่า Overlay สำหรับ OBS / TikTok Live Studio'}
             </div>
           </div>
@@ -328,7 +375,7 @@ function DashboardView() {
                       />
                     </div>
                     {status==='idle'||status==='error' ? (
-                      <button onClick={connect} disabled={!username.trim()} style={{ background:'linear-gradient(135deg,#7c3aed,#6d28d9)', border:'none', borderRadius:10, color:'#fff', padding:'11px 24px', fontSize:14, fontWeight:700, cursor:'pointer', opacity:username.trim()?1:.45, display:'flex', alignItems:'center', gap:8, whiteSpace:'nowrap' }}>
+                      <button className="re-connect-btn" onClick={connect} disabled={!username.trim()} style={{ background:'linear-gradient(135deg,#7c3aed 0%,#a855f7 50%,#ec4899 100%)', border:'none', borderRadius:10, color:'#fff', padding:'11px 26px', fontSize:14, fontWeight:800, cursor:'pointer', opacity:username.trim()?1:.45, display:'flex', alignItems:'center', gap:8, whiteSpace:'nowrap', boxShadow:'0 8px 24px -8px rgba(168,85,247,.65)', letterSpacing:'.04em' }}>
                         ▶ &nbsp;เชื่อมต่อ
                       </button>
                     ) : status==='connecting' ? (
@@ -357,11 +404,11 @@ function DashboardView() {
 
                 {/* stat cards */}
                 {statCards.map(s => (
-                  <div key={s.label} className="re-stat-card" style={{ background:'rgba(22,21,42,.85)', backdropFilter:'blur(8px)', border:`1px solid ${s.color}33`, borderRadius:14, padding:'16px 18px', display:'flex', flexDirection:'column', justifyContent:'space-between', gap:14, minHeight:120, '--gc': s.color }}>
-                    <div style={{ width:34, height:34, borderRadius:10, background:`${s.color}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:17 }}>{s.icon}</div>
+                  <div key={s.label} className="re-stat-card" style={{ background:'linear-gradient(155deg,rgba(22,21,42,.92) 0%,rgba(28,18,48,.92) 100%)', backdropFilter:'blur(10px)', border:`1px solid ${s.color}33`, borderRadius:14, padding:'16px 18px', display:'flex', flexDirection:'column', justifyContent:'space-between', gap:14, minHeight:120, '--gc': s.color }}>
+                    <div className="re-stat-icon" style={{ width:36, height:36, borderRadius:10, background:`linear-gradient(135deg,${s.color}33,${s.color}11)`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, boxShadow:`0 0 18px -6px ${s.color}88, inset 0 1px 0 rgba(255,255,255,.08)` }}>{s.icon}</div>
                     <div>
-                      <div className="re-stat-val" style={{ fontSize:22, fontWeight:900, color:s.color, lineHeight:1, marginBottom:3 }}>{s.value}</div>
-                      <div style={{ fontSize:11, color:'rgba(160,150,200,.5)', fontWeight:600 }}>{s.label}</div>
+                      <div key={String(s.value)} className="re-stat-val" style={{ fontSize:24, fontWeight:900, color:s.color, lineHeight:1, marginBottom:4, textShadow:`0 0 22px ${s.color}55`, letterSpacing:'-.01em' }}>{s.value}</div>
+                      <div style={{ fontSize:11, color:'rgba(160,150,200,.55)', fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase' }}>{s.label}</div>
                     </div>
                   </div>
                 ))}
@@ -381,7 +428,8 @@ function DashboardView() {
                 <div style={{ padding:'10px 14px', borderBottom:'1px solid rgba(139,92,246,.08)', display:'flex', gap:6, flexWrap:'wrap', flexShrink:0 }}>
                   {FILTERS.map(f => (
                     <button key={f.key} onClick={() => setEventFilter(f.key)}
-                      style={{ background: eventFilter===f.key ? 'rgba(139,92,246,.22)' : 'rgba(139,92,246,.06)', border:`1px solid ${eventFilter===f.key?'rgba(139,92,246,.5)':'rgba(139,92,246,.12)'}`, borderRadius:20, color: eventFilter===f.key?'#c4b5fd':'rgba(160,150,200,.5)', fontSize:12, fontWeight:600, padding:'4px 12px', cursor:'pointer', transition:'all .15s', whiteSpace:'nowrap' }}>
+                      className={`re-filter-pill ${eventFilter===f.key?'active':''}`}
+                      style={{ background: eventFilter===f.key ? 'linear-gradient(135deg,rgba(139,92,246,.32),rgba(244,114,182,.18))' : 'rgba(139,92,246,.06)', border:`1px solid ${eventFilter===f.key?'rgba(167,139,250,.6)':'rgba(139,92,246,.12)'}`, borderRadius:20, color: eventFilter===f.key?'#e9d5ff':'rgba(160,150,200,.55)', fontSize:12, fontWeight:700, padding:'4px 12px', cursor:'pointer', whiteSpace:'nowrap' }}>
                       {f.label}
                       {f.key !== 'all' && <span style={{ marginLeft:4, opacity:.6 }}>({events.filter(e=>e.type===f.key).length})</span>}
                     </button>
@@ -397,9 +445,7 @@ function DashboardView() {
                       <div style={{ fontSize:12, color:'rgba(160,150,200,.25)', marginTop:4 }}>เชื่อมต่อ TikTok LIVE เพื่อเริ่มต้นกัน</div>
                     </div>
                   ) : filteredEvents.map(item => (
-                    <div key={item.id} style={{ display:'flex', alignItems:'center', gap:9, padding:'6px 8px', borderRadius:8, marginBottom:2, transition:'background .1s' }}
-                      onMouseEnter={e=>e.currentTarget.style.background='rgba(139,92,246,.06)'}
-                      onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                    <div key={item.id} className="re-event-row" style={{ display:'flex', alignItems:'center', gap:9, padding:'7px 10px', borderRadius:8, marginBottom:2 }}>
                       {/* avatar */}
                       {item.profilePicUrl
                         ? <img src={item.profilePicUrl} alt="" style={{ width:28, height:28, borderRadius:'50%', objectFit:'cover', flexShrink:0, border:`1.5px solid ${TYPE_COLOR[item.type]||'#444'}55` }} onError={e=>e.target.style.display='none'} />

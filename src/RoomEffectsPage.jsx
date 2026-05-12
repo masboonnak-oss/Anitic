@@ -91,7 +91,7 @@ function DashboardView() {
       setErrMsg(a ? `กำลังลองใหม่ ${a}/${m||5} (อีก ${Math.round((ms||2000)/1000)}s)` : 'กำลังเชื่อมต่อใหม่...');
     });
     sock.on('roomUser', d => { if (typeof d?.viewerCount === 'number') setViewers(d.viewerCount); });
-    sock.on('like',     d => { if (typeof d?.totalLikeCount === 'number' && d.totalLikeCount > 0) setLikes(d.totalLikeCount); });
+    sock.on('like',     d => { if (typeof d?.totalLikeCount === 'number') setLikes(d.totalLikeCount); });
 
     const push = item => setEvents(prev => {
       const next = [...prev, item];
@@ -170,6 +170,21 @@ function DashboardView() {
         @keyframes kingPulse{0%{box-shadow:0 0 50px rgba(255,190,30,.7),0 0 100px rgba(220,80,255,.4)}50%{box-shadow:0 0 80px rgba(255,190,30,1),0 0 160px rgba(220,80,255,.7),0 0 240px rgba(255,130,0,.3)}100%{box-shadow:0 0 50px rgba(255,190,30,.7),0 0 100px rgba(220,80,255,.4)}}
         @keyframes lightningFlash{0%,100%{opacity:0}10%,30%{opacity:1}20%,40%{opacity:.3}}
         @keyframes ringOut{0%{transform:translate(-50%,-50%) scale(0);opacity:.8}100%{transform:translate(-50%,-50%) scale(4);opacity:0}}
+        /* ─── Tokyo Gaming aesthetic ─── */
+        @keyframes tg-grid-pan{0%{background-position:0 0,0 0}100%{background-position:60px 60px,60px 60px}}
+        @keyframes tg-scan{0%{transform:translateY(-100%)}100%{transform:translateY(100vh)}}
+        @keyframes tg-emoji-rise{0%{transform:translateY(110vh) rotate(0deg);opacity:0}10%{opacity:.55}90%{opacity:.55}100%{transform:translateY(-15vh) rotate(360deg);opacity:0}}
+        @keyframes tg-glow-pulse{0%,100%{box-shadow:0 0 24px -10px var(--gc,#a78bfa),inset 0 0 0 1px rgba(255,255,255,.04)}50%{box-shadow:0 0 36px -6px var(--gc,#a78bfa),inset 0 0 0 1px rgba(255,255,255,.08)}}
+        @keyframes tg-neon-border{0%,100%{border-color:rgba(167,139,250,.35)}50%{border-color:rgba(244,114,182,.55)}}
+        .tg-bg{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+        .tg-grid{position:absolute;inset:-2px;background-image:linear-gradient(rgba(167,139,250,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(244,114,182,.06) 1px,transparent 1px);background-size:60px 60px;animation:tg-grid-pan 24s linear infinite;mask-image:radial-gradient(ellipse at center,#000 30%,transparent 80%)}
+        .tg-glow1{position:absolute;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(244,114,182,.18),transparent 65%);top:-180px;right:-160px;filter:blur(40px)}
+        .tg-glow2{position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(34,211,238,.14),transparent 65%);bottom:-220px;left:-160px;filter:blur(50px)}
+        .tg-glow3{position:absolute;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,rgba(167,139,250,.16),transparent 65%);top:40%;left:35%;filter:blur(60px)}
+        .tg-scanline{position:absolute;inset:0 0 0 0;background:linear-gradient(180deg,transparent 0,rgba(167,139,250,.07) 50%,transparent 100%);height:120px;animation:tg-scan 8s linear infinite}
+        .tg-emoji{position:absolute;font-size:18px;opacity:.55;animation:tg-emoji-rise linear infinite;text-shadow:0 0 12px currentColor;will-change:transform}
+        .re-stat-card{transition:transform .2s,box-shadow .2s;animation:tg-glow-pulse 3.6s ease-in-out infinite}
+        .re-stat-card:hover{transform:translateY(-2px) scale(1.02)}
         input::placeholder{color:rgba(180,160,230,.35)}
         input:focus{outline:none}
         .re-sidebar{width:156px;flex-shrink:0}
@@ -205,7 +220,30 @@ function DashboardView() {
         }
       `}</style>
 
-      <div style={{ display:'flex', height:'100vh', overflow:'hidden' }}>
+      {/* ─── Tokyo Gaming animated background ─── */}
+      <div className="tg-bg" aria-hidden>
+        <div className="tg-grid" />
+        <div className="tg-glow1" />
+        <div className="tg-glow2" />
+        <div className="tg-glow3" />
+        <div className="tg-scanline" />
+        {(() => {
+          const ems = ['✦','⚡','💎','❤️','🎮','✨','★','💜'];
+          const items = [];
+          for (let i = 0; i < 14; i++) {
+            const e = ems[i % ems.length];
+            const left = (7 + (i * 6.7) % 92).toFixed(1) + '%';
+            const dur = (14 + (i * 1.7) % 12).toFixed(1) + 's';
+            const delay = ((i * 1.3) % 12).toFixed(1) + 's';
+            const sz = 14 + (i % 4) * 4;
+            const color = ['#f472b6','#a78bfa','#22d3ee','#fbbf24'][i % 4];
+            items.push(<span key={i} className="tg-emoji" style={{ left, fontSize:sz, color, animationDuration:dur, animationDelay:delay }}>{e}</span>);
+          }
+          return items;
+        })()}
+      </div>
+
+      <div style={{ display:'flex', height:'100vh', overflow:'hidden', position:'relative', zIndex:1 }}>
 
         {/* ══ SIDEBAR ══ */}
         <aside className="re-sidebar" style={{ background:'#0f0e1a', borderRight:'1px solid rgba(139,92,246,.14)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
@@ -319,7 +357,7 @@ function DashboardView() {
 
                 {/* stat cards */}
                 {statCards.map(s => (
-                  <div key={s.label} className="re-stat-card" style={{ background:'#16152a', border:'1px solid rgba(139,92,246,.14)', borderRadius:14, padding:'16px 18px', display:'flex', flexDirection:'column', justifyContent:'space-between', gap:14, minHeight:120 }}>
+                  <div key={s.label} className="re-stat-card" style={{ background:'rgba(22,21,42,.85)', backdropFilter:'blur(8px)', border:`1px solid ${s.color}33`, borderRadius:14, padding:'16px 18px', display:'flex', flexDirection:'column', justifyContent:'space-between', gap:14, minHeight:120, '--gc': s.color }}>
                     <div style={{ width:34, height:34, borderRadius:10, background:`${s.color}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:17 }}>{s.icon}</div>
                     <div>
                       <div className="re-stat-val" style={{ fontSize:22, fontWeight:900, color:s.color, lineHeight:1, marginBottom:3 }}>{s.value}</div>
@@ -395,10 +433,19 @@ function DashboardView() {
                 ];
                 return (
                   <div style={{ background:'linear-gradient(135deg,rgba(40,20,60,.6),rgba(20,10,40,.6))', border:'1px solid rgba(255,200,80,.2)', borderRadius:14, padding:'14px 16px', flexShrink:0 }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12, flexWrap:'wrap' }}>
                       <span style={{ fontSize:15 }}>👑</span>
                       <span style={{ fontWeight:800, fontSize:13, color:'rgba(255,210,80,.9)', letterSpacing:'.06em' }}>TOP 3 ผู้ส่งเพชรสูงสุด</span>
-                      <span style={{ fontSize:11, color:'rgba(160,150,200,.45)', marginLeft:6 }}>(จะได้เอฟเฟกต์เข้าห้องพิเศษในอนาคต)</span>
+                      <span style={{ fontSize:11, color:'rgba(160,150,200,.45)' }}>(เอฟเฟกต์เข้าห้องพิเศษบน Overlay)</span>
+                      <div style={{ flex:1 }} />
+                      <button onClick={async () => {
+                        const u = username.trim().replace(/^@/,'');
+                        if (!u || !window.confirm(`รีเซ็ตลำดับผู้ส่งเพชรของ @${u}? (ไม่ลบ visitor)`)) return;
+                        await fetch(`/api/room-visitors/${encodeURIComponent(u)}/diamonds`, { method:'DELETE' });
+                        setVisitors(prev => prev.map(v => ({ ...v, total_diamonds: 0 })));
+                      }} style={{ background:'rgba(251,191,36,.1)', border:'1px solid rgba(251,191,36,.4)', borderRadius:8, color:'rgba(251,191,36,.95)', fontSize:11, fontWeight:700, padding:'4px 10px', cursor:'pointer', whiteSpace:'nowrap' }}>
+                        🔄 ล้างลำดับเพชร
+                      </button>
                     </div>
                     <div className="re-podium" style={{ display:'flex', gap:10 }}>
                       {top3.map((v, i) => {
@@ -650,59 +697,98 @@ function pushNameplate(prev, item) {
 }
 
 function OverlayView() {
-  const [queue, setQueue] = useState([]);
+  const [queue, setQueue] = useState([]);       // ป้ายปกติ (มุมล่างซ้าย)
+  const [vipQueue, setVipQueue] = useState([]); // ป้าย VIP top-3 (ลอยข้ามจอ)
+  const topMapRef = useRef(new Map());          // uniqueId → rank (1|2|3) — ใช้ ref กัน stale closure
   const uidRef  = useRef(0);
-  const seenRef = useRef(new Map()); // uniqueId → lastShown ts
-  const timersRef = useRef(new Set());
+  const seenRef = useRef(new Map());
   const mkid = () => `${Date.now()}-${++uidRef.current}`;
-  const setTrackedTimeout = (fn, ms) => {
-    const id = setTimeout(() => { timersRef.current.delete(id); fn(); }, ms);
-    timersRef.current.add(id);
-    return id;
-  };
 
-  const tryShow = (uid, displayName) => {
+  const tryShow = (uid, displayName, forceRank) => {
     const name = (displayName || uid || '').trim();
     if (!name) return;
     const now = Date.now();
     const last = uid ? (seenRef.current.get(uid) || 0) : 0;
     if (uid && now - last < NAMEPLATE_DEDUPE_MS) return;
     if (uid) seenRef.current.set(uid, now);
-    // gc dedupe map ทุก ~5นาที
     if (seenRef.current.size > 4000) {
       const cutoff = now - NAMEPLATE_DEDUPE_MS;
       for (const [k, t] of seenRef.current) if (t < cutoff) seenRef.current.delete(k);
     }
-    setQueue(prev => pushNameplate(prev, { _uid: mkid(), name }));
+    const rank = forceRank || (uid ? topMapRef.current.get(uid) : null);
+    if (rank) {
+      setVipQueue(prev => {
+        // จัดสลอตคงที่ (0,1) เพื่อกัน yOffset กระโดดเมื่อรายการกลางสลายไป
+        const usedSlots = new Set(prev.map(p => p.slot));
+        let slot = 0; while (usedSlots.has(slot)) slot++;
+        if (slot > 1) { // เกินสลอต → ดันรายการเก่าสุดออก
+          const dropped = prev[0];
+          const remain = prev.slice(1);
+          const used2 = new Set(remain.map(p => p.slot));
+          slot = 0; while (used2.has(slot)) slot++;
+          return [...remain, { _uid: mkid(), name, rank, slot }];
+        }
+        return [...prev, { _uid: mkid(), name, rank, slot }];
+      });
+    } else {
+      setQueue(prev => pushNameplate(prev, { _uid: mkid(), name }));
+    }
   };
 
-  // DEMO: ปั๊มชื่อตัวอย่างเป็นระยะ
+  // DEMO
   useEffect(() => {
     if (!IS_DEMO) return;
     const names = ['BabyNoryy', 'KingArthur', 'StarLight ✦', 'นักรบทองคำ', 'LegendX'];
     let i = 0;
-    const fire = () => { tryShow(`demo-${i}`, names[i % names.length]); i++; };
+    const fire = () => {
+      const uid = `demo-${i}`;
+      const rank = i < 3 ? (i + 1) : null; // 0,1,2 = TOP1,2,3
+      tryShow(uid, names[i % names.length], rank);
+      i++;
+    };
     fire();
     const iv = setInterval(fire, 3200);
     return () => clearInterval(iv);
   }, []);
 
+  // โหลด Top-3 ตอน mount
+  useEffect(() => {
+    if (!OVERLAY_USER) return;
+    fetch(`/api/top-diamond-senders/${encodeURIComponent(OVERLAY_USER)}`)
+      .then(r => r.json())
+      .then(d => {
+        const m = new Map();
+        (d?.top || []).forEach(t => m.set(t.uniqueId, t.rank));
+        topMapRef.current = m;
+      })
+      .catch(()=>{});
+  }, []);
+
+  // socket subscriptions (run once)
   useEffect(() => {
     if (!overlaySock) return;
     const onMember = (d) => tryShow(d?.uniqueId, d?.displayName || d?.uniqueId);
     const onChat   = (d) => tryShow(d?.uniqueId, d?.displayName || d?.uniqueId);
+    const onTop    = (list) => {
+      const m = new Map();
+      (list || []).forEach(t => m.set(t.uniqueId, t.rank));
+      topMapRef.current = m;
+    };
     overlaySock.on('tiktokMember', onMember);
     overlaySock.on('tiktokChat',   onChat);
+    overlaySock.on('topDiamondSenders', onTop);
     return () => {
       overlaySock.off('tiktokMember', onMember);
       overlaySock.off('tiktokChat',   onChat);
-      timersRef.current.forEach(clearTimeout);
-      timersRef.current.clear();
+      overlaySock.off('topDiamondSenders', onTop);
     };
   }, []);
 
   function dismiss(uid) {
     setQueue(prev => prev.filter(q => q._uid !== uid));
+  }
+  function dismissVip(uid) {
+    setVipQueue(prev => prev.filter(q => q._uid !== uid));
   }
 
   const isPreview = params.has('preview');
@@ -717,6 +803,8 @@ function OverlayView() {
         @keyframes np-sweep  {0%{transform:translateX(-120%) skewX(-18deg)}60%,100%{transform:translateX(220%) skewX(-18deg)}}
         @keyframes np-glow   {0%,100%{filter:drop-shadow(0 0 14px rgba(255,200,60,.55)) drop-shadow(0 0 28px rgba(220,80,255,.35))}50%{filter:drop-shadow(0 0 22px rgba(255,215,80,.85)) drop-shadow(0 0 44px rgba(255,128,255,.55))}}
         @keyframes np-spark  {0%{opacity:0;transform:translate(0,0) scale(.4)}30%{opacity:1}100%{opacity:0;transform:translate(var(--sx),var(--sy)) scale(.9)}}
+        @keyframes vip-rainbow{0%,100%{filter:hue-rotate(0deg) drop-shadow(0 0 24px rgba(255,200,60,.9)) drop-shadow(0 0 60px rgba(220,80,255,.7))}50%{filter:hue-rotate(40deg) drop-shadow(0 0 36px rgba(255,150,255,1)) drop-shadow(0 0 80px rgba(80,200,255,.85))}}
+        @keyframes vip-trail {0%{opacity:0;transform:translateX(-30px) scale(.6)}40%{opacity:1}100%{opacity:0;transform:translateX(60px) scale(1.1)}}
       `}</style>
 
       {isPreview && (
@@ -742,6 +830,15 @@ function OverlayView() {
         </AnimatePresence>
       </div>
 
+      {/* VIP TOP-3: ลอยจากซ้าย→ขวาข้ามจอ อลังการกว่าปกติ */}
+      <div style={{ position:'fixed', top:'42%', left:0, right:0, pointerEvents:'none', zIndex:60 }}>
+        <AnimatePresence>
+          {vipQueue.map(item => (
+            <VipNamePlate key={item._uid} name={item.name} rank={item.rank} stackIdx={item.slot} onDone={() => dismissVip(item._uid)} />
+          ))}
+        </AnimatePresence>
+      </div>
+
       {isPreview && queue.length === 0 && (
         <div style={{ position:'fixed', bottom:48, left:48, background:'rgba(10,0,20,.7)', border:'1px dashed rgba(255,200,60,.3)', borderRadius:12, padding:'14px 20px', backdropFilter:'blur(10px)' }}>
           <div style={{ fontSize:12, color:'rgba(255,200,60,.55)', letterSpacing:'.12em' }}>
@@ -750,6 +847,101 @@ function OverlayView() {
         </div>
       )}
     </>
+  );
+}
+
+/* ── VIP NAMEPLATE: TOP-3 ผู้ส่งเพชร ลอยซ้าย→ขวาข้ามจออลังการ ── */
+const VIP_LIFE_MS = 8200;
+const RANK_THEME = {
+  1: { label:'TOP 1', emoji:'👑', main:'#ffe14a', sub:'#ff5edb', tag:'⚜️ KING OF DIAMONDS', size:'clamp(34px,4vw,52px)' },
+  2: { label:'TOP 2', emoji:'💎', main:'#a8f4ff', sub:'#9d8bff', tag:'★ DIAMOND ROYAL',     size:'clamp(28px,3.4vw,42px)' },
+  3: { label:'TOP 3', emoji:'🏆', main:'#ffb86b', sub:'#ff5edb', tag:'✦ DIAMOND ELITE',     size:'clamp(26px,3vw,38px)' },
+};
+function VipNamePlate({ name, rank, stackIdx = 0, onDone }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, VIP_LIFE_MS);
+    return () => clearTimeout(t);
+  }, []);
+  const th = RANK_THEME[rank] || RANK_THEME[3];
+  const yOffset = stackIdx * 92;
+  const trails = Array.from({ length: 6 }, (_, i) => i);
+  return (
+    <motion.div
+      initial={{ x: '-110vw', opacity: 0, scale: 0.6 }}
+      animate={{ x: ['-110vw', '12vw', '52vw', '110vw'], opacity: [0, 1, 1, 0], scale: [0.6, 1.05, 1.05, 0.85] }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: VIP_LIFE_MS / 1000, ease: [0.18, 0.62, 0.32, 1], times: [0, 0.18, 0.78, 1] }}
+      style={{
+        position:'absolute', top: yOffset, left: 0,
+        animation:'vip-rainbow 2s ease-in-out infinite',
+        willChange:'transform,opacity',
+      }}
+    >
+      {/* ลำแสง trail ตามหลัง */}
+      <div style={{ position:'absolute', top:'50%', left:-160, transform:'translateY(-50%)', width:300, height:80, pointerEvents:'none',
+        background:`linear-gradient(90deg, transparent 0%, ${th.main}aa 60%, ${th.sub}cc 100%)`,
+        filter:'blur(18px)', borderRadius:'50%' }} />
+      {/* aura */}
+      <div style={{ position:'absolute', inset:-22, borderRadius:30, pointerEvents:'none',
+        background:`radial-gradient(ellipse at center, ${th.main}66 0%, ${th.sub}44 45%, transparent 75%)`, filter:'blur(20px)' }} />
+
+      <div style={{
+        position:'relative', display:'inline-flex', alignItems:'center', gap:18,
+        padding:'18px 36px 18px 28px', borderRadius:18,
+        background:`linear-gradient(135deg, rgba(20,4,12,.94), rgba(38,8,40,.94) 50%, rgba(8,8,40,.94))`,
+        boxShadow:`0 14px 60px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.18), 0 0 80px ${th.main}55`,
+      }}>
+        {/* rainbow border */}
+        <div style={{
+          position:'absolute', inset:0, borderRadius:18, padding:2.5, pointerEvents:'none',
+          background:`linear-gradient(120deg, ${th.main} 0%, ${th.sub} 25%, #80c8ff 50%, ${th.main} 75%, #fff2a8 100%)`,
+          backgroundSize:'250% 100%', animation:'np-shimmer 2.4s linear infinite',
+          WebkitMask:'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
+          WebkitMaskComposite:'xor', maskComposite:'exclude',
+        }} />
+
+        {/* rank badge */}
+        <div style={{ position:'relative', display:'flex', flexDirection:'column', alignItems:'center', gap:4, flexShrink:0 }}>
+          <div style={{ fontSize:38, lineHeight:1, filter:`drop-shadow(0 0 14px ${th.main})` }}>{th.emoji}</div>
+          <div style={{ fontSize:10, fontWeight:900, letterSpacing:'.18em', padding:'2px 8px', borderRadius:8,
+            background:`linear-gradient(135deg, ${th.main}, ${th.sub})`, color:'#1a0820',
+            boxShadow:`0 0 12px ${th.main}88` }}>{th.label}</div>
+        </div>
+
+        {/* name + tag */}
+        <div style={{ display:'flex', flexDirection:'column', gap:6, minWidth:0 }}>
+          <div style={{ fontSize:11, fontWeight:900, letterSpacing:'.32em', textTransform:'uppercase',
+            background:`linear-gradient(90deg, ${th.main}, ${th.sub})`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
+            fontFamily:'Cinzel,serif' }}>{th.tag}</div>
+          <div style={{
+            fontSize: th.size, fontWeight:900, lineHeight:1.05, letterSpacing:'.01em',
+            background:`linear-gradient(110deg, #fff8d6 0%, ${th.main} 25%, #ff9ce0 50%, ${th.sub} 75%, #fff8d6 100%)`,
+            backgroundSize:'250% 100%',
+            WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
+            animation:'np-shimmer 3s linear infinite',
+            whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:'48vw',
+            filter:`drop-shadow(0 2px 0 rgba(0,0,0,.55)) drop-shadow(0 0 16px ${th.main}cc)`,
+          }}>{name}</div>
+        </div>
+
+        {/* light sweep */}
+        <div style={{ position:'absolute', inset:0, overflow:'hidden', borderRadius:18, pointerEvents:'none' }}>
+          <div style={{ position:'absolute', top:0, bottom:0, left:0, width:'45%',
+            background:'linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent)',
+            mixBlendMode:'screen', animation:'np-sweep 1.8s ease-in-out infinite' }} />
+        </div>
+
+        {/* particles trailing */}
+        {trails.map(i => (
+          <span key={i} style={{
+            position:'absolute', left: -20 - i * 12, top: `${30 + ((i*17)%40)}%`,
+            fontSize: 14 + (i%3)*6, color: i%2 ? th.main : th.sub,
+            animation: `vip-trail ${1.4 + i*0.18}s ${i*0.12}s ease-out infinite`,
+            textShadow: `0 0 12px currentColor`, pointerEvents:'none',
+          }}>{['✦','✨','💎','★','⚡','◆'][i]}</span>
+        ))}
+      </div>
+    </motion.div>
   );
 }
 

@@ -191,6 +191,45 @@ async function upsertRoomVisitor({ roomUsername, uniqueId, displayName, profileP
   }
 }
 
+/* ── Top-3 ผู้ส่งเพชรต่อห้อง (สำหรับ overlay fancy entry effect) ── */
+async function getTopDiamondSenders(roomUsername, limit = 3) {
+  if (!roomUsername) return [];
+  try {
+    const r = await pool.query(
+      `SELECT unique_id, display_name, profile_pic_url, total_diamonds
+       FROM room_visitors
+       WHERE room_username = $1 AND total_diamonds > 0
+       ORDER BY total_diamonds DESC LIMIT $2`,
+      [roomUsername.toLowerCase(), limit]
+    );
+    return r.rows.map((row, i) => ({
+      rank: i + 1,
+      uniqueId: row.unique_id,
+      displayName: row.display_name,
+      profilePicUrl: row.profile_pic_url,
+      totalDiamonds: Number(row.total_diamonds) || 0,
+    }));
+  } catch (e) {
+    console.error('[db] getTopDiamondSenders:', e.message);
+    return [];
+  }
+}
+async function broadcastTop3(roomUsername) {
+  const top = await getTopDiamondSenders(roomUsername, 3);
+  io.to(`room:${roomKey(roomUsername)}`).emit('topDiamondSenders', top);
+}
+const top3Timers = new Map(); // roomUsername → timeout
+function scheduleTop3Broadcast(roomUsername) {
+  const k = (roomUsername || '').toLowerCase();
+  if (!k) return;
+  if (top3Timers.has(k)) return; // มี timer ค้างอยู่แล้ว
+  const t = setTimeout(() => {
+    top3Timers.delete(k);
+    broadcastTop3(k).catch(()=>{});
+  }, 1500);
+  top3Timers.set(k, t);
+}
+
 /* ── JWT secret (stored in DB) ── */
 let JWT_SECRET = '';
 async function getOrCreateJwtSecret() {
@@ -842,13 +881,26 @@ io.on('connection', (socket) => {
         io.to(`room:${roomKey(uniqueId)}`).emit('tiktokGift', giftPayload);
         upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: uid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level, diamonds });
         console.log(`${tag} gift ${u.displayName} +${diamonds}💎 (${giftPayload.giftName} x${repeats}) total=${liveTotals.totalDiamonds}`);
+        // อัปเดต Top-3 ผู้ส่งเพชร (debounce 1s กันยิง DB ถี่)
+        scheduleTop3Broadcast(uniqueId);
       });
 
+      let likeDebugCount = 0;
       conn.on(WebcastEvent?.LIKE || 'like', (data) => {
+        // debug 3 ครั้งแรก: log key ทั้งหมดเพื่อตรวจ shape ที่ lib ส่งมาจริง
+        if (likeDebugCount < 3) {
+          likeDebugCount++;
+          console.log(`${tag} LIKE raw[${likeDebugCount}]`, JSON.stringify(Object.keys(data || {})), 'sample=', JSON.stringify({
+            likeCount: data?.likeCount, count: data?.count, total: data?.total,
+            totalLikeCount: data?.totalLikeCount, total_like_count: data?.total_like_count,
+            user: data?.user?.uniqueId,
+          }));
+        }
         const lUid = data?.user?.uniqueId;
         const total = num(data?.totalLikeCount, data?.total_like_count, data?.totalLikes, data?.total);
-        const lc    = num(data?.likeCount, data?.like_count, data?.count, 1);
-        if (total) liveTotals.totalLikes = total;
+        let lc      = num(data?.likeCount, data?.like_count, data?.count);
+        if (!lc) lc = 1; // อย่างน้อย +1 ต่อ event เสมอ
+        if (total) liveTotals.totalLikes = Math.max(liveTotals.totalLikes, total);
         else liveTotals.totalLikes += lc; // fallback ถ้า lib ไม่ส่ง totalLikeCount
         const u = lUid ? rememberUser(uniqueId, lUid, {
           displayName: data?.user?.nickname || lUid,
@@ -946,6 +998,8 @@ io.on('connection', (socket) => {
         if (liveTotals.viewers)       socket.emit('roomUser', { viewerCount: liveTotals.viewers });
         if (liveTotals.totalLikes)    socket.emit('like',     { totalLikeCount: liveTotals.totalLikes, likeCount: 0 });
         if (liveTotals.totalDiamonds) socket.emit('gift',     { diamonds: liveTotals.totalDiamonds, _snapshot: true, repeatCount: 1, giftName: '(snapshot)', uniqueId: '__snapshot__', displayName: '' });
+        // ส่ง Top-3 ผู้ส่งเพชรทันที (overlay จะใช้กำหนดเอฟเฟกต์พิเศษ)
+        broadcastTop3(uniqueId).catch(()=>{});
       } catch (err) {
         let msg = err?.message || String(err);
         if (Array.isArray(err?.errors) && err.errors.length > 0) {
@@ -1584,8 +1638,30 @@ app.delete('/api/room-visitors/:username', async (req, res) => {
   if (!uname) return res.status(400).json({ error: 'username required' });
   try {
     const result = await pool.query('DELETE FROM room_visitors WHERE room_username = $1', [uname]);
+    broadcastTop3(uname).catch(()=>{});
     res.json({ deleted: result.rowCount });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ล้างเฉพาะลำดับเพชร (ไม่ลบ visitor) → ใช้สำหรับรีเซ็ต Top-3
+app.delete('/api/room-visitors/:username/diamonds', async (req, res) => {
+  const uname = String(req.params.username || '').toLowerCase().trim().replace(/^@/, '');
+  if (!uname) return res.status(400).json({ error: 'username required' });
+  try {
+    const result = await pool.query(
+      'UPDATE room_visitors SET total_diamonds = 0 WHERE room_username = $1',
+      [uname]
+    );
+    broadcastTop3(uname).catch(()=>{});
+    res.json({ updated: result.rowCount });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// REST: ดึง Top-3 ปัจจุบัน (overlay ใช้ตอนเปิดหน้าเพื่อเช็ค rank ทันที)
+app.get('/api/top-diamond-senders/:username', async (req, res) => {
+  const uname = String(req.params.username || '').toLowerCase().trim().replace(/^@/, '');
+  if (!uname) return res.status(400).json({ error: 'username required' });
+  res.json({ top: await getTopDiamondSenders(uname, 3) });
 });
 
 /* ── Serve built frontend in production ── */

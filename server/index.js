@@ -782,7 +782,14 @@ io.on('connection', (socket) => {
       socket._tiktokConn = conn;
 
       conn.connect()
-        .then(state => { socket.emit('tiktokConnected', state); })
+        .then(state => {
+          console.log(`[live:${uniqueId}] connected (roomId=${state?.roomId||'?'})`);
+          socket.emit('tiktokConnected', state);
+          // ส่ง snapshot เริ่มต้นของ totals (ถ้ามี cache จาก connection ก่อน) → กัน UI ค้างที่ 0
+          if (liveTotals.viewers)       socket.emit('roomUser', { viewerCount: liveTotals.viewers });
+          if (liveTotals.totalLikes)    socket.emit('like', { totalLikeCount: liveTotals.totalLikes, likeCount: 0 });
+          if (liveTotals.totalDiamonds) socket.emit('gift', { diamonds: liveTotals.totalDiamonds, _snapshot: true, repeatCount: 1, giftName: '(snapshot)', uniqueId: '__snapshot__', displayName: '' });
+        })
         .catch(err => {
           let msg = err?.message || String(err);
           if (Array.isArray(err?.errors) && err.errors.length > 0) {
@@ -791,6 +798,20 @@ io.on('connection', (socket) => {
           socket.emit('tiktokDisconnected', msg);
           socket._tiktokConn = null;
         });
+
+      // ── Per-room running totals สำหรับ dashboard standalone (per-socket flow) ──
+      const liveTotals = { viewers: 0, totalLikes: 0, totalDiamonds: 0 };
+      const tag = `[live:${uniqueId}]`;
+      let lastViewerLog = 0;
+
+      // helper: อ่านค่า count แบบ defensive จากหลายชื่อ field (camelCase / snake_case / nested)
+      const num = (...vals) => {
+        for (const v of vals) {
+          if (typeof v === 'number' && Number.isFinite(v)) return v;
+          if (typeof v === 'string' && v.trim() && !Number.isNaN(+v)) return +v;
+        }
+        return 0;
+      };
 
       conn.on(WebcastEvent?.CHAT || 'chat', (data) => {
         const uid   = data?.user?.uniqueId || data?.uniqueId;
@@ -803,51 +824,65 @@ io.on('connection', (socket) => {
         socket.emit('chat', payload);
         io.to(`room:${roomKey(uniqueId)}`).emit('tiktokChat', payload);
         upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: uid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level });
+        console.log(`${tag} chat ${u.displayName}: ${(data?.comment||'').slice(0,40)}`);
       });
 
       conn.on(WebcastEvent?.GIFT || 'gift', (data) => {
         if (data?.giftType === 1 && !data?.repeatEnd) return;
         const uid = data?.user?.uniqueId || data?.uniqueId;
         if (!uid) return;
-        const diamonds = (data?.diamondCount || data?.gift?.diamondCount || 1) * (data?.repeatCount || 1);
+        const perDiamond = num(data?.diamondCount, data?.gift?.diamondCount, data?.gift?.diamond_count, data?.gift?.diamondsCount, 1);
+        const repeats    = num(data?.repeatCount, data?.repeat_count, data?.comboCount, data?.combo_count, data?.combo, 1) || 1;
+        const diamonds   = perDiamond * repeats;
         const u = rememberUser(uniqueId, uid, {
           displayName: data?.user?.nickname || uid,
           profilePicUrl: proxiedPic(data?.user?.profilePictureUrl, uid),
           level: data?.user?.fansClub?.memberLevel || data?.user?.level || 0,
         });
+        liveTotals.totalDiamonds += diamonds;
         const giftPayload = {
           uniqueId: uid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level,
-          giftName: data?.gift?.name || data?.giftName || 'ของขวัญ',
-          diamonds, repeatCount: data?.repeatCount || 1, ts: Date.now(),
+          giftName: data?.gift?.name || data?.giftName || data?.gift?.giftName || 'ของขวัญ',
+          diamonds, repeatCount: repeats, ts: Date.now(),
         };
         socket.emit('gift', giftPayload);
         io.to(`room:${roomKey(uniqueId)}`).emit('tiktokGift', giftPayload);
         upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: uid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level, diamonds });
+        console.log(`${tag} gift ${u.displayName} +${diamonds}💎 (${giftPayload.giftName} x${repeats}) total=${liveTotals.totalDiamonds}`);
       });
 
       conn.on(WebcastEvent?.LIKE || 'like', (data) => {
         const lUid = data?.user?.uniqueId;
+        const total = num(data?.totalLikeCount, data?.total_like_count, data?.totalLikes, data?.total);
+        const lc    = num(data?.likeCount, data?.like_count, data?.count, 1);
+        if (total) liveTotals.totalLikes = total;
+        else liveTotals.totalLikes += lc; // fallback ถ้า lib ไม่ส่ง totalLikeCount
         const u = lUid ? rememberUser(uniqueId, lUid, {
           displayName: data?.user?.nickname || lUid,
           profilePicUrl: proxiedPic(data?.user?.profilePictureUrl, lUid),
           level: data?.user?.fansClub?.memberLevel || data?.user?.level || 0,
         }) : {};
         const payload = {
-          totalLikeCount: data?.totalLikeCount, likeCount: data?.likeCount,
+          totalLikeCount: liveTotals.totalLikes, likeCount: lc,
           uniqueId: lUid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level,
         };
         socket.emit('like', payload);
         io.to(`room:${roomKey(uniqueId)}`).emit('tiktokLike', payload);
-        if (lUid) upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: lUid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level, likes: data?.likeCount || 1 });
+        if (lUid) upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: lUid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level, likes: lc });
+        console.log(`${tag} like ${u.displayName||'?'} +${lc} total=${liveTotals.totalLikes}`);
       });
 
-      conn.on('roomUser', (data) => {
-        if (typeof data?.viewerCount !== 'number') return;
-        socket.emit('roomUser', { viewerCount: data.viewerCount });
-        io.to(`room:${roomKey(uniqueId)}`).emit('tiktokViewers', { viewerCount: data.viewerCount });
+      conn.on(WebcastEvent?.ROOM_USER || 'roomUser', (data) => {
+        const v = num(data?.viewerCount, data?.viewer_count, data?.totalUser, data?.total_user, data?.userCount, data?.user_count, data?.total);
+        if (!v) return;
+        liveTotals.viewers = v;
+        socket.emit('roomUser', { viewerCount: v });
+        io.to(`room:${roomKey(uniqueId)}`).emit('tiktokViewers', { viewerCount: v });
+        const now = Date.now();
+        if (now - lastViewerLog > 15000) { console.log(`${tag} viewers=${v}`); lastViewerLog = now; }
       });
 
-      conn.on('member', (data) => {
+      conn.on(WebcastEvent?.MEMBER || 'member', (data) => {
         const mUid   = data?.user?.uniqueId;
         if (!mUid) return;
         const mNick  = data?.user?.nickname || mUid;
@@ -860,7 +895,16 @@ io.on('connection', (socket) => {
         upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: mUid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level });
       });
 
+      // ── Diagnostic: log ทุก event ที่ lib emit (ครั้งแรกของแต่ละชนิด) ──
+      const seenEvents = new Set();
+      conn.onAny?.((evtName /*, ...args */) => {
+        if (seenEvents.has(evtName)) return;
+        seenEvents.add(evtName);
+        console.log(`${tag} first-seen event: ${evtName}`);
+      });
+
       conn.on('disconnected', () => {
+        console.log(`${tag} disconnected`);
         socket.emit('tiktokDisconnected', 'การเชื่อมต่อถูกตัด');
       });
 

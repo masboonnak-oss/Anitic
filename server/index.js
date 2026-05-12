@@ -133,6 +133,42 @@ async function initDb() {
   console.log('[db] tables ready');
 }
 
+/* ── Per-room user cache (จำชื่อ/รูป/เลเวล จากทุก event) ── */
+const roomUserCache = new Map(); // key: roomUsername → Map<uniqueId, {displayName, profilePicUrl, level}>
+function getUserCache(roomUsername) {
+  const k = (roomUsername || '').toLowerCase();
+  if (!roomUserCache.has(k)) roomUserCache.set(k, new Map());
+  return roomUserCache.get(k);
+}
+const MAX_USER_CACHE = 5000; // กัน RAM บวมตอนรัน 24/7 บน VPS
+function rememberUser(roomUsername, uid, partial) {
+  if (!uid) return partial || {};
+  const cache = getUserCache(roomUsername);
+  const prev = cache.get(uid) || {};
+  const merged = {
+    displayName:   partial?.displayName   || prev.displayName   || uid,
+    profilePicUrl: partial?.profilePicUrl || prev.profilePicUrl || null,
+    level:         Math.max(prev.level || 0, partial?.level || 0),
+  };
+  // LRU: ถ้า re-set ค่า key เดิม ให้ delete ก่อน insert ใหม่ → key ขึ้นไปท้าย Map
+  if (cache.has(uid)) cache.delete(uid);
+  cache.set(uid, merged);
+  // Trim oldest
+  while (cache.size > MAX_USER_CACHE) cache.delete(cache.keys().next().value);
+  return merged;
+}
+function recallUser(roomUsername, uid) {
+  return getUserCache(roomUsername).get(uid) || {};
+}
+
+/* ── Per-room HUD totals (จำเลขไว้ส่งให้ overlay ที่ refresh) ── */
+const roomStats = new Map(); // key: roomUsername → {viewers, totalLikes, totalDiamonds}
+function getRoomStats(roomUsername) {
+  const k = (roomUsername || '').toLowerCase();
+  if (!roomStats.has(k)) roomStats.set(k, { viewers: 0, totalLikes: 0, totalDiamonds: 0 });
+  return roomStats.get(k);
+}
+
 /* ── Room Visitor upsert helper ── */
 async function upsertRoomVisitor({ roomUsername, uniqueId, displayName, profilePicUrl, level = 0, likes = 0, diamonds = 0 }) {
   if (!roomUsername || !uniqueId) return;
@@ -498,6 +534,11 @@ function sendInitialState(socket, username) {
   socket.emit('commenters', Array.from(st.commenters.values()).sort((a, b) => b.lastSeen - a.lastSeen).slice(0, MAX_COMMENTERS));
   socket.emit('top1Threshold', st.top1Threshold);
   socket.emit('watchedGiftersUpdate', Object.fromEntries([...st.watchedGifters.entries()]));
+  // ส่งยอด HUD ปัจจุบันให้ overlay/dashboard ที่เพิ่ง connect/refresh
+  const rs = getRoomStats(username);
+  socket.emit('tiktokViewers', { viewerCount: rs.viewers });
+  socket.emit('tiktokLike',    { totalLikeCount: rs.totalLikes, likeCount: 0 });
+  socket.emit('hudSnapshot',   { totalDiamonds: rs.totalDiamonds });
 }
 
 /* ── TikTok Live ── */
@@ -590,13 +631,14 @@ function connectLive(adminUser, tiktokUser, attempt) {
     const level      = data?.user?.fansClub?.memberLevel || data?.user?.level || 0;
     if (!uid) return;
     const picUrl     = proxiedPic(picRaw, uid);
-    const displayName = nickname || uid;
-    st.commenters.set(uid, { uniqueId: uid, nickname: displayName, profilePicUrl: picUrl, level, lastSeen: Date.now(), msgCount: (st.commenters.get(uid)?.msgCount || 0) + 1, lastMsg: data?.comment || '' });
-    saveToCache(uid, { displayName, profilePicUrl: picUrl }).catch(() => {});
-    io.to(`room:${adminUser}`).emit('chatCapture', { uniqueId: uid, displayName, profilePicUrl: picUrl, level });
-    io.to(`room:${adminUser}`).emit('tiktokChat', { uniqueId: uid, displayName, profilePicUrl: picUrl, comment: data?.comment || '', level, ts: Date.now() });
+    const u          = rememberUser(adminUser, uid, { displayName: nickname || uid, profilePicUrl: picUrl, level });
+    const displayName = u.displayName;
+    st.commenters.set(uid, { uniqueId: uid, nickname: displayName, profilePicUrl: u.profilePicUrl, level: u.level, lastSeen: Date.now(), msgCount: (st.commenters.get(uid)?.msgCount || 0) + 1, lastMsg: data?.comment || '' });
+    saveToCache(uid, { displayName, profilePicUrl: u.profilePicUrl }).catch(() => {});
+    io.to(`room:${adminUser}`).emit('chatCapture', { uniqueId: uid, displayName, profilePicUrl: u.profilePicUrl, level: u.level });
+    io.to(`room:${adminUser}`).emit('tiktokChat', { uniqueId: uid, displayName, profilePicUrl: u.profilePicUrl, comment: data?.comment || '', level: u.level, ts: Date.now() });
     // upsert ลง room_visitors เพื่อให้เรียงตาม level ได้แม้ user แค่แชท
-    upsertRoomVisitor({ roomUsername: adminUser, uniqueId: uid, displayName, profilePicUrl: picUrl, level });
+    upsertRoomVisitor({ roomUsername: adminUser, uniqueId: uid, displayName, profilePicUrl: u.profilePicUrl, level: u.level });
     if (st.commenters.size > MAX_COMMENTERS * 2) {
       const entries = [...st.commenters.entries()].sort((a, b) => b[1].lastSeen - a[1].lastSeen);
       st.commenters = new Map(entries.slice(0, MAX_COMMENTERS));
@@ -612,16 +654,19 @@ function connectLive(adminUser, tiktokUser, attempt) {
     if (data?.giftType === 1 && !data?.repeatEnd) return;
     const diamonds = (data?.diamondCount || data?.gift?.diamondCount || 1) * (data?.repeatCount || 1);
     if (!uid || diamonds <= 0) return;
-    const prev = st.giftTracker.get(uid) || { uniqueId: uid, displayName: nickname || uid, profilePicUrl: proxiedPic(picRaw, uid), diamonds: 0 };
+    const u = rememberUser(adminUser, uid, { displayName: nickname || uid, profilePicUrl: proxiedPic(picRaw, uid), level: data?.user?.fansClub?.memberLevel || data?.user?.level || 0 });
+    const prev = st.giftTracker.get(uid) || { uniqueId: uid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, diamonds: 0 };
     prev.diamonds += diamonds;
-    if (nickname) prev.displayName = nickname;
-    if (picRaw)   prev.profilePicUrl = proxiedPic(picRaw, uid);
+    prev.displayName   = u.displayName;
+    prev.profilePicUrl = u.profilePicUrl;
     st.giftTracker.set(uid, prev);
+    upsertRoomVisitor({ roomUsername: adminUser, uniqueId: uid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level, diamonds });
+    getRoomStats(adminUser).totalDiamonds += diamonds;
 
     if (st.watchedGifters.has(uid)) {
       const wg = st.watchedGifters.get(uid);
       if (nickname) wg.displayName = nickname;
-      if (picRaw)   wg.profilePicUrl = proxiedPic(picRaw, uid);
+      wg.profilePicUrl = u.profilePicUrl;
       const giftName = data?.gift?.name || data?.giftName || (data?.giftId ? `Gift #${data.giftId}` : 'ของขวัญ');
       const entry = { name: giftName, diamonds, count: data?.repeatCount || 1, ts: Date.now() };
       wg.giftLog.unshift(entry);
@@ -642,14 +687,26 @@ function connectLive(adminUser, tiktokUser, attempt) {
   // Like events
   const likeEvent = WebcastEvent?.LIKE || 'like';
   conn.on(likeEvent, (data) => {
+    const lUid    = data?.user?.uniqueId || data?.uniqueId;
+    const lNick   = data?.user?.nickname || lUid;
+    const lPicRaw = data?.user?.profilePictureUrl || data?.user?.avatarUrl;
+    const lLevel  = data?.user?.fansClub?.memberLevel || data?.user?.level || 0;
+    const lPic    = proxiedPic(lPicRaw, lUid);
+    const u       = lUid ? rememberUser(adminUser, lUid, { displayName: lNick, profilePicUrl: lPic, level: lLevel }) : {};
     if (typeof data?.totalLikeCount === 'number') {
-      io.to(`room:${adminUser}`).emit('tiktokLike', { totalLikeCount: data.totalLikeCount, likeCount: data.likeCount || 0 });
+      getRoomStats(adminUser).totalLikes = data.totalLikeCount;
+      io.to(`room:${adminUser}`).emit('tiktokLike', {
+        totalLikeCount: data.totalLikeCount, likeCount: data.likeCount || 0,
+        uniqueId: lUid, displayName: u.displayName || lNick, profilePicUrl: u.profilePicUrl || lPic, level: u.level || lLevel,
+      });
     }
+    if (lUid) upsertRoomVisitor({ roomUsername: adminUser, uniqueId: lUid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level, likes: data?.likeCount || 1 });
   });
 
   // Viewer count
   conn.on('roomUser', (data) => {
     if (typeof data?.viewerCount === 'number') {
+      getRoomStats(adminUser).viewers = data.viewerCount;
       io.to(`room:${adminUser}`).emit('tiktokViewers', { viewerCount: data.viewerCount });
     }
   });
@@ -660,11 +717,14 @@ function connectLive(adminUser, tiktokUser, attempt) {
     const mNick  = data?.user?.nickname  || data?.nickname || mUid;
     const picRaw = data?.user?.profilePictureUrl || data?.user?.avatarUrl;
     const level  = data?.user?.fansClub?.memberLevel || data?.user?.level || 0;
-    if (mUid) io.to(`room:${adminUser}`).emit('tiktokMember', {
-      uniqueId: mUid, displayName: mNick,
-      profilePicUrl: picRaw ? proxiedPic(picRaw, mUid) : null,
-      level, ts: Date.now(),
+    if (!mUid) return;
+    const u = rememberUser(adminUser, mUid, { displayName: mNick, profilePicUrl: proxiedPic(picRaw, mUid), level });
+    io.to(`room:${adminUser}`).emit('tiktokMember', {
+      uniqueId: mUid, displayName: u.displayName,
+      profilePicUrl: u.profilePicUrl,
+      level: u.level, ts: Date.now(),
     });
+    upsertRoomVisitor({ roomUsername: adminUser, uniqueId: mUid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level });
   });
 
   conn.on('disconnected', () => {
@@ -731,61 +791,70 @@ io.on('connection', (socket) => {
 
       conn.on(WebcastEvent?.CHAT || 'chat', (data) => {
         const uid   = data?.user?.uniqueId || data?.uniqueId;
+        if (!uid) return;
         const nick  = data?.user?.nickname  || uid;
         const pic   = proxiedPic(data?.user?.profilePictureUrl, uid);
         const level = data?.user?.fansClub?.memberLevel || data?.user?.level || 0;
-        socket.emit('chat', { uniqueId: uid, displayName: nick, profilePicUrl: pic, comment: data?.comment || '', level, ts: Date.now() });
-        io.to(`room:${uniqueId}`).emit('tiktokChat', { uniqueId: uid, displayName: nick, profilePicUrl: pic, comment: data?.comment || '', level, ts: Date.now() });
-        if (uid) upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: uid, displayName: nick, profilePicUrl: pic, level });
+        const u = rememberUser(uniqueId, uid, { displayName: nick, profilePicUrl: pic, level });
+        const payload = { uniqueId: uid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, comment: data?.comment || '', level: u.level, ts: Date.now() };
+        socket.emit('chat', payload);
+        io.to(`room:${uniqueId}`).emit('tiktokChat', payload);
+        upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: uid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level });
       });
 
       conn.on(WebcastEvent?.GIFT || 'gift', (data) => {
         if (data?.giftType === 1 && !data?.repeatEnd) return;
         const uid = data?.user?.uniqueId || data?.uniqueId;
+        if (!uid) return;
         const diamonds = (data?.diamondCount || data?.gift?.diamondCount || 1) * (data?.repeatCount || 1);
-        const giftPayload = {
-          uniqueId: uid, displayName: data?.user?.nickname || uid,
+        const u = rememberUser(uniqueId, uid, {
+          displayName: data?.user?.nickname || uid,
           profilePicUrl: proxiedPic(data?.user?.profilePictureUrl, uid),
+          level: data?.user?.fansClub?.memberLevel || data?.user?.level || 0,
+        });
+        const giftPayload = {
+          uniqueId: uid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level,
           giftName: data?.gift?.name || data?.giftName || 'ของขวัญ',
           diamonds, repeatCount: data?.repeatCount || 1, ts: Date.now(),
         };
         socket.emit('gift', giftPayload);
-        /* broadcast to overlay(s) listening on this room */
         io.to(`room:${uniqueId}`).emit('tiktokGift', giftPayload);
-        if (uid) upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: uid,
-          displayName: giftPayload.displayName, profilePicUrl: giftPayload.profilePicUrl,
-          level: data?.user?.fansClub?.memberLevel || data?.user?.level || 0, diamonds });
+        upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: uid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level, diamonds });
       });
 
       conn.on(WebcastEvent?.LIKE || 'like', (data) => {
-        socket.emit('like', { totalLikeCount: data?.totalLikeCount, likeCount: data?.likeCount });
         const lUid = data?.user?.uniqueId;
-        if (lUid) upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: lUid,
+        const u = lUid ? rememberUser(uniqueId, lUid, {
           displayName: data?.user?.nickname || lUid,
-          profilePicUrl: data?.user?.profilePictureUrl ? proxiedPic(data.user.profilePictureUrl, lUid) : null,
+          profilePicUrl: proxiedPic(data?.user?.profilePictureUrl, lUid),
           level: data?.user?.fansClub?.memberLevel || data?.user?.level || 0,
-          likes: data?.likeCount || 1 });
+        }) : {};
+        const payload = {
+          totalLikeCount: data?.totalLikeCount, likeCount: data?.likeCount,
+          uniqueId: lUid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level,
+        };
+        socket.emit('like', payload);
+        io.to(`room:${uniqueId}`).emit('tiktokLike', payload);
+        if (lUid) upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: lUid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level, likes: data?.likeCount || 1 });
       });
 
       conn.on('roomUser', (data) => {
-        socket.emit('roomUser', { viewerCount: data?.viewerCount });
+        if (typeof data?.viewerCount !== 'number') return;
+        socket.emit('roomUser', { viewerCount: data.viewerCount });
+        io.to(`room:${uniqueId}`).emit('tiktokViewers', { viewerCount: data.viewerCount });
       });
 
       conn.on('member', (data) => {
         const mUid   = data?.user?.uniqueId;
+        if (!mUid) return;
         const mNick  = data?.user?.nickname || mUid;
         const picRaw = data?.user?.profilePictureUrl || data?.user?.avatarUrl;
         const level  = data?.user?.fansClub?.memberLevel || data?.user?.level || 0;
-        const memberPayload = {
-          uniqueId: mUid, displayName: mNick,
-          profilePicUrl: picRaw ? proxiedPic(picRaw, mUid) : null,
-          level,
-        };
+        const u = rememberUser(uniqueId, mUid, { displayName: mNick, profilePicUrl: proxiedPic(picRaw, mUid), level });
+        const memberPayload = { uniqueId: mUid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level };
         socket.emit('member', memberPayload);
-        /* broadcast to overlay(s) listening on this room */
         io.to(`room:${uniqueId}`).emit('tiktokMember', memberPayload);
-        if (mUid) upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: mUid,
-          displayName: mNick, profilePicUrl: memberPayload.profilePicUrl, level });
+        upsertRoomVisitor({ roomUsername: uniqueId, uniqueId: mUid, displayName: u.displayName, profilePicUrl: u.profilePicUrl, level: u.level });
       });
 
       conn.on('disconnected', () => {

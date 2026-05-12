@@ -94,13 +94,13 @@ function DashboardView() {
     });
 
     sock.on('member', d => push({ id:mkid(), type:'join',   uniqueId:d.uniqueId||'?', displayName:d.displayName||d.uniqueId||'?', profilePicUrl:d.profilePicUrl||null, text:'เข้าร่วมห้อง', level:d.level||0 }));
-    sock.on('chat',   d => push({ id:mkid(), type:'chat',   uniqueId:d.uniqueId,      displayName:d.displayName,                   profilePicUrl:d.profilePicUrl,        text:d.comment }));
-    sock.on('follow', d => push({ id:mkid(), type:'follow', uniqueId:d.uniqueId,      displayName:d.displayName,                   profilePicUrl:d.profilePicUrl,        text:'กดติดตาม' }));
-    sock.on('share',  d => push({ id:mkid(), type:'share',  uniqueId:d.uniqueId,      displayName:d.displayName,                   profilePicUrl:d.profilePicUrl,        text:'แชร์ไลฟ์' }));
-    sock.on('like',   d => { if (d?.likeCount > 0) push({ id:mkid(), type:'like', uniqueId:d.uniqueId||'?', displayName:d.displayName||'?', profilePicUrl:d.profilePicUrl||null, text:`ไลค์ ${d.likeCount} ครั้ง` }); });
+    sock.on('chat',   d => push({ id:mkid(), type:'chat',   uniqueId:d.uniqueId,      displayName:d.displayName,                   profilePicUrl:d.profilePicUrl,        text:d.comment, level:d.level||0 }));
+    sock.on('follow', d => push({ id:mkid(), type:'follow', uniqueId:d.uniqueId,      displayName:d.displayName,                   profilePicUrl:d.profilePicUrl,        text:'กดติดตาม', level:d.level||0 }));
+    sock.on('share',  d => push({ id:mkid(), type:'share',  uniqueId:d.uniqueId,      displayName:d.displayName,                   profilePicUrl:d.profilePicUrl,        text:'แชร์ไลฟ์', level:d.level||0 }));
+    sock.on('like',   d => { if (d?.likeCount > 0) push({ id:mkid(), type:'like', uniqueId:d.uniqueId||'?', displayName:d.displayName||'?', profilePicUrl:d.profilePicUrl||null, text:`ไลค์ ${d.likeCount} ครั้ง`, level:d.level||0 }); });
     sock.on('gift',   d => {
       setDiamonds(prev => prev + (d.diamonds || 0));
-      push({ id:mkid(), type:'gift', uniqueId:d.uniqueId, displayName:d.displayName, profilePicUrl:d.profilePicUrl||null, text:`🎁 ${d.giftName||'ของขวัญ'}${d.repeatCount>1?' ×'+d.repeatCount:''}`, diamonds:d.diamonds||0 });
+      push({ id:mkid(), type:'gift', uniqueId:d.uniqueId, displayName:d.displayName, profilePicUrl:d.profilePicUrl||null, text:`🎁 ${d.giftName||'ของขวัญ'}${d.repeatCount>1?' ×'+d.repeatCount:''}`, diamonds:d.diamonds||0, level:d.level||0 });
     });
   }
 
@@ -141,8 +141,9 @@ function DashboardView() {
 
   /* ── stat cards data ── */
   const statCards = [
-    { icon:'⚡', label:'เหตุการณ์',  value: events.length,                    color:'#8b5cf6' },
-    { icon:'🎁', label:'ของขวัญ',    value: events.filter(e=>e.type==='gift').length, color:'#f472b6' },
+    { icon:'👁', label:'ผู้ชม',      value: viewers.toLocaleString(),         color:'#22d3ee' },
+    { icon:'❤️', label:'ใจรวม',      value: likes.toLocaleString(),           color:'#f472b6' },
+    { icon:'💎', label:'เพชร',       value: diamonds.toLocaleString(),        color:'#a78bfa' },
     { icon:'⚡', label:'Level สูง',  value: Math.max(0, ...events.filter(e=>e.level>0).map(e=>e.level)), color:'#fbbf24' },
   ];
 
@@ -573,6 +574,9 @@ function OverlayView() {
   const [queue, setQueue] = useState(IS_DEMO ? [DEMO_ITEM] : []);
   const [flash, setFlash] = useState(false);
   const [kingAnnounce, setKingAnnounce] = useState(null);
+  const [hudViewers,  setHudViewers]  = useState(0);
+  const [hudLikes,    setHudLikes]    = useState(0);
+  const [hudDiamonds, setHudDiamonds] = useState(0);
   const uidRef = useRef(0);
   const mkid   = () => `${Date.now()}-${++uidRef.current}`;
 
@@ -641,6 +645,7 @@ function OverlayView() {
       }
     }
     function onGift(data) {
+      setHudDiamonds(prev => prev + (data.diamonds || 0));
       setQueue(prev => addToQueue(prev, {
         _uid: mkid(), variant: 'gift',
         uniqueId: data.uniqueId, displayName: data.displayName || data.uniqueId || '?',
@@ -648,13 +653,37 @@ function OverlayView() {
         giftName: data.giftName, repeatCount: data.repeatCount || 1, diamonds: data.diamonds || 0,
       }));
     }
+    function onChat(data) {
+      // ใช้ chat สำหรับเลเวลและ trigger entry tag (tier 4+) ของคนที่แค่แชท
+      const lv = data.level || 0;
+      const tier = getTier(lv);
+      if (tier.hasAnnounce) {
+        const item = {
+          _uid: mkid(), variant: 'join',
+          uniqueId: data.uniqueId, displayName: data.displayName || data.uniqueId || '?',
+          profilePicUrl: data.profilePicUrl || null, level: lv,
+        };
+        enqueueAnnounce(item.displayName, tier.id, item);
+      }
+    }
+    function onLike(data)     { if (typeof data?.totalLikeCount === 'number') setHudLikes(data.totalLikeCount); }
+    function onViewers(data)  { if (typeof data?.viewerCount    === 'number') setHudViewers(data.viewerCount); }
+    function onSnapshot(data) { if (typeof data?.totalDiamonds  === 'number') setHudDiamonds(data.totalDiamonds); }
 
-    overlaySock.on('tiktokMember', onMember);
-    overlaySock.on('tiktokGift',   onGift);
+    overlaySock.on('tiktokMember',  onMember);
+    overlaySock.on('tiktokGift',    onGift);
+    overlaySock.on('tiktokChat',    onChat);
+    overlaySock.on('tiktokLike',    onLike);
+    overlaySock.on('tiktokViewers', onViewers);
+    overlaySock.on('hudSnapshot',   onSnapshot);
 
     return () => {
-      overlaySock.off('tiktokMember', onMember);
-      overlaySock.off('tiktokGift',   onGift);
+      overlaySock.off('tiktokMember',  onMember);
+      overlaySock.off('tiktokGift',    onGift);
+      overlaySock.off('tiktokChat',    onChat);
+      overlaySock.off('tiktokLike',    onLike);
+      overlaySock.off('tiktokViewers', onViewers);
+      overlaySock.off('hudSnapshot',   onSnapshot);
       timersRef.current.forEach(clearTimeout);
       timersRef.current.clear();
       announceQueueRef.current = [];
@@ -705,6 +734,27 @@ function OverlayView() {
           </div>
         </div>
       )}
+
+      {/* ── HUD: viewers / likes / diamonds (มุมขวาบน) ── */}
+      <div style={{ position:'fixed', top:24, right:24, display:'flex', gap:10, zIndex:60, pointerEvents:'none' }}>
+        {[
+          { icon:'👁', value:hudViewers,  color:'#22d3ee', glow:'rgba(34,211,238,.35)' },
+          { icon:'❤️', value:hudLikes,    color:'#f472b6', glow:'rgba(244,114,182,.35)' },
+          { icon:'💎', value:hudDiamonds, color:'#a78bfa', glow:'rgba(167,139,250,.4)'  },
+        ].map(s => (
+          <div key={s.icon} style={{
+            background:'rgba(10,0,20,.78)', border:`1px solid ${s.glow}`,
+            borderRadius:12, padding:'8px 14px', backdropFilter:'blur(10px)',
+            display:'flex', alignItems:'center', gap:8, minWidth:90,
+            boxShadow:`0 4px 18px ${s.glow}`,
+          }}>
+            <span style={{ fontSize:16 }}>{s.icon}</span>
+            <span style={{ fontSize:18, fontWeight:900, color:s.color, fontVariantNumeric:'tabular-nums' }}>
+              {(s.value || 0).toLocaleString()}
+            </span>
+          </div>
+        ))}
+      </div>
 
       <div style={{ position:'fixed', bottom:32, left:32, display:'flex', flexDirection:'column', alignItems:'flex-start', gap:16, pointerEvents:'none', zIndex:50, maxWidth:960, width:'calc(100vw - 64px)' }}>
         <AnimatePresence>
